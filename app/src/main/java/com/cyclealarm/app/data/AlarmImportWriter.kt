@@ -203,14 +203,16 @@ class AlarmImportWriter(private val context: Context) {
         dateAlarms: List<DateAlarmEntity>
     ) {
         val db = AppDatabase.get(context)
-        db.withTransaction {
-            alarms.forEach { alarm ->
-                db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_CYCLE, alarm.id.toLong())
+        runCatching {
+            db.withTransaction {
+                alarms.forEach { alarm ->
+                    db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_CYCLE, alarm.id.toLong())
+                }
+                dateAlarms.forEach { alarm ->
+                    db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_DATE, alarm.id.toLong())
+                }
             }
-            dateAlarms.forEach { alarm ->
-                db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_DATE, alarm.id.toLong())
-            }
-        }
+        }.onFailure { Log.e(TAG, "clear replaced snoozes failed", it) }
         alarms.forEach { alarm ->
             runCatching { AlarmScheduler.cancelAlarm(context, alarm) }
                 .onFailure { Log.e(TAG, "cancel imported alarm failed id=${alarm.id}", it) }
