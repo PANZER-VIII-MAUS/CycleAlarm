@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.core.RingLaunchValidator
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.service.RingService
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
@@ -36,32 +37,57 @@ class RingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val alarmId = intent?.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0) ?: 0
-        val kind = intent?.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
-            ?: AlarmScheduler.KIND_CYCLE
-        val dayIndex = intent?.getIntExtra(AlarmScheduler.EXTRA_DAY_INDEX, 0) ?: 0
-        val hour = intent?.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8) ?: 8
-        val minute = intent?.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0) ?: 0
-        val label = intent?.getStringExtra(AlarmScheduler.EXTRA_LABEL) ?: ""
+        val launchIntent = intent
+        val alarmId = launchIntent?.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0) ?: 0
+        val kind = if (launchIntent?.hasExtra(AlarmScheduler.EXTRA_ALARM_KIND) == true) {
+            launchIntent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
+        } else {
+            null
+        }
+        val dayIndex = if (launchIntent?.hasExtra(AlarmScheduler.EXTRA_DAY_INDEX) == true) {
+            launchIntent.getIntExtra(AlarmScheduler.EXTRA_DAY_INDEX, 0)
+        } else {
+            null
+        }
+        val hour = if (launchIntent?.hasExtra(AlarmScheduler.EXTRA_HOUR) == true) {
+            launchIntent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 0)
+        } else {
+            null
+        }
+        val minute = if (launchIntent?.hasExtra(AlarmScheduler.EXTRA_MINUTE) == true) {
+            launchIntent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
+        } else {
+            null
+        }
+        if (!RingLaunchValidator.isValid(alarmId, kind, dayIndex, hour, minute)) {
+            finish()
+            return
+        }
+
+        val checkedKind = requireNotNull(kind)
+        val checkedDayIndex = requireNotNull(dayIndex)
+        val checkedHour = requireNotNull(hour)
+        val checkedMinute = requireNotNull(minute)
+        val label = launchIntent.getStringExtra(AlarmScheduler.EXTRA_LABEL) ?: ""
         val snoozeMinutes = RingPrefs.snoozeMinutes(this)
 
         setContent {
             CycleAlarmTheme {
                 RingScreen(
-                    dayIndex = dayIndex,
-                    hour = hour,
-                    minute = minute,
+                    dayIndex = checkedDayIndex,
+                    hour = checkedHour,
+                    minute = checkedMinute,
                     label = label,
                     snoozeMinutes = snoozeMinutes,
                     onStop = { stopRing() },
                     onSnooze = {
                         AlarmScheduler.snoozeAt(
                             context = this,
-                            kind = kind,
+                            kind = checkedKind,
                             alarmId = alarmId,
-                            dayIndex = dayIndex,
-                            hour = hour,
-                            minute = minute,
+                            dayIndex = checkedDayIndex,
+                            hour = checkedHour,
+                            minute = checkedMinute,
                             label = label,
                             minutes = snoozeMinutes
                         )

@@ -10,8 +10,8 @@ import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.HolidayEntity
+import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.receiver.AlarmReceiver
-import com.cyclealarm.app.ui.ring.RingActivity
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -50,6 +50,9 @@ object AlarmScheduler {
     const val DATE_REQUEST_BASE = 1_000_000
 
     private const val SNOOZE_REQUEST_OFFSET = 100_000
+
+    /** 全屏响铃 Activity 的独立 requestCode 偏移，避免与 showIntent / snooze 槽位混用。 */
+    const val FULLSCREEN_REQUEST_OFFSET = 200_000
 
     /** 把 (类型, 数据库 id) 换算成全局唯一的调度 id。 */
     fun schedulerId(kind: String, alarmId: Int): Int =
@@ -265,6 +268,7 @@ object AlarmScheduler {
         label: String,
         minutes: Int = 10
     ) {
+        if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
         val schedulerId = schedulerId(kind, alarmId)
@@ -316,7 +320,9 @@ object AlarmScheduler {
         PendingIntent.getActivity(
             context,
             requestCode,
-            Intent(context, RingActivity::class.java),
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 

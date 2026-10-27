@@ -120,7 +120,7 @@ class RingService : Service() {
         val schedulerId = AlarmScheduler.schedulerId(kind, alarmId)
         val fullScreenIntent = PendingIntent.getActivity(
             this,
-            schedulerId,
+            schedulerId + AlarmScheduler.FULLSCREEN_REQUEST_OFFSET,
             Intent(this, RingActivity::class.java)
                 .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
                 .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
