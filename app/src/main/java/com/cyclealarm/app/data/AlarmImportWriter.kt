@@ -198,10 +198,19 @@ class AlarmImportWriter(private val context: Context) {
         AppDatabase.get(context).importSnapshotDao().deleteAll()
     }
 
-    private fun cancelSchedules(
+    private suspend fun cancelSchedules(
         alarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>
     ) {
+        val db = AppDatabase.get(context)
+        db.withTransaction {
+            alarms.forEach { alarm ->
+                db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_CYCLE, alarm.id.toLong())
+            }
+            dateAlarms.forEach { alarm ->
+                db.snoozeDao().deleteByAlarm(AlarmScheduler.KIND_DATE, alarm.id.toLong())
+            }
+        }
         alarms.forEach { alarm ->
             runCatching { AlarmScheduler.cancelAlarm(context, alarm) }
                 .onFailure { Log.e(TAG, "cancel imported alarm failed id=${alarm.id}", it) }

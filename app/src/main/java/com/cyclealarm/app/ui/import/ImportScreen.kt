@@ -1,6 +1,7 @@
 package com.cyclealarm.app.ui.import
 
 import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -80,6 +81,7 @@ fun ImportScreen(
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFileSelected(it) }
     }
+    BackHandler { viewModel.closeImport(onClose) }
 
     var showOptions by remember { mutableStateOf(false) }
     var showManual by remember { mutableStateOf(false) }
