@@ -31,16 +31,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.data.CycleTypes
@@ -68,16 +69,16 @@ fun SettingsScreen(
     viewModel: AlarmViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val settings by viewModel.settings.collectAsState()
-    val cycleLength by viewModel.cycleLength.collectAsState()
-    val themeMode by ThemeManager.mode.collectAsState()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val cycleLength by viewModel.cycleLength.collectAsStateWithLifecycle()
+    val themeMode by ThemeManager.mode.collectAsStateWithLifecycle()
 
-    var is24h by remember { mutableStateOf(DisplayPrefs.is24Hour(context)) }
-    var ringDuration by remember { mutableStateOf(RingPrefs.durationSeconds(context)) }
-    var snoozeMinutes by remember { mutableStateOf(RingPrefs.snoozeMinutes(context)) }
-    var dialog by remember { mutableStateOf<SettingsDialog?>(null) }
-    var pendingMode by remember { mutableStateOf<String?>(null) }
-    var pendingLength by remember { mutableStateOf<Int?>(null) }
+    var is24h by rememberSaveable { mutableStateOf(DisplayPrefs.is24Hour(context)) }
+    var ringDuration by rememberSaveable { mutableStateOf(RingPrefs.durationSeconds(context)) }
+    var snoozeMinutes by rememberSaveable { mutableStateOf(RingPrefs.snoozeMinutes(context)) }
+    var dialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
+    var pendingMode by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingLength by rememberSaveable { mutableStateOf<Int?>(null) }
 
     val cycleType = settings?.cycleType ?: CycleTypes.CUSTOM
     val isCustom = cycleType == CycleTypes.CUSTOM
@@ -478,7 +479,9 @@ private fun StepperDialog(
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var value by remember { mutableStateOf(initial.coerceIn(range.first, range.last)) }
+    var value by rememberSaveable {
+        mutableStateOf(initial.coerceIn(range.first, range.last))
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },

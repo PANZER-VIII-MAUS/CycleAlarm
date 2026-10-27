@@ -61,7 +61,6 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.cyclealarm.app.core.AlarmScheduler
@@ -186,20 +186,20 @@ private fun nextAlarmSourceLabel(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
-    val alarms by viewModel.alarms.collectAsState()
-    val dateAlarms by viewModel.dateAlarms.collectAsState()
-    val snoozes by viewModel.snoozes.collectAsState()
-    val activityTypes by viewModel.activityTypes.collectAsState()
-    val dayPlans by viewModel.dayPlans.collectAsState()
-    val holidays by viewModel.holidays.collectAsState()
-    val settings by viewModel.settings.collectAsState()
-    val cycleLength by viewModel.cycleLength.collectAsState()
-    val databaseError by viewModel.databaseError.collectAsState()
+    val alarms by viewModel.alarms.collectAsStateWithLifecycle()
+    val dateAlarms by viewModel.dateAlarms.collectAsStateWithLifecycle()
+    val snoozes by viewModel.snoozes.collectAsStateWithLifecycle()
+    val activityTypes by viewModel.activityTypes.collectAsStateWithLifecycle()
+    val dayPlans by viewModel.dayPlans.collectAsStateWithLifecycle()
+    val holidays by viewModel.holidays.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val cycleLength by viewModel.cycleLength.collectAsStateWithLifecycle()
+    val databaseError by viewModel.databaseError.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    var refreshTick by remember { mutableStateOf(0) }
-    var todayEpochDay by remember { mutableStateOf(LocalDate.now().toEpochDay()) }
+    var refreshTick by rememberSaveable { mutableStateOf(0) }
+    var todayEpochDay by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
 
     fun refreshUiClock() {
         todayEpochDay = LocalDate.now().toEpochDay()
@@ -223,16 +223,20 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     }
 
-    var showPermissionGuide by remember {
+    var showPermissionGuide by rememberSaveable {
         mutableStateOf(!prefs.getBoolean("onboarding_done", false))
     }
-    var editingAlarm by remember { mutableStateOf<AlarmEntity?>(null) }
-    var editingHoliday by remember { mutableStateOf<HolidayEntity?>(null) }
-    var planPickerDay by remember { mutableStateOf<Int?>(null) }
-    var planTimeDay by remember { mutableStateOf<Int?>(null) }
-    var deletePlanDay by remember { mutableStateOf<Int?>(null) }
-    var showTypeManager by remember { mutableStateOf(false) }
-    var showDayPicker by remember { mutableStateOf(false) }
+    var editingAlarm by rememberSaveable(stateSaver = AlarmEntitySaver) {
+        mutableStateOf<AlarmEntity?>(null)
+    }
+    var editingHoliday by rememberSaveable(stateSaver = HolidayEntitySaver) {
+        mutableStateOf<HolidayEntity?>(null)
+    }
+    var planPickerDay by rememberSaveable { mutableStateOf<Int?>(null) }
+    var planTimeDay by rememberSaveable { mutableStateOf<Int?>(null) }
+    var deletePlanDay by rememberSaveable { mutableStateOf<Int?>(null) }
+    var showTypeManager by rememberSaveable { mutableStateOf(false) }
+    var showDayPicker by rememberSaveable { mutableStateOf(false) }
 
     val plansByDay = remember(dayPlans) { dayPlans.associateBy { it.dayIndex } }
     val typesById = remember(activityTypes) { activityTypes.associateBy { it.id } }
@@ -760,11 +764,11 @@ private fun HolidayEditDialog(
     onDismiss: () -> Unit,
     onSave: (label: String, startEpochDay: Long, endEpochDay: Long) -> Unit
 ) {
-    var label by remember(holiday.id) { mutableStateOf(holiday.label) }
-    var start by remember(holiday.id) { mutableStateOf(holiday.startEpochDay) }
-    var end by remember(holiday.id) { mutableStateOf(holiday.endEpochDay) }
-    var pickStart by remember(holiday.id) { mutableStateOf(false) }
-    var pickEnd by remember(holiday.id) { mutableStateOf(false) }
+    var label by rememberSaveable(holiday.id) { mutableStateOf(holiday.label) }
+    var start by rememberSaveable(holiday.id) { mutableStateOf(holiday.startEpochDay) }
+    var end by rememberSaveable(holiday.id) { mutableStateOf(holiday.endEpochDay) }
+    var pickStart by rememberSaveable(holiday.id) { mutableStateOf(false) }
+    var pickEnd by rememberSaveable(holiday.id) { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1026,11 +1030,11 @@ private fun EditAlarmDialog(
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
-    var label by remember(alarm.id) { mutableStateOf(alarm.label) }
-    var hour by remember(alarm.id) { mutableStateOf(alarm.hour) }
-    var minute by remember(alarm.id) { mutableStateOf(alarm.minute) }
-    var enabled by remember(alarm.id) { mutableStateOf(alarm.enabled) }
-    var muted by remember(alarm.id) { mutableStateOf(alarm.mutedDuringHoliday) }
+    var label by rememberSaveable(alarm.id) { mutableStateOf(alarm.label) }
+    var hour by rememberSaveable(alarm.id) { mutableStateOf(alarm.hour) }
+    var minute by rememberSaveable(alarm.id) { mutableStateOf(alarm.minute) }
+    var enabled by rememberSaveable(alarm.id) { mutableStateOf(alarm.enabled) }
+    var muted by rememberSaveable(alarm.id) { mutableStateOf(alarm.mutedDuringHoliday) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

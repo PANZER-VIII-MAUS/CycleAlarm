@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +48,7 @@ fun PreviewTable(
     onDelete: (Int) -> Unit
 ) {
     val context = LocalContext.current
-    var editingIndex by remember { mutableStateOf<Int?>(null) }
+    var editingIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         itemsIndexed(entries) { index, entry ->
@@ -106,10 +107,10 @@ private fun EditEntryDialog(
     onSave: (ImportedEntry) -> Unit
 ) {
     val context = LocalContext.current
-    var title by remember { mutableStateOf(entry.title) }
-    var hour by remember { mutableStateOf(entry.hour) }
-    var minute by remember { mutableStateOf(entry.minute) }
-    var weekday by remember { mutableStateOf(entry.weekday) }
+    var title by rememberSaveable { mutableStateOf(entry.title) }
+    var hour by rememberSaveable { mutableStateOf(entry.hour) }
+    var minute by rememberSaveable { mutableStateOf(entry.minute) }
+    var weekday by rememberSaveable { mutableStateOf(entry.weekday) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

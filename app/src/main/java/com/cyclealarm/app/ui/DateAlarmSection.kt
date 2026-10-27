@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.HolidayEntity
 import com.cyclealarm.app.ui.components.CycleCard
 import com.cyclealarm.app.ui.theme.timePickerContext
+import com.cyclealarm.app.ui.DateAlarmEntitySaver
 import java.util.Locale
 
 /**
@@ -51,7 +53,9 @@ fun DateAlarmSection(
 ) {
     if (alarms.isEmpty()) return
     val context = LocalContext.current
-    var editing by remember { mutableStateOf<DateAlarmEntity?>(null) }
+    var editing by rememberSaveable(stateSaver = DateAlarmEntitySaver) {
+        mutableStateOf<DateAlarmEntity?>(null)
+    }
 
     CycleCard {
         Column(
@@ -126,11 +130,11 @@ private fun DateAlarmEditDialog(
     onSave: (DateAlarmEntity) -> Unit
 ) {
     val context = LocalContext.current
-    var label by remember(alarm.id) { mutableStateOf(alarm.label) }
-    var hour by remember(alarm.id) { mutableStateOf(alarm.hour) }
-    var minute by remember(alarm.id) { mutableStateOf(alarm.minute) }
-    var enabled by remember(alarm.id) { mutableStateOf(alarm.enabled) }
-    var muted by remember(alarm.id) { mutableStateOf(alarm.mutedDuringHoliday) }
+    var label by rememberSaveable(alarm.id) { mutableStateOf(alarm.label) }
+    var hour by rememberSaveable(alarm.id) { mutableStateOf(alarm.hour) }
+    var minute by rememberSaveable(alarm.id) { mutableStateOf(alarm.minute) }
+    var enabled by rememberSaveable(alarm.id) { mutableStateOf(alarm.enabled) }
+    var muted by rememberSaveable(alarm.id) { mutableStateOf(alarm.mutedDuringHoliday) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.ui.theme.timePickerContext
+import com.cyclealarm.app.ui.ActivityTypeEntitySaver
 
 /**
  * 安排类型管理：增删改、上下移、显示使用天数。
@@ -53,9 +55,15 @@ fun PlanTypeManagerDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var editing by remember { mutableStateOf<ActivityTypeEntity?>(null) }
-    var pendingTimeChange by remember { mutableStateOf<ActivityTypeEntity?>(null) }
-    var deleting by remember { mutableStateOf<ActivityTypeEntity?>(null) }
+    var editing by rememberSaveable(stateSaver = ActivityTypeEntitySaver) {
+        mutableStateOf<ActivityTypeEntity?>(null)
+    }
+    var pendingTimeChange by rememberSaveable(stateSaver = ActivityTypeEntitySaver) {
+        mutableStateOf<ActivityTypeEntity?>(null)
+    }
+    var deleting by rememberSaveable(stateSaver = ActivityTypeEntitySaver) {
+        mutableStateOf<ActivityTypeEntity?>(null)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -206,10 +214,10 @@ private fun PlanTypeEditDialog(
     onSave: (ActivityTypeEntity) -> Unit
 ) {
     val context = LocalContext.current
-    var name by remember(type.id) { mutableStateOf(type.name) }
-    var hour by remember(type.id) { mutableStateOf(type.hour) }
-    var minute by remember(type.id) { mutableStateOf(type.minute) }
-    var rings by remember(type.id) { mutableStateOf(type.rings) }
+    var name by rememberSaveable(type.id) { mutableStateOf(type.name) }
+    var hour by rememberSaveable(type.id) { mutableStateOf(type.hour) }
+    var minute by rememberSaveable(type.id) { mutableStateOf(type.minute) }
+    var rings by rememberSaveable(type.id) { mutableStateOf(type.rings) }
     val nameValid = name.trim().isNotEmpty()
 
     AlertDialog(

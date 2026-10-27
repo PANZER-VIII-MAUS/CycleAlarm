@@ -38,16 +38,17 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.DetectedLayout
 import com.cyclealarm.app.importer.ImportOptions
@@ -76,17 +77,17 @@ fun ImportScreen(
     viewModel: ImportViewModel = viewModel(),
     onClose: () -> Unit
 ) {
-    val state by viewModel.state.collectAsState()
-    val alarmCount by viewModel.alarmCount.collectAsState()
-    val undoAvailable by viewModel.undoAvailable.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val alarmCount by viewModel.alarmCount.collectAsStateWithLifecycle()
+    val undoAvailable by viewModel.undoAvailable.collectAsStateWithLifecycle()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFileSelected(it) }
     }
     BackHandler { viewModel.closeImport(onClose) }
 
-    var showOptions by remember { mutableStateOf(false) }
-    var showManual by remember { mutableStateOf(false) }
-    var showOverwrite by remember { mutableStateOf(false) }
+    var showOptions by rememberSaveable { mutableStateOf(false) }
+    var showManual by rememberSaveable { mutableStateOf(false) }
+    var showOverwrite by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(state is ImportUiState.Preview) {
         if (state is ImportUiState.Preview) viewModel.refreshAlarmCount()
@@ -459,10 +460,15 @@ private fun OptionsDialog(
     onApply: (lead: Int, fallback: LocalTime, overwrite: Boolean, sections: Map<Int, LocalTime>) -> Unit
 ) {
     val context = LocalContext.current
-    var lead by remember { mutableStateOf(options.leadMinutes) }
-    var fallback by remember { mutableStateOf(options.fallbackTime) }
-    var overwrite by remember { mutableStateOf(options.overwrite) }
-    var sections by remember { mutableStateOf(options.sectionTimes) }
+    var lead by rememberSaveable { mutableStateOf(options.leadMinutes) }
+    var fallbackHour by rememberSaveable { mutableStateOf(options.fallbackTime.hour) }
+    var fallbackMinute by rememberSaveable { mutableStateOf(options.fallbackTime.minute) }
+    val fallback = LocalTime.of(fallbackHour, fallbackMinute)
+    var overwrite by rememberSaveable { mutableStateOf(options.overwrite) }
+    var sectionsEncoded by rememberSaveable {
+        mutableStateOf(SectionTimeTable.encode(options.sectionTimes))
+    }
+    val sections = remember(sectionsEncoded) { SectionTimeTable.decode(sectionsEncoded) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -486,7 +492,10 @@ private fun OptionsDialog(
                     onClick = {
                         TimePickerDialog(
                             timePickerContext(context),
-                            { _, h, m -> fallback = LocalTime.of(h, m) },
+                            { _, h, m ->
+                                fallbackHour = h
+                                fallbackMinute = m
+                            },
                             fallback.hour,
                             fallback.minute,
                             DisplayPrefs.is24Hour(context)
@@ -512,7 +521,11 @@ private fun OptionsDialog(
                             onClick = {
                                 TimePickerDialog(
                                     timePickerContext(context),
-                                    { _, h, m -> sections = sections + (section to LocalTime.of(h, m)) },
+                                    { _, h, m ->
+                                        sectionsEncoded = SectionTimeTable.encode(
+                                            sections + (section to LocalTime.of(h, m))
+                                        )
+                                    },
                                     time.hour,
                                     time.minute,
                                     DisplayPrefs.is24Hour(context)
@@ -541,13 +554,14 @@ private fun ManualMappingDialog(
     onDismiss: () -> Unit,
     onApply: (DetectedLayout) -> Unit
 ) {
-    var dated by remember { mutableStateOf(false) }
-    var headerRow by remember { mutableStateOf(0) }
-    var dateColumn by remember { mutableStateOf(1) }
-    var timeColumn by remember { mutableStateOf<Int?>(2) }
-    var weekColumns by remember {
-        mutableStateOf(mapOf(1 to 1, 2 to 2, 3 to 3, 4 to 4, 5 to 5, 6 to 6, 7 to 7))
+    var dated by rememberSaveable { mutableStateOf(false) }
+    var headerRow by rememberSaveable { mutableStateOf(0) }
+    var dateColumn by rememberSaveable { mutableStateOf(1) }
+    var timeColumn by rememberSaveable { mutableStateOf<Int?>(2) }
+    var weekColumnsEncoded by rememberSaveable {
+        mutableStateOf(encodeWeekColumns(DEFAULT_WEEK_COLUMNS))
     }
+    val weekColumns = remember(weekColumnsEncoded) { decodeWeekColumns(weekColumnsEncoded) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -583,7 +597,9 @@ private fun ManualMappingDialog(
                         ColumnPicker(
                             label = weekdayName(weekday),
                             selected = weekColumns[weekday] ?: (weekday - 1),
-                            onSelect = { weekColumns = weekColumns + (weekday to it) }
+                            onSelect = {
+                                weekColumnsEncoded = encodeWeekColumns(weekColumns + (weekday to it))
+                            }
                         )
                     }
                     ColumnPicker(
@@ -630,7 +646,7 @@ private fun ColumnPicker(
     allowNone: Boolean = false,
     onSelect: (Int) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, modifier = Modifier.weight(1f))
         OutlinedButton(onClick = { expanded = true }) {
@@ -676,3 +692,15 @@ private fun columnName(index: Int): String = ('A' + index.coerceIn(0, 25)).toStr
 
 private fun weekdayName(weekday: Int): String =
     listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")[weekday - 1]
+
+private val DEFAULT_WEEK_COLUMNS = mapOf(1 to 1, 2 to 2, 3 to 3, 4 to 4, 5 to 5, 6 to 6, 7 to 7)
+
+private fun encodeWeekColumns(columns: Map<Int, Int>): String =
+    columns.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" }
+
+private fun decodeWeekColumns(raw: String): Map<Int, Int> =
+    raw.split(';').mapNotNull { part ->
+        val weekday = part.substringBefore('=', "").toIntOrNull()
+        val column = part.substringAfter('=', "").toIntOrNull()
+        if (weekday != null && column != null) weekday to column else null
+    }.toMap().ifEmpty { DEFAULT_WEEK_COLUMNS }
