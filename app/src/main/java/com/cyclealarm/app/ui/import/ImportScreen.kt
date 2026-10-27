@@ -53,6 +53,7 @@ import com.cyclealarm.app.importer.ImportWarning
 import com.cyclealarm.app.importer.ImportedEntry
 import com.cyclealarm.app.importer.ScheduleKind
 import com.cyclealarm.app.importer.SectionTimeTable
+import com.cyclealarm.app.data.ImportWeeklyPolicy
 import com.cyclealarm.app.ui.import.components.PreviewTable
 import com.cyclealarm.app.viewmodel.ImportUiState
 import com.cyclealarm.app.viewmodel.ImportViewModel
@@ -132,7 +133,8 @@ fun ImportScreen(
                     onManual = { showManual = true },
                     onConfirm = {
                         if (current.options.overwrite) showOverwrite = true else viewModel.write()
-                    }
+                    },
+                    onCancelWeekly = viewModel::reset
                 )
 
                 is ImportUiState.Done -> DoneContent(
@@ -270,9 +272,12 @@ private fun PreviewContent(
     onDelete: (Int) -> Unit,
     onOptions: () -> Unit,
     onManual: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onCancelWeekly: () -> Unit
 ) {
     val needsConfirm = state.warnings.size
+    val selectedEntries = state.entries.filterIndexed { index, _ -> index in state.selected }
+    val requiresWeeklySwitch = ImportWeeklyPolicy.requiresWeeklySwitch(selectedEntries)
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
             "识别到 ${state.entries.size} 条，${state.selected.size} 条已选中" +
@@ -284,6 +289,23 @@ private fun PreviewContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
+        if (requiresWeeklySwitch) {
+            Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "该文件按周组织，导入将把循环方式改为每周（周一至周日）",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = onCancelWeekly) { Text("取消") }
+                        TextButton(onClick = onConfirm) { Text("仍然导入") }
+                    }
+                }
+            }
+        }
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -335,7 +357,13 @@ private fun PreviewContent(
                 enabled = state.selected.isNotEmpty(),
                 modifier = Modifier.weight(1f)
             ) {
-                Text("确认导入（${state.selected.size}）")
+                Text(
+                    if (requiresWeeklySwitch) {
+                        "仍然导入并切换每周（${state.selected.size}）"
+                    } else {
+                        "确认导入（${state.selected.size}）"
+                    }
+                )
             }
         }
     }
@@ -386,6 +414,13 @@ private fun DoneContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
+        if (state.switchedToWeekly) {
+            Text(
+                "循环方式已切换为每周（周一至周日）",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         if (undoAvailable) {
             OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
                 Text("撤销本次导入（24 小时内）")

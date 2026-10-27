@@ -44,7 +44,11 @@ sealed interface ImportUiState {
     ) : ImportUiState
 
     data object Writing : ImportUiState
-    data class Done(val cycleCount: Int, val dateCount: Int) : ImportUiState
+    data class Done(
+        val cycleCount: Int,
+        val dateCount: Int,
+        val switchedToWeekly: Boolean
+    ) : ImportUiState
     data class Error(val message: String) : ImportUiState
 }
 
@@ -259,7 +263,11 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     writer.write(entries, preview.options.overwrite)
                 }
                 _undoAvailable.value = true
-                _state.value = ImportUiState.Done(result.cycleCount, result.dateCount)
+                _state.value = ImportUiState.Done(
+                    result.cycleCount,
+                    result.dateCount,
+                    result.switchedToWeekly
+                )
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "写入闹钟失败")
             }
