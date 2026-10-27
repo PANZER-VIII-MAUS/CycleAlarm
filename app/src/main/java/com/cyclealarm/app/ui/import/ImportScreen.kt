@@ -56,7 +56,6 @@ import com.cyclealarm.app.importer.SectionTimeTable
 import com.cyclealarm.app.ui.import.components.PreviewTable
 import com.cyclealarm.app.viewmodel.ImportUiState
 import com.cyclealarm.app.viewmodel.ImportViewModel
-import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.util.Locale
 
@@ -76,6 +75,7 @@ fun ImportScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val alarmCount by viewModel.alarmCount.collectAsState()
+    val undoAvailable by viewModel.undoAvailable.collectAsState()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFileSelected(it) }
     }
@@ -93,7 +93,7 @@ fun ImportScreen(
             TopAppBar(
                 title = { Text("从课表导入") },
                 navigationIcon = {
-                    IconButton(onClick = onClose) {
+                    IconButton(onClick = { viewModel.closeImport(onClose) }) {
                         Icon(Icons.Default.Close, contentDescription = "关闭")
                     }
                 },
@@ -108,7 +108,9 @@ fun ImportScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val current = state) {
                 ImportUiState.Idle -> IdleContent(
-                    onPick = { launcher.launch(MIME_TYPES) }
+                    onPick = { launcher.launch(MIME_TYPES) },
+                    undoAvailable = undoAvailable,
+                    onUndo = viewModel::undo
                 )
 
                 ImportUiState.Reading -> LoadingContent("正在读取文件…")
@@ -135,14 +137,15 @@ fun ImportScreen(
 
                 is ImportUiState.Done -> DoneContent(
                     state = current,
+                    undoAvailable = undoAvailable,
                     onUndo = viewModel::undo,
-                    onClose = onClose
+                    onClose = { viewModel.closeImport(onClose) }
                 )
 
                 is ImportUiState.Error -> ErrorContent(
                     message = current.message,
                     onRetry = viewModel::reset,
-                    onClose = onClose
+                    onClose = { viewModel.closeImport(onClose) }
                 )
             }
         }
@@ -194,7 +197,11 @@ fun ImportScreen(
 // ---------------------------------------------------------------------
 
 @Composable
-private fun IdleContent(onPick: () -> Unit) {
+private fun IdleContent(
+    onPick: () -> Unit,
+    undoAvailable: Boolean,
+    onUndo: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -210,6 +217,11 @@ private fun IdleContent(onPick: () -> Unit) {
         }
         OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
             Text("图片识别暂不支持")
+        }
+        if (undoAvailable) {
+            OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
+                Text("撤销上次导入（24 小时内）")
+            }
         }
         Text(
             "先用 Excel / CSV 导入，或用底部「添加闹钟」手动加",
@@ -359,14 +371,10 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
 @Composable
 private fun DoneContent(
     state: ImportUiState.Done,
+    undoAvailable: Boolean,
     onUndo: () -> Unit,
     onClose: () -> Unit
 ) {
-    var canUndo by remember(state) { mutableStateOf(true) }
-    LaunchedEffect(state) {
-        delay(30_000)
-        canUndo = false
-    }
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -378,9 +386,9 @@ private fun DoneContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
-        if (canUndo) {
+        if (undoAvailable) {
             OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
-                Text("撤销（30 秒内）")
+                Text("撤销本次导入（24 小时内）")
             }
         }
         Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) {

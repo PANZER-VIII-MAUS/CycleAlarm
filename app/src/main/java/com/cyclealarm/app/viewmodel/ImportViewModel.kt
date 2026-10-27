@@ -2,6 +2,7 @@ package com.cyclealarm.app.viewmodel
 
 import android.app.Application
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.ImportPrefs
@@ -59,11 +60,16 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         leadMinutes = ImportPrefs.leadMinutes(app),
         sectionTimes = ImportPrefs.sectionTimes(app)
     )
-    private var lastWrite: AlarmImportWriter.WriteResult? = null
     private var lastPreview: ImportUiState.Preview? = null
     private var manualLayout: DetectedLayout? = null
     private val _alarmCount = MutableStateFlow(0)
     val alarmCount: StateFlow<Int> = _alarmCount
+    private val _undoAvailable = MutableStateFlow(false)
+    val undoAvailable: StateFlow<Boolean> = _undoAvailable
+
+    init {
+        refreshUndoAvailability()
+    }
 
     fun refreshAlarmCount() {
         viewModelScope.launch {
@@ -252,7 +258,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 val result = withContext(Dispatchers.IO) {
                     writer.write(entries, preview.options.overwrite)
                 }
-                lastWrite = result
+                _undoAvailable.value = true
                 _state.value = ImportUiState.Done(result.cycleCount, result.dateCount)
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "写入闹钟失败")
@@ -261,15 +267,43 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun undo() {
-        val result = lastWrite ?: return
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) { writer.undo(result) }
-                lastWrite = null
-                _state.value = lastPreview ?: ImportUiState.Idle
+                val undone = withContext(Dispatchers.IO) { writer.undo() }
+                _undoAvailable.value = false
+                _state.value = if (undone) {
+                    lastPreview ?: ImportUiState.Idle
+                } else {
+                    ImportUiState.Error("没有可撤销的导入")
+                }
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "撤销失败")
             }
         }
+    }
+
+    fun closeImport(onFinished: () -> Unit) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { writer.clearSnapshot() }
+            }.onFailure {
+                Log.e(TAG, "clear import snapshot failed", it)
+            }
+            _undoAvailable.value = false
+            onFinished()
+        }
+    }
+
+    private fun refreshUndoAvailability() {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { writer.hasUndoSnapshot() }
+            }.onSuccess { _undoAvailable.value = it }
+                .onFailure { Log.e(TAG, "check import snapshot failed", it) }
+        }
+    }
+
+    private companion object {
+        const val TAG = "ImportViewModel"
     }
 }

@@ -1,6 +1,9 @@
 package com.cyclealarm.app.data
 
 import android.content.Context
+import android.util.Log
+import androidx.room.withTransaction
+import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.importer.ImportedEntry
@@ -9,7 +12,7 @@ import java.time.LocalDate
 
 /**
  * 导入结果 → 数据库的唯一写入入口。
- * 负责：写入前快照（供撤销）、WEEKLY 切换、去重、写库、重排。
+ * 数据库变更与导入快照位于同一事务；AlarmManager 操作只在事务提交后执行。
  */
 class AlarmImportWriter(private val context: Context) {
 
@@ -22,85 +25,122 @@ class AlarmImportWriter(private val context: Context) {
     data class WriteResult(
         val cycleCount: Int,
         val dateCount: Int,
-        val snapshot: Snapshot,
         val switchedToWeekly: Boolean
+    )
+
+    private data class TransactionWrite(
+        val result: WriteResult,
+        val alarmsToCancel: List<AlarmEntity>,
+        val dateAlarmsToCancel: List<DateAlarmEntity>
+    )
+
+    private data class TransactionUndo(
+        val alarmsToCancel: List<AlarmEntity>,
+        val dateAlarmsToCancel: List<DateAlarmEntity>
     )
 
     suspend fun write(entries: List<ImportedEntry>, overwrite: Boolean): WriteResult {
         val db = AppDatabase.get(context)
-        val snapshot = Snapshot(
-            alarms = db.alarmDao().getAll(),
-            dateAlarms = db.dateAlarmDao().getAll(),
-            settings = db.settingsDao().get()
-        )
+        val now = System.currentTimeMillis()
+        val transaction = db.withTransaction {
+            val snapshot = Snapshot(
+                alarms = db.alarmDao().getAll(),
+                dateAlarms = db.dateAlarmDao().getAll(),
+                settings = db.settingsDao().get()
+            )
+            db.importSnapshotDao().deleteExpired(now)
+            db.importSnapshotDao().upsert(
+                ImportSnapshotEntity(
+                    payload = ImportSnapshotCodec.encode(snapshot),
+                    createdAt = now,
+                    expiresAt = now + SNAPSHOT_LIFETIME_MS
+                )
+            )
 
-        if (overwrite) {
-            snapshot.alarms.forEach { AlarmScheduler.cancelAlarm(context, it) }
-            snapshot.dateAlarms.forEach { AlarmScheduler.cancelDateAlarm(context, it) }
-            snapshot.alarms.forEach { db.alarmDao().deleteById(it.id) }
-            db.dateAlarmDao().deleteAll()
-        }
+            val alarmsToCancel = mutableListOf<AlarmEntity>()
+            val dateAlarmsToCancel = mutableListOf<DateAlarmEntity>()
+            if (overwrite) {
+                alarmsToCancel += snapshot.alarms
+                dateAlarmsToCancel += snapshot.dateAlarms
+                db.alarmDao().deleteAll()
+                db.dateAlarmDao().deleteAll()
+            }
 
-        val weeklyEntries = entries.filter { it.kind == ScheduleKind.WEEKLY }
-        val datedEntries = entries.filter { it.kind == ScheduleKind.DATED }
-        val switched = if (weeklyEntries.isNotEmpty()) ensureWeekly(db) else false
+            val weeklyEntries = entries.filter { it.kind == ScheduleKind.WEEKLY }
+            val datedEntries = entries.filter { it.kind == ScheduleKind.DATED }
+            val weeklySwitch = if (weeklyEntries.isNotEmpty()) ensureWeekly(db) else false to emptyList()
+            alarmsToCancel += weeklySwitch.second
 
-        // 已存在的 (dayIndex/hour/minute)、(epochDay/hour/minute)，用于去重
-        val existingCycle = db.alarmDao().getAll()
-            .map { Triple(it.dayIndex, it.hour, it.minute) }
-            .toMutableSet()
-        val existingDated = db.dateAlarmDao().getAll()
-            .map { Triple(it.epochDay, it.hour, it.minute) }
-            .toMutableSet()
+            val existingCycle = ImportWritePolicy.existingCycleKeys(
+                snapshot.alarms,
+                overwrite
+            ).toMutableSet()
+            val existingDated = ImportWritePolicy.existingDateKeys(
+                snapshot.dateAlarms,
+                overwrite
+            ).toMutableSet()
 
-        val newCycle = weeklyEntries.mapNotNull { entry ->
-            val weekday = entry.weekday ?: return@mapNotNull null
-            val key = Triple(weekday - 1, entry.hour, entry.minute)
-            if (!existingCycle.add(key)) return@mapNotNull null
-            AlarmEntity(
-                dayIndex = weekday - 1,
-                hour = entry.hour,
-                minute = entry.minute,
-                enabled = true,
-                mutedDuringHoliday = true,
-                label = entry.title
+            val newCycle = weeklyEntries.mapNotNull { entry ->
+                val weekday = entry.weekday ?: return@mapNotNull null
+                val key = Triple(weekday - 1, entry.hour, entry.minute)
+                if (!existingCycle.add(key)) return@mapNotNull null
+                AlarmEntity(
+                    dayIndex = weekday - 1,
+                    hour = entry.hour,
+                    minute = entry.minute,
+                    enabled = true,
+                    mutedDuringHoliday = true,
+                    label = entry.title
+                )
+            }
+            newCycle.forEach { db.alarmDao().upsert(it) }
+
+            val newDated = datedEntries.mapNotNull { entry ->
+                val epochDay = entry.epochDay ?: return@mapNotNull null
+                val key = Triple(epochDay, entry.hour, entry.minute)
+                if (!existingDated.add(key)) return@mapNotNull null
+                DateAlarmEntity(
+                    epochDay = epochDay,
+                    hour = entry.hour,
+                    minute = entry.minute,
+                    enabled = true,
+                    mutedDuringHoliday = true,
+                    label = entry.title
+                )
+            }
+            db.dateAlarmDao().upsertAll(newDated)
+
+            // 覆盖导入可能删掉安排生成的闹钟；数据库同步仍在本事务内完成。
+            alarmsToCancel += DayPlanAlarmSync.syncFromDatabaseOnly(db)
+
+            TransactionWrite(
+                result = WriteResult(
+                    cycleCount = newCycle.size,
+                    dateCount = newDated.size,
+                    switchedToWeekly = weeklySwitch.first
+                ),
+                alarmsToCancel = alarmsToCancel.distinctBy { it.id },
+                dateAlarmsToCancel = dateAlarmsToCancel.distinctBy { it.id }
             )
         }
-        newCycle.forEach { db.alarmDao().upsert(it) }
 
-        val newDated = datedEntries.mapNotNull { entry ->
-            val epochDay = entry.epochDay ?: return@mapNotNull null
-            val key = Triple(epochDay, entry.hour, entry.minute)
-            if (!existingDated.add(key)) return@mapNotNull null
-            DateAlarmEntity(
-                epochDay = epochDay,
-                hour = entry.hour,
-                minute = entry.minute,
-                enabled = true,
-                mutedDuringHoliday = true,
-                label = entry.title
-            )
-        }
-        db.dateAlarmDao().upsertAll(newDated)
-
-        // 覆盖导入会删掉「安排生成」的闹钟，这里重跑一次安排同步把它们补回来（幂等）
-        DayPlanAlarmSync.syncFromDatabase(context)
-        return WriteResult(newCycle.size, newDated.size, snapshot, switched)
+        cancelSchedules(transaction.alarmsToCancel, transaction.dateAlarmsToCancel)
+        runCatching { AlarmResyncHelper.resyncAll(context) }
+            .onFailure { Log.e(TAG, "resync after import failed", it) }
+        return transaction.result
     }
 
-    /** 切到「每周」循环：第 1 天 = 本周一，长度固定 7；顺带清理第 8 天及以后的闹钟。 */
-    private suspend fun ensureWeekly(db: AppDatabase): Boolean {
-        val settings = db.settingsDao().get() ?: return false
+    /** 切到「每周」循环；只改数据库，排期由调用方在事务提交后处理。 */
+    private suspend fun ensureWeekly(db: AppDatabase): Pair<Boolean, List<AlarmEntity>> {
+        val settings = db.settingsDao().get() ?: return false to emptyList()
         val today = LocalDate.now()
         val monday = today.toEpochDay() - (today.dayOfWeek.value - 1)
         val alreadyWeekly = settings.cycleType == CycleTypes.WEEKLY &&
             settings.cycleLength == 7 &&
             settings.cycleStartEpochDay == monday
-        if (alreadyWeekly) return false
+        if (alreadyWeekly) return false to emptyList()
 
-        db.alarmDao().getAll()
-            .filter { it.dayIndex >= 7 }
-            .forEach { AlarmScheduler.cancelAlarm(context, it) }
+        val alarmsToCancel = db.alarmDao().getAll().filter { it.dayIndex >= 7 }
         db.alarmDao().deleteFromIndex(7)
         db.settingsDao().upsert(
             settings.copy(
@@ -109,24 +149,71 @@ class AlarmImportWriter(private val context: Context) {
                 cycleStartEpochDay = monday
             )
         )
+        return true to alarmsToCancel
+    }
+
+    /** 撤销：在同一事务内读取快照、替换数据并清空快照。 */
+    suspend fun undo(): Boolean {
+        val db = AppDatabase.get(context)
+        val now = System.currentTimeMillis()
+        val transaction = db.withTransaction {
+            val stored = db.importSnapshotDao().get()
+            if (stored == null || stored.expiresAt <= now) {
+                db.importSnapshotDao().deleteAll()
+                return@withTransaction null
+            }
+
+            val snapshot = ImportSnapshotCodec.decode(stored.payload)
+            val currentAlarms = db.alarmDao().getAll()
+            val currentDated = db.dateAlarmDao().getAll()
+            db.alarmDao().deleteAll()
+            db.dateAlarmDao().deleteAll()
+            snapshot.alarms.forEach { db.alarmDao().upsert(it) }
+            db.dateAlarmDao().upsertAll(snapshot.dateAlarms)
+            snapshot.settings?.let { db.settingsDao().upsert(it) }
+
+            val planAlarmsToCancel = DayPlanAlarmSync.syncFromDatabaseOnly(db)
+            db.importSnapshotDao().deleteAll()
+            TransactionUndo(
+                alarmsToCancel = (currentAlarms + planAlarmsToCancel).distinctBy { it.id },
+                dateAlarmsToCancel = currentDated.distinctBy { it.id }
+            )
+        } ?: return false
+
+        cancelSchedules(transaction.alarmsToCancel, transaction.dateAlarmsToCancel)
+        runCatching { AlarmResyncHelper.resyncAll(context) }
+            .onFailure { Log.e(TAG, "resync after undo failed", it) }
         return true
     }
 
-    /** 撤销：清空当前数据 → 恢复快照（保留原 id）→ 重排。 */
-    suspend fun undo(result: WriteResult) {
+    suspend fun hasUndoSnapshot(now: Long = System.currentTimeMillis()): Boolean {
         val db = AppDatabase.get(context)
-        val currentAlarms = db.alarmDao().getAll()
-        val currentDated = db.dateAlarmDao().getAll()
-        currentAlarms.forEach { AlarmScheduler.cancelAlarm(context, it) }
-        currentDated.forEach { AlarmScheduler.cancelDateAlarm(context, it) }
-        currentAlarms.forEach { db.alarmDao().deleteById(it.id) }
-        db.dateAlarmDao().deleteAll()
+        return db.withTransaction {
+            db.importSnapshotDao().deleteExpired(now)
+            db.importSnapshotDao().get() != null
+        }
+    }
 
-        result.snapshot.alarms.forEach { db.alarmDao().upsert(it) }
-        db.dateAlarmDao().upsertAll(result.snapshot.dateAlarms)
-        result.snapshot.settings?.let { db.settingsDao().upsert(it) }
+    suspend fun clearSnapshot() {
+        AppDatabase.get(context).importSnapshotDao().deleteAll()
+    }
 
-        // 撤销后同样重跑安排同步，保证安排与闹钟一致
-        DayPlanAlarmSync.syncFromDatabase(context)
+    private fun cancelSchedules(
+        alarms: List<AlarmEntity>,
+        dateAlarms: List<DateAlarmEntity>
+    ) {
+        alarms.forEach { alarm ->
+            runCatching { AlarmScheduler.cancelAlarm(context, alarm) }
+                .onFailure { Log.e(TAG, "cancel imported alarm failed id=${alarm.id}", it) }
+        }
+        dateAlarms.forEach { alarm ->
+            runCatching { AlarmScheduler.cancelDateAlarm(context, alarm) }
+                .onFailure { Log.e(TAG, "cancel imported date alarm failed id=${alarm.id}", it) }
+        }
+    }
+
+    private companion object {
+        const val TAG = "AlarmImportWriter"
+        const val SNAPSHOT_LIFETIME_MS = 24 * 60 * 60 * 1000L
     }
 }

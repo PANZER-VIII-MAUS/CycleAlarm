@@ -3,6 +3,7 @@ package com.cyclealarm.app.core
 import android.content.Context
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppDatabase
+import androidx.room.withTransaction
 
 /**
  * 把 [DayPlanSync.diff] 算出的操作落到数据库与 AlarmManager 上。
@@ -12,12 +13,24 @@ object DayPlanAlarmSync {
 
     suspend fun apply(context: Context, ops: List<AlarmOp>) {
         val db = AppDatabase.get(context)
+        val alarmsToCancel = db.withTransaction {
+            applyDatabaseOnly(db, ops)
+        }
+        alarmsToCancel.forEach { AlarmScheduler.cancelAlarm(context, it) }
+        AlarmResyncHelper.resyncAll(context)
+    }
 
+    /** 只做数据库变更；返回需要在事务提交后取消排期的旧闹钟。 */
+    suspend fun applyDatabaseOnly(
+        db: AppDatabase,
+        ops: List<AlarmOp>
+    ): List<AlarmEntity> {
+        val alarmsToCancel = mutableListOf<AlarmEntity>()
         ops.forEach { op ->
             when (op) {
                 is AlarmOp.Delete -> {
                     db.alarmDao().getById(op.alarmId)?.let { alarm ->
-                        AlarmScheduler.cancelAlarm(context, alarm)
+                        alarmsToCancel += alarm
                         db.alarmDao().deleteById(op.alarmId)
                     }
                 }
@@ -39,7 +52,7 @@ object DayPlanAlarmSync {
 
                 is AlarmOp.Update -> {
                     val existing = db.alarmDao().getById(op.alarmId) ?: return@forEach
-                    AlarmScheduler.cancelAlarm(context, existing)
+                    alarmsToCancel += existing
                     db.alarmDao().upsert(
                         existing.copy(
                             dayIndex = op.dayIndex,
@@ -54,18 +67,25 @@ object DayPlanAlarmSync {
                 }
             }
         }
-
-        AlarmResyncHelper.resyncAll(context)
+        return alarmsToCancel.distinctBy { it.id }
     }
 
     /** 读取当前库内状态并跑一次 diff + apply（供各触发点复用）。 */
     suspend fun syncFromDatabase(context: Context) {
         val db = AppDatabase.get(context)
-        val ops = DayPlanSync.diff(
+        apply(context, databaseSyncOps(db))
+    }
+
+    /** 在一个既有事务内同步数据库，不触发 AlarmManager。 */
+    suspend fun syncFromDatabaseOnly(db: AppDatabase): List<AlarmEntity> {
+        val ops = databaseSyncOps(db)
+        return applyDatabaseOnly(db, ops)
+    }
+
+    private suspend fun databaseSyncOps(db: AppDatabase): List<AlarmOp> =
+        DayPlanSync.diff(
             plans = db.dayPlanDao().getAll().map { DayPlanSync.toPlanRow(it) },
             types = db.activityTypeDao().getAll().map { DayPlanSync.toPlanType(it) },
             alarms = db.alarmDao().getAll()
         )
-        apply(context, ops)
-    }
 }
