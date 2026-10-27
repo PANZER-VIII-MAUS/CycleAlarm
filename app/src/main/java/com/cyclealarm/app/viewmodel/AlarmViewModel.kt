@@ -21,6 +21,8 @@ import com.cyclealarm.app.data.HolidayEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -33,24 +35,30 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     val databaseError: StateFlow<String?> = _databaseError
 
     val alarms: StateFlow<List<AlarmEntity>> = db.alarmDao().observeAll()
+        .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** 安排类型（上课 / 自习 / 休息 …）。 */
     val activityTypes: StateFlow<List<ActivityTypeEntity>> = db.activityTypeDao().observeAll()
+        .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** 每个周期日的安排。 */
     val dayPlans: StateFlow<List<DayPlanEntity>> = db.dayPlanDao().observeAll()
+        .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** 按日期的一次性闹钟（课表/排班表按日期导入）。 */
     val dateAlarms: StateFlow<List<DateAlarmEntity>> = db.dateAlarmDao().observeAll()
+        .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val holidays: StateFlow<List<HolidayEntity>> = db.holidayDao().observeAll()
+        .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val settings: StateFlow<AppSettingsEntity?> = db.settingsDao().observe()
+        .guardDatabase<AppSettingsEntity?>(null)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val cycleLength: StateFlow<Int> = settings.map { it?.cycleLength ?: 6 }
@@ -62,21 +70,31 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                 ensureSeeded()
                 ensurePlansSeeded()
             }.onFailure { throwable ->
-                Log.e(TAG, "database initialization failed", throwable)
-                _databaseError.value = if (
-                    throwable is IllegalStateException &&
-                    throwable.message?.contains("migration", ignoreCase = true) == true
-                ) {
-                    "数据库版本过旧，请卸载重装"
-                } else {
-                    "数据库初始化失败，请重启应用"
-                }
+                handleDatabaseFailure(throwable)
             }
         }
     }
 
     fun clearDatabaseError() {
         _databaseError.value = null
+    }
+
+    private fun <T> Flow<T>.guardDatabase(fallback: T): Flow<T> =
+        catch { throwable ->
+            handleDatabaseFailure(throwable)
+            emit(fallback)
+        }
+
+    private fun handleDatabaseFailure(throwable: Throwable) {
+        Log.e(TAG, "database access failed", throwable)
+        _databaseError.value = if (
+            throwable is IllegalStateException &&
+            throwable.message?.contains("migration", ignoreCase = true) == true
+        ) {
+            "数据库版本过旧，请卸载重装"
+        } else {
+            "数据库初始化失败，请重启应用"
+        }
     }
 
     /** 首次启动只建 settings（闹钟改由「循环安排」生成）。 */

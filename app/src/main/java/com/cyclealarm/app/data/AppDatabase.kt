@@ -93,38 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
         /** v6 → v7：只新增 snoozes、import_snapshots 与必要索引。 */
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `snoozes` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "`kind` TEXT NOT NULL, " +
-                        "`alarmId` INTEGER NOT NULL, " +
-                        "`dayIndex` INTEGER NOT NULL, " +
-                        "`hour` INTEGER NOT NULL, " +
-                        "`minute` INTEGER NOT NULL, " +
-                        "`label` TEXT NOT NULL, " +
-                        "`triggerAt` INTEGER NOT NULL, " +
-                        "`requestCode` INTEGER NOT NULL)"
-                )
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `import_snapshots` (" +
-                        "`id` INTEGER NOT NULL, " +
-                        "`payload` TEXT NOT NULL, " +
-                        "`createdAt` INTEGER NOT NULL, " +
-                        "`expiresAt` INTEGER NOT NULL, " +
-                        "PRIMARY KEY(`id`))"
-                )
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_snoozes_triggerAt` " +
-                        "ON `snoozes` (`triggerAt`)"
-                )
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_snoozes_alarmId` " +
-                        "ON `snoozes` (`alarmId`)"
-                )
-                db.execSQL(
-                    "CREATE INDEX IF NOT EXISTS `index_alarms_dayIndex_hour_minute` " +
-                        "ON `alarms` (`dayIndex`, `hour`, `minute`)"
-                )
+                Migration6To7Sql.statements.forEach(db::execSQL)
             }
         }
 
