@@ -4,6 +4,8 @@
 
 > 仓库地址：<https://github.com/PANZER-VIII-MAUS/CycleAlarm>
 
+[![Android CI](https://github.com/PANZER-VIII-MAUS/CycleAlarm/actions/workflows/android.yml/badge.svg)](https://github.com/PANZER-VIII-MAUS/CycleAlarm/actions/workflows/android.yml)
+
 - 支持三种循环方式：每天（1 天）、每周（周一至周日）、自定义 N 天；周期内每天独立设置时间 / 启用状态 / 备注
 - 每天可以挂一个「安排」（上课 / 自习 / 休息，类型可自定义增删改），按安排自动生成或撤销当天闹钟
 - 支持「从课表 / 排班表导入」：Excel(.xlsx) 与 CSV，导入前有可编辑预览
