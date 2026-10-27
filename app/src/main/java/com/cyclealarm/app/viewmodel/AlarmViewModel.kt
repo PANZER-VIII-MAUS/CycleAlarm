@@ -1,0 +1,413 @@
+package com.cyclealarm.app.viewmodel
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.cyclealarm.app.core.AlarmScheduler
+import com.cyclealarm.app.core.DayPlanAlarmSync
+import com.cyclealarm.app.core.DayPlanSync
+import com.cyclealarm.app.data.ActivityTypeEntity
+import com.cyclealarm.app.data.AlarmEntity
+import com.cyclealarm.app.data.AppDatabase
+import com.cyclealarm.app.data.AppSettingsEntity
+import com.cyclealarm.app.data.ChinaHolidaysProvider
+import com.cyclealarm.app.data.CycleTypes
+import com.cyclealarm.app.data.DateAlarmEntity
+import com.cyclealarm.app.data.DayPlanEntity
+import com.cyclealarm.app.data.HolidayEntity
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+
+class AlarmViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val db = AppDatabase.get(app)
+
+    val alarms: StateFlow<List<AlarmEntity>> = db.alarmDao().observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** 安排类型（上课 / 自习 / 休息 …）。 */
+    val activityTypes: StateFlow<List<ActivityTypeEntity>> = db.activityTypeDao().observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** 每个周期日的安排。 */
+    val dayPlans: StateFlow<List<DayPlanEntity>> = db.dayPlanDao().observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** 按日期的一次性闹钟（课表/排班表按日期导入）。 */
+    val dateAlarms: StateFlow<List<DateAlarmEntity>> = db.dateAlarmDao().observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val holidays: StateFlow<List<HolidayEntity>> = db.holidayDao().observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val settings: StateFlow<AppSettingsEntity?> = db.settingsDao().observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val cycleLength: StateFlow<Int> = settings.map { it?.cycleLength ?: 6 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 6)
+
+    init {
+        viewModelScope.launch {
+            ensureSeeded()
+            ensurePlansSeeded()
+        }
+    }
+
+    /** 首次启动只建 settings（闹钟改由「循环安排」生成）。 */
+    private suspend fun ensureSeeded() {
+        if (db.settingsDao().get() != null) return
+        val today = LocalDate.now().toEpochDay()
+        db.settingsDao().upsert(
+            AppSettingsEntity(id = 1, cycleLength = 6, cycleStartEpochDay = today)
+        )
+        // 首次启动自动导入还没过去的法定节假日（当前只有 2026 中秋/国庆等）
+        importChinaHolidaysInternal()
+        reschedule()
+    }
+
+    // ---------------------------------------------------------------------
+    // 循环安排：一次性 seed
+    // ---------------------------------------------------------------------
+
+    /**
+     * 安排功能的一次性 seed（幂等）：
+     * 1. 以 settings.plansSeeded 为准，只有 false 才执行「清空旧闹钟 + 建默认计划」；
+     * 2. 先把标记置 true 再动数据，保证中途失败重入时不会二次清空；
+     * 3. day_plans 为空不再作为判据（用户可能把每天改成「未安排」）。
+     */
+    private suspend fun ensurePlansSeeded() {
+        val settings = db.settingsDao().get() ?: return
+        if (settings.plansSeeded) {
+            // 已 seed 过：只在类型表被删空时补回默认类型
+            if (db.activityTypeDao().count() == 0) {
+                insertDefaultTypes()
+                syncPlans()
+            }
+            return
+        }
+
+        // ① 先置标记（重入安全）
+        db.settingsDao().upsert(settings.copy(plansSeeded = true))
+
+        // ② 类型表为空则补默认类型
+        if (db.activityTypeDao().count() == 0) insertDefaultTypes()
+
+        // ③ 清空旧的周期闹钟（按日期闹钟 date_alarms 不动）
+        val oldAlarms = db.alarmDao().getAll()
+        oldAlarms.forEach { AlarmScheduler.cancelAlarm(getApplication(), it) }
+        oldAlarms.forEach { db.alarmDao().deleteById(it.id) }
+
+        // ④ 按当前周期天数建默认计划：第 1..N-1 天上课，第 N 天休息
+        val types = db.activityTypeDao().getAll()
+        val classType = types.firstOrNull { it.name == "上课" } ?: types.firstOrNull { it.rings }
+        val restType = types.firstOrNull { !it.rings }
+        val length = settings.cycleLength.coerceAtLeast(1)
+        if (classType != null) {
+            if (length <= 1) {
+                db.dayPlanDao().upsert(
+                    DayPlanEntity(
+                        dayIndex = 0,
+                        typeId = classType.id,
+                        hour = classType.hour,
+                        minute = classType.minute,
+                        enabled = true
+                    )
+                )
+            } else {
+                for (day in 0 until length - 1) {
+                    db.dayPlanDao().upsert(
+                        DayPlanEntity(
+                            dayIndex = day,
+                            typeId = classType.id,
+                            hour = classType.hour,
+                            minute = classType.minute,
+                            enabled = true
+                        )
+                    )
+                }
+                if (restType != null) {
+                    db.dayPlanDao().upsert(
+                        DayPlanEntity(
+                            dayIndex = length - 1,
+                            typeId = restType.id,
+                            hour = restType.hour,
+                            minute = restType.minute,
+                            enabled = true
+                        )
+                    )
+                }
+            }
+        }
+
+        // ⑤ 同步生成闹钟
+        syncPlans()
+    }
+
+    private suspend fun insertDefaultTypes() {
+        listOf(
+            ActivityTypeEntity(name = "上课", hour = 7, minute = 30, rings = true, sortOrder = 0),
+            ActivityTypeEntity(name = "自习", hour = 8, minute = 30, rings = true, sortOrder = 1),
+            ActivityTypeEntity(name = "休息", hour = 0, minute = 0, rings = false, sortOrder = 2)
+        ).forEach { db.activityTypeDao().upsert(it) }
+    }
+
+    /** 安排 ↔ 闹钟 一致性同步（幂等，可在任何触发点调用）。 */
+    private suspend fun syncPlans() {
+        DayPlanAlarmSync.syncFromDatabase(getApplication())
+    }
+
+    fun setEnabled(alarm: AlarmEntity, enabled: Boolean) = viewModelScope.launch {
+        db.alarmDao().upsert(alarm.copy(enabled = enabled))
+        syncPlans()
+    }
+
+    fun saveAlarm(alarm: AlarmEntity) = viewModelScope.launch {
+        db.alarmDao().upsert(alarm)
+        syncPlans()
+    }
+
+    /** 为某一天添加一条新的闹钟（默认 7:00）。 */
+    fun addAlarmToDay(dayIndex: Int) = viewModelScope.launch {
+        db.alarmDao().upsert(
+            AlarmEntity(dayIndex = dayIndex, hour = 7, minute = 0, enabled = true)
+        )
+        syncPlans()
+    }
+
+    /** 删除单条闹钟：取消排期并删除，不影响周期天数。 */
+    fun deleteAlarm(id: Int) = viewModelScope.launch {
+        val alarm = db.alarmDao().getById(id) ?: return@launch
+        AlarmScheduler.cancelAlarm(getApplication(), alarm)
+        db.alarmDao().deleteById(id)
+        syncPlans()
+    }
+
+    /**
+     * 应用循环设置：
+     * - DAILY：固定 1 天，每天重复；
+     * - WEEKLY：固定 7 天，第 1 天 = 本周一；
+     * - CUSTOM：N 天一轮（1..30），今天对齐到第 alignDay 天。
+     * 缩短天数时会删除末尾天的全部闹钟；周期一旦确定，只能在第 1..N 天里添加闹钟。
+     */
+    fun applyCycleSettings(mode: String, length: Int, alignDay: Int) = viewModelScope.launch {
+        val settings = db.settingsDao().get() ?: return@launch
+        val target = when (mode) {
+            CycleTypes.DAILY -> 1
+            CycleTypes.WEEKLY -> 7
+            else -> length.coerceIn(1, 30)
+        }
+        if (target < settings.cycleLength) {
+            db.alarmDao().getAll()
+                .filter { it.dayIndex >= target }
+                .forEach { AlarmScheduler.cancelAlarm(getApplication(), it) }
+            db.alarmDao().deleteFromIndex(target)
+            // 周期变短：超出新长度的安排一并删除
+            db.dayPlanDao().deleteFromIndex(target)
+        }
+        val today = LocalDate.now()
+        val anchor = when (mode) {
+            CycleTypes.WEEKLY -> today.toEpochDay() - (today.dayOfWeek.value - 1)
+            CycleTypes.DAILY -> today.toEpochDay()
+            else -> today.toEpochDay() - (alignDay - 1)
+        }
+        db.settingsDao().upsert(
+            settings.copy(
+                cycleType = mode,
+                cycleLength = target,
+                cycleStartEpochDay = anchor
+            )
+        )
+        syncPlans()
+    }
+
+    // ---------------------------------------------------------------------
+    // 循环安排：每日安排与安排类型
+    // ---------------------------------------------------------------------
+
+    /** 给某天指定安排（时间取该类型的默认值）。 */
+    fun setDayPlan(dayIndex: Int, typeId: Int) = viewModelScope.launch {
+        val type = db.activityTypeDao().getById(typeId) ?: return@launch
+        db.dayPlanDao().upsert(
+            DayPlanEntity(
+                dayIndex = dayIndex,
+                typeId = type.id,
+                hour = type.hour,
+                minute = type.minute,
+                enabled = true
+            )
+        )
+        syncPlans()
+    }
+
+    /** 该天改为「未安排」。 */
+    fun clearDayPlan(dayIndex: Int) = viewModelScope.launch {
+        db.dayPlanDao().deleteByDay(dayIndex)
+        syncPlans()
+    }
+
+    /** 临时停用/启用某天的安排（保留安排记录，不生成闹钟）。 */
+    fun setPlanEnabled(dayIndex: Int, enabled: Boolean) = viewModelScope.launch {
+        val plan = db.dayPlanDao().getByDay(dayIndex) ?: return@launch
+        db.dayPlanDao().upsert(plan.copy(enabled = enabled))
+        syncPlans()
+    }
+
+    /** 单日调整安排时间（只影响这一天，其他同类型日不变）。 */
+    fun updatePlanTime(dayIndex: Int, hour: Int, minute: Int) = viewModelScope.launch {
+        val plan = db.dayPlanDao().getByDay(dayIndex) ?: return@launch
+        db.dayPlanDao().upsert(plan.copy(hour = hour, minute = minute))
+        syncPlans()
+    }
+
+    /** 新增安排类型。 */
+    fun addActivityType(name: String, hour: Int, minute: Int, rings: Boolean) = viewModelScope.launch {
+        val sortOrder = (db.activityTypeDao().getAll().maxOfOrNull { it.sortOrder } ?: -1) + 1
+        db.activityTypeDao().upsert(
+            ActivityTypeEntity(
+                name = name.trim(),
+                hour = hour,
+                minute = minute,
+                rings = rings,
+                sortOrder = sortOrder
+            )
+        )
+        syncPlans()
+    }
+
+    /**
+     * 更新安排类型。
+     * [applyToExisting] = true 时，把这类型当前使用的所有安排的时间一起改成新默认值；
+     * false 则只改类型默认值，已安排的日子保持原时间。
+     */
+    fun updateActivityType(type: ActivityTypeEntity, applyToExisting: Boolean) = viewModelScope.launch {
+        db.activityTypeDao().upsert(type)
+        if (applyToExisting) {
+            db.dayPlanDao().getAll()
+                .filter { it.typeId == type.id }
+                .forEach { plan ->
+                    db.dayPlanDao().upsert(plan.copy(hour = type.hour, minute = type.minute))
+                }
+        }
+        syncPlans()
+    }
+
+    /** 删除安排类型：引用它的那些天变为「未安排」。 */
+    fun deleteActivityType(id: Int) = viewModelScope.launch {
+        db.dayPlanDao().deleteByType(id)
+        db.activityTypeDao().deleteById(id)
+        syncPlans()
+    }
+
+    /** 类型排序：上移 / 下移。 */
+    fun moveActivityType(id: Int, up: Boolean) = viewModelScope.launch {
+        val list = db.activityTypeDao().getAll()
+        val index = list.indexOfFirst { it.id == id }
+        if (index < 0) return@launch
+        val target = if (up) index - 1 else index + 1
+        if (target !in list.indices) return@launch
+        val reordered = list.toMutableList().apply { add(target, removeAt(index)) }
+        reordered.forEachIndexed { position, type ->
+            db.activityTypeDao().upsert(type.copy(sortOrder = position))
+        }
+    }
+
+    /**
+     * 假期模式总开关：
+     * - 开启：假期段内的“假期静音”闹钟自动静默；
+     * - 关闭：所有假期段不生效，并批量把全部闹钟的“假期静音”置为关（省去逐个关闭）。
+     */
+    fun setHolidayMode(enabled: Boolean) = viewModelScope.launch {
+        val settings = db.settingsDao().get() ?: return@launch
+        db.settingsDao().upsert(settings.copy(holidayModeEnabled = enabled))
+        if (!enabled) {
+            db.alarmDao().setAllMutedDuringHoliday(false)
+        }
+        reschedule()
+    }
+
+    /** 一键导入中国法定节假日：自动跳过已经过去的假期，避免历史年份污染列表。 */
+    fun importChinaHolidays() = viewModelScope.launch {
+        importChinaHolidaysInternal()
+        reschedule()
+    }
+
+    private suspend fun importChinaHolidaysInternal() {
+        val existing = db.holidayDao().getAll().associateBy { it.label }
+        ChinaHolidaysProvider.upcomingOrActive().forEach { official ->
+            val old = existing[official.label]
+            db.holidayDao().upsert(
+                if (old == null) {
+                    official
+                } else {
+                    // 已存在同名假期：只更新日期，保留用户自己的启用状态
+                    old.copy(
+                        startEpochDay = official.startEpochDay,
+                        endEpochDay = official.endEpochDay
+                    )
+                }
+            )
+        }
+    }
+
+    /** 新增（id=0）或编辑一段假期；开始晚于结束时自动交换。 */
+    fun saveHoliday(holiday: HolidayEntity) = viewModelScope.launch {
+        val s = holiday.startEpochDay
+        val e = holiday.endEpochDay
+        val (ss, ee) = if (s <= e) s to e else e to s
+        db.holidayDao().upsert(holiday.copy(startEpochDay = ss, endEpochDay = ee))
+        reschedule()
+    }
+
+    /** 启用/停用某一段假期。 */
+    fun setHolidayEnabled(id: Int, enabled: Boolean) = viewModelScope.launch {
+        val h = db.holidayDao().getById(id) ?: return@launch
+        db.holidayDao().upsert(h.copy(enabled = enabled))
+        reschedule()
+    }
+
+    /** 删除一段假期。 */
+    fun deleteHoliday(id: Int) = viewModelScope.launch {
+        db.holidayDao().deleteById(id)
+        reschedule()
+    }
+
+    /** 批量设置所有闹钟的“假期静音”开关。 */
+    fun setAllAlarmsMutedDuringHoliday(muted: Boolean) = viewModelScope.launch {
+        db.alarmDao().setAllMutedDuringHoliday(muted)
+        reschedule()
+    }
+
+    // ---------------------------------------------------------------------
+    // 按日期闹钟（一次性）
+    // ---------------------------------------------------------------------
+
+    fun setDateAlarmEnabled(alarm: DateAlarmEntity, enabled: Boolean) = viewModelScope.launch {
+        db.dateAlarmDao().upsert(alarm.copy(enabled = enabled))
+        reschedule()
+    }
+
+    fun saveDateAlarm(alarm: DateAlarmEntity) = viewModelScope.launch {
+        db.dateAlarmDao().upsert(alarm)
+        reschedule()
+    }
+
+    fun deleteDateAlarm(id: Int) = viewModelScope.launch {
+        db.dateAlarmDao().getById(id)?.let { AlarmScheduler.cancelDateAlarm(getApplication(), it) }
+        db.dateAlarmDao().deleteById(id)
+        reschedule()
+    }
+
+    private suspend fun reschedule() {
+        AlarmScheduler.rescheduleAll(
+            getApplication(),
+            db.alarmDao().getAll(),
+            db.dateAlarmDao().getAll(),
+            db.settingsDao().get(),
+            db.holidayDao().getAll()
+        )
+    }
+}

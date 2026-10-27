@@ -1,0 +1,25 @@
+*.iml
+.gradle/
+.idea/
+local.properties
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+
+# å¯†é’¥åº“ä¸ç­¾åé…ç½®ï¼šç»ä¸è¦æäº¤åˆ°ç‰ˆæœ¬åº“
+keystore.properties
+*.jks
+*.keystore
+*.p12
+
+# æœ¬åœ°æ„å»ºæ—¥å¿—ã€Kotlin ç¼“å­˜ä¸ç³»ç»Ÿä¸´æ—¶æ–‡ä»¶
+build-logs/
+.kotlin/
+*.log
+**/.DS_Store
+
+# Android Studio¡¸Generate Signed APK¡¹Ä¬ÈÏÊä³öÄ¿Â¼£¨·¢²¼²úÎï×ß Releases£©
+app/release/

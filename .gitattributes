@@ -1,0 +1,13 @@
+# 统一换行符，避免 Linux CI 上 ./gradlew 因 CRLF 执行失败
+* text=auto
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+*.sh text eol=lf
+*.bat text eol=crlf
+
+# 二进制文件不要做换行符转换
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
