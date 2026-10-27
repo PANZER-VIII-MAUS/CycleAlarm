@@ -52,6 +52,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
@@ -64,6 +68,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -115,6 +120,8 @@ import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val weekLabels = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 
@@ -202,12 +209,31 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val uiScope = rememberCoroutineScope()
     var refreshTick by rememberSaveable { mutableStateOf(0) }
     var todayEpochDay by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
 
     fun refreshUiClock() {
         todayEpochDay = LocalDate.now().toEpochDay()
         refreshTick++
+    }
+
+    fun showUndoSnackbar(message: String, onUndo: () -> Unit) {
+        uiScope.launch {
+            val result = withTimeoutOrNull(5_000L) {
+                snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = "撤销",
+                    withDismissAction = false,
+                    duration = SnackbarDuration.Indefinite
+                )
+            }
+            when (result) {
+                SnackbarResult.ActionPerformed -> onUndo()
+                else -> snackbarHostState.currentSnackbarData?.dismiss()
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -286,6 +312,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -372,7 +399,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                             viewModel.setHolidayEnabled(h.id, enabled)
                         },
                         onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
-                        onDeleteHoliday = { viewModel.deleteHoliday(it) }
+                        onDeleteHoliday = { holiday ->
+                            viewModel.deleteHoliday(holiday.id)
+                            showUndoSnackbar("已删除假期") {
+                                viewModel.restoreHoliday(holiday)
+                            }
+                        }
                     )
                 }
 
@@ -394,7 +426,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         holidays = holidays,
                         onToggle = { alarm, enabled -> viewModel.setDateAlarmEnabled(alarm, enabled) },
                         onSave = { viewModel.saveDateAlarm(it) },
-                        onDelete = { viewModel.deleteDateAlarm(it) }
+                        onDelete = { alarm ->
+                            viewModel.deleteDateAlarm(alarm.id)
+                            showUndoSnackbar("已删除按日期闹钟") {
+                                viewModel.restoreDateAlarm(alarm)
+                            }
+                        }
                     )
                 }
 
@@ -422,7 +459,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onAddAlarm = { viewModel.addAlarmToDay(dayIndex) },
                         onEditManual = { editingAlarm = it },
                         onToggleManual = { alarm, enabled -> viewModel.setEnabled(alarm, enabled) },
-                        onDeleteManual = { viewModel.deleteAlarm(it.id) }
+                        onDeleteManual = { alarm ->
+                            viewModel.deleteAlarm(alarm.id)
+                            showUndoSnackbar("已删除闹钟") {
+                                viewModel.restoreAlarm(alarm)
+                            }
+                        }
                     )
                 }
 
@@ -465,6 +507,9 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             },
             onDelete = {
                 viewModel.deleteAlarm(alarm.id)
+                showUndoSnackbar("已删除闹钟") {
+                    viewModel.restoreAlarm(alarm)
+                }
                 editingAlarm = null
             }
         )
@@ -618,7 +663,7 @@ private fun HolidayCard(
     onEdit: (HolidayEntity) -> Unit,
     onToggleHoliday: (HolidayEntity, Boolean) -> Unit,
     onSetAllMuted: (Boolean) -> Unit,
-    onDeleteHoliday: (Int) -> Unit
+    onDeleteHoliday: (HolidayEntity) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     val summary = if (holidayModeEnabled) {
@@ -720,7 +765,7 @@ private fun HolidayCard(
                             IconButton(onClick = { onEdit(h) }) {
                                 Icon(Icons.Outlined.Edit, contentDescription = "编辑这段假期")
                             }
-                            IconButton(onClick = { onDeleteHoliday(h.id) }) {
+                            IconButton(onClick = { onDeleteHoliday(h) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除这段假期")
                             }
                             Switch(

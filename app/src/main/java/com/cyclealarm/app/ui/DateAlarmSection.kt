@@ -53,7 +53,7 @@ fun DateAlarmSection(
     holidays: List<HolidayEntity>,
     onToggle: (DateAlarmEntity, Boolean) -> Unit,
     onSave: (DateAlarmEntity) -> Unit,
-    onDelete: (Int) -> Unit
+    onDelete: (DateAlarmEntity) -> Unit
 ) {
     if (alarms.isEmpty()) return
     val context = LocalContext.current
@@ -104,7 +104,7 @@ fun DateAlarmSection(
                             }
                         )
                     }
-                    IconButton(onClick = { onDelete(alarm.id) }) {
+                    IconButton(onClick = { onDelete(alarm) }) {
                         Icon(Icons.Default.Delete, contentDescription = "删除这条按日期闹钟")
                     }
                     Switch(

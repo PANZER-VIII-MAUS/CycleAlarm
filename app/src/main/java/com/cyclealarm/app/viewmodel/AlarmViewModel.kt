@@ -8,6 +8,7 @@ import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.AlarmEditPolicy
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
+import com.cyclealarm.app.core.DeleteUndoPolicy
 import com.cyclealarm.app.core.PlanSeedPolicy
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AlarmEntity
@@ -222,6 +223,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         syncPlans()
     }
 
+    fun restoreAlarm(snapshot: AlarmEntity) = viewModelScope.launch {
+        db.alarmDao().upsert(DeleteUndoPolicy.alarmForRestore(snapshot))
+        syncPlans()
+    }
+
     /**
      * 应用循环设置：
      * - DAILY：固定 1 天，每天重复；
@@ -408,6 +414,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         reschedule()
     }
 
+    fun restoreHoliday(snapshot: HolidayEntity) = viewModelScope.launch {
+        db.holidayDao().upsert(DeleteUndoPolicy.holidayForRestore(snapshot))
+        reschedule()
+    }
+
     /** 批量设置所有闹钟的“假期静音”开关。 */
     fun setAllAlarmsMutedDuringHoliday(muted: Boolean) = viewModelScope.launch {
         db.alarmDao().setAllMutedDuringHoliday(muted)
@@ -431,6 +442,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteDateAlarm(id: Int) = viewModelScope.launch {
         db.dateAlarmDao().getById(id)?.let { AlarmScheduler.cancelDateAlarm(getApplication(), it) }
         db.dateAlarmDao().deleteById(id)
+        reschedule()
+    }
+
+    fun restoreDateAlarm(snapshot: DateAlarmEntity) = viewModelScope.launch {
+        db.dateAlarmDao().upsert(DeleteUndoPolicy.dateAlarmForRestore(snapshot))
         reschedule()
     }
 
