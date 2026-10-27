@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
+import com.cyclealarm.app.core.PlanSeedPolicy
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppDatabase
@@ -75,75 +76,66 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * 安排功能的一次性 seed（幂等）：
-     * 1. 以 settings.plansSeeded 为准，只有 false 才执行「清空旧闹钟 + 建默认计划」；
-     * 2. 先把标记置 true 再动数据，保证中途失败重入时不会二次清空；
-     * 3. day_plans 为空不再作为判据（用户可能把每天改成「未安排」）。
+     * 「清空旧闹钟再建默认计划」是被废弃的旧行为：v5→v6 迁移后 plansSeeded=false，
+     * 旧做法会让每个升级用户首次启动时丢失已有周期闹钟。现在只在 alarms 与 day_plans
+     * 同时为空时创建默认计划；任何既有闹钟都必须保留，由 [DayPlanSync] 决定后续接管。
+     *
+     * plansSeeded 在函数结尾统一置 true，重入不会再次触发默认计划。
      */
     private suspend fun ensurePlansSeeded() {
         val settings = db.settingsDao().get() ?: return
-        if (settings.plansSeeded) {
-            // 已 seed 过：只在类型表被删空时补回默认类型
-            if (db.activityTypeDao().count() == 0) {
-                insertDefaultTypes()
-                syncPlans()
-            }
-            return
-        }
 
-        // ① 先置标记（重入安全）
-        db.settingsDao().upsert(settings.copy(plansSeeded = true))
-
-        // ② 类型表为空则补默认类型
+        // 类型表为空则补默认类型；这不表示要重建用户的闹钟或安排。
         if (db.activityTypeDao().count() == 0) insertDefaultTypes()
 
-        // ③ 清空旧的周期闹钟（按日期闹钟 date_alarms 不动）
-        val oldAlarms = db.alarmDao().getAll()
-        oldAlarms.forEach { AlarmScheduler.cancelAlarm(getApplication(), it) }
-        oldAlarms.forEach { db.alarmDao().deleteById(it.id) }
-
-        // ④ 按当前周期天数建默认计划：第 1..N-1 天上课，第 N 天休息
-        val types = db.activityTypeDao().getAll()
-        val classType = types.firstOrNull { it.name == "上课" } ?: types.firstOrNull { it.rings }
-        val restType = types.firstOrNull { !it.rings }
-        val length = settings.cycleLength.coerceAtLeast(1)
-        if (classType != null) {
-            if (length <= 1) {
-                db.dayPlanDao().upsert(
-                    DayPlanEntity(
-                        dayIndex = 0,
-                        typeId = classType.id,
-                        hour = classType.hour,
-                        minute = classType.minute,
-                        enabled = true
-                    )
-                )
-            } else {
-                for (day in 0 until length - 1) {
+        if (!settings.plansSeeded) {
+            val alarmCount = db.alarmDao().getAll().size
+            val dayPlanCount = db.dayPlanDao().getAll().size
+            if (PlanSeedPolicy.shouldCreateDefaultPlans(alarmCount, dayPlanCount)) {
+                // 只有全新安装 / 两张表都为空时才建默认计划：第 1..N-1 天上课，第 N 天休息
+                val types = db.activityTypeDao().getAll()
+                val classType = types.firstOrNull { it.name == "上课" }
+                    ?: types.firstOrNull { it.rings }
+                val restType = types.firstOrNull { !it.rings }
+                val length = settings.cycleLength.coerceAtLeast(1)
+                if (classType != null && length <= 1) {
                     db.dayPlanDao().upsert(
                         DayPlanEntity(
-                            dayIndex = day,
+                            dayIndex = 0,
                             typeId = classType.id,
                             hour = classType.hour,
                             minute = classType.minute,
                             enabled = true
                         )
                     )
-                }
-                if (restType != null) {
-                    db.dayPlanDao().upsert(
-                        DayPlanEntity(
-                            dayIndex = length - 1,
-                            typeId = restType.id,
-                            hour = restType.hour,
-                            minute = restType.minute,
-                            enabled = true
+                } else if (classType != null) {
+                    for (day in 0 until length - 1) {
+                        db.dayPlanDao().upsert(
+                            DayPlanEntity(
+                                dayIndex = day,
+                                typeId = classType.id,
+                                hour = classType.hour,
+                                minute = classType.minute,
+                                enabled = true
+                            )
                         )
-                    )
+                    }
+                    if (restType != null) {
+                        db.dayPlanDao().upsert(
+                            DayPlanEntity(
+                                dayIndex = length - 1,
+                                typeId = restType.id,
+                                hour = restType.hour,
+                                minute = restType.minute,
+                                enabled = true
+                            )
+                        )
+                    }
                 }
             }
         }
 
-        // ⑤ 同步生成闹钟
+        db.settingsDao().upsert(settings.copy(plansSeeded = true))
         syncPlans()
     }
 
