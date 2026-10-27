@@ -196,16 +196,22 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var refreshTick by remember { mutableStateOf(0) }
+    var todayEpochDay by remember { mutableStateOf(LocalDate.now().toEpochDay()) }
+
+    fun refreshUiClock() {
+        todayEpochDay = LocalDate.now().toEpochDay()
+        refreshTick++
+    }
 
     LaunchedEffect(Unit) {
         while (isActive) {
             delay(60_000)
-            refreshTick++
+            refreshUiClock()
         }
     }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refreshTick++
+            if (event == Lifecycle.Event.ON_RESUME) refreshUiClock()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -247,26 +253,18 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         showPermissionGuide = false
     }
 
-    val todayText = remember(settings) {
-        val s = settings
-        if (s == null) {
-            "今天是第 1 天"
+    val currentSettings = settings
+    val todayDay = currentSettings?.let { cycleDayOf(it, todayEpochDay) } ?: 1
+    val todayText = if (currentSettings == null) {
+        "今天是第 1 天"
+    } else {
+        if (currentSettings.cycleType == CycleTypes.WEEKLY) {
+            "今天是 ${weekLabels[(todayDay - 1) % weekLabels.size]}"
         } else {
-            val len = s.cycleLength.coerceAtLeast(1)
-            val day = Math.floorMod(LocalDate.now().toEpochDay() - s.cycleStartEpochDay, len.toLong())
-                .toInt() + 1
-            if (s.cycleType == CycleTypes.WEEKLY) {
-                "今天是 ${weekLabels[(day - 1) % weekLabels.size]}"
-            } else {
-                "今天是第 $day 天"
-            }
+            "今天是第 $todayDay 天"
         }
     }
-    val todayIndex = remember(settings) {
-        val s = settings ?: return@remember 0
-        val len = s.cycleLength.coerceAtLeast(1)
-        Math.floorMod(LocalDate.now().toEpochDay() - s.cycleStartEpochDay, len.toLong()).toInt()
-    }
+    val todayIndex = todayDay - 1
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -364,9 +362,10 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     CycleInfoCard(
                         settings = settings,
                         cycleLength = cycleLength,
-                    onSettingsClick = {
-                        context.startActivity(Intent(context, SettingsActivity::class.java))
-                    }
+                        todayDay = todayDay,
+                        onSettingsClick = {
+                            context.startActivity(Intent(context, SettingsActivity::class.java))
+                        }
                     )
                 }
 
@@ -771,12 +770,9 @@ private fun HolidayEditDialog(
 private fun CycleInfoCard(
     settings: AppSettingsEntity?,
     cycleLength: Int,
+    todayDay: Int,
     onSettingsClick: () -> Unit
 ) {
-    val todayEpoch = LocalDate.now().toEpochDay()
-    val todayDay = settings?.let {
-        Math.floorMod(todayEpoch - it.cycleStartEpochDay, it.cycleLength.toLong()) + 1
-    } ?: 1
     val subtitle = when (settings?.cycleType) {
         CycleTypes.DAILY -> "每天重复 · 点击调整循环设置"
         CycleTypes.WEEKLY -> "每周重复 · 今天是${weekLabels[((todayDay - 1) % weekLabels.size).toInt()]} · 点击调整"
