@@ -24,12 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.RingLaunchValidator
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.service.RingService
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
+import kotlinx.coroutines.launch
 
 /** 全屏响铃界面：锁屏唤醒显示，支持停止与稍后提醒。 */
 class RingActivity : ComponentActivity() {
@@ -69,36 +71,56 @@ class RingActivity : ComponentActivity() {
         val checkedHour = requireNotNull(hour)
         val checkedMinute = requireNotNull(minute)
         val label = launchIntent.getStringExtra(AlarmScheduler.EXTRA_LABEL) ?: ""
+        val originalHour = if (launchIntent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR)) {
+            launchIntent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, checkedHour)
+        } else {
+            null
+        }
+        val originalMinute = if (launchIntent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE)) {
+            launchIntent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, checkedMinute)
+        } else {
+            null
+        }
         val snoozeMinutes = RingPrefs.snoozeMinutes(this)
 
         setContent {
             CycleAlarmTheme {
                 RingScreen(
+                    kind = checkedKind,
                     dayIndex = checkedDayIndex,
                     hour = checkedHour,
                     minute = checkedMinute,
                     label = label,
+                    originalHour = originalHour,
+                    originalMinute = originalMinute,
                     snoozeMinutes = snoozeMinutes,
-                    onStop = { stopRing() },
+                    onStop = {
+                        AlarmScheduler.clearSnoozeForAlarm(this, checkedKind, alarmId)
+                        finishRing()
+                    },
                     onSnooze = {
-                        AlarmScheduler.snoozeAt(
-                            context = this,
-                            kind = checkedKind,
-                            alarmId = alarmId,
-                            dayIndex = checkedDayIndex,
-                            hour = checkedHour,
-                            minute = checkedMinute,
-                            label = label,
-                            minutes = snoozeMinutes
-                        )
-                        stopRing()
+                        lifecycleScope.launch {
+                            val scheduled = AlarmScheduler.snoozeAt(
+                                context = this@RingActivity,
+                                kind = checkedKind,
+                                alarmId = alarmId,
+                                dayIndex = checkedDayIndex,
+                                hour = checkedHour,
+                                minute = checkedMinute,
+                                label = label,
+                                minutes = snoozeMinutes,
+                                originalHour = originalHour ?: checkedHour,
+                                originalMinute = originalMinute ?: checkedMinute
+                            )
+                            if (scheduled) finishRing()
+                        }
                     }
                 )
             }
         }
     }
 
-    private fun stopRing() {
+    private fun finishRing() {
         stopService(Intent(this, RingService::class.java))
         finish()
     }
@@ -106,14 +128,28 @@ class RingActivity : ComponentActivity() {
 
 @Composable
 private fun RingScreen(
+    kind: String,
     dayIndex: Int,
     hour: Int,
     minute: Int,
     label: String,
+    originalHour: Int?,
+    originalMinute: Int?,
     snoozeMinutes: Int,
     onStop: () -> Unit,
     onSnooze: () -> Unit
 ) {
+    val context = LocalContext.current
+    val detail = if (originalHour != null && originalMinute != null) {
+        val source = if (kind == AlarmScheduler.KIND_DATE) {
+            label.ifBlank { "按日期闹钟" }
+        } else {
+            "第 ${dayIndex + 1} 天"
+        }
+        "原定 ${DisplayPrefs.formatTime(context, originalHour, originalMinute)} · $source"
+    } else {
+        label.ifBlank { "第 ${dayIndex + 1} 天" }
+    }
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Column(
             modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -122,12 +158,12 @@ private fun RingScreen(
         ) {
             Text("闹钟", color = Color.White, style = MaterialTheme.typography.titleLarge)
             Text(
-                DisplayPrefs.formatTime(LocalContext.current, hour, minute),
+                DisplayPrefs.formatTime(context, hour, minute),
                 color = Color.White,
                 style = MaterialTheme.typography.displayMedium
             )
             Text(
-                label.ifBlank { "第 ${dayIndex + 1} 天" },
+                detail,
                 color = Color.White.copy(alpha = 0.7f),
                 style = MaterialTheme.typography.titleMedium
             )

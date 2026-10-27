@@ -29,6 +29,10 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             AlarmScheduler.ACTION_STOP_RING -> {
+                val kind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
+                    ?: AlarmScheduler.KIND_CYCLE
+                val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
+                AlarmScheduler.clearSnoozeForAlarm(context, kind, alarmId)
                 context.stopService(Intent(context, RingService::class.java))
             }
 
@@ -44,6 +48,34 @@ class AlarmReceiver : BroadcastReceiver() {
                         val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
                         val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
                         val snoozed = intent.getBooleanExtra(AlarmScheduler.EXTRA_SNOOZED, false)
+                        val snoozeId = intent.getLongExtra(AlarmScheduler.EXTRA_SNOOZE_ID, 0L)
+                        val originalHour = if (
+                            intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR)
+                        ) {
+                            intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, hour)
+                        } else {
+                            null
+                        }
+                        val originalMinute = if (
+                            intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE)
+                        ) {
+                            intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, minute)
+                        } else {
+                            null
+                        }
+
+                        if (snoozed) {
+                            runCatching {
+                                val db = AppDatabase.get(context)
+                                if (snoozeId > 0) {
+                                    db.snoozeDao().deleteById(snoozeId)
+                                } else {
+                                    db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
+                                }
+                            }.onFailure {
+                                Log.e(TAG, "delete consumed snooze failed", it)
+                            }
+                        }
 
                         AlarmFireCoordinator.run(
                             shouldReschedule = !snoozed && kind == AlarmScheduler.KIND_CYCLE,
@@ -65,7 +97,16 @@ class AlarmReceiver : BroadcastReceiver() {
                                 ContextCompat.startForegroundService(
                                     context,
                                     RingService.ringIntent(
-                                        context, alarmId, dayIndex, hour, minute, label, snoozed, kind
+                                        context = context,
+                                        alarmId = alarmId,
+                                        dayIndex = dayIndex,
+                                        hour = hour,
+                                        minute = minute,
+                                        label = label,
+                                        snoozed = snoozed,
+                                        kind = kind,
+                                        originalHour = originalHour,
+                                        originalMinute = originalMinute
                                     )
                                 )
                             },

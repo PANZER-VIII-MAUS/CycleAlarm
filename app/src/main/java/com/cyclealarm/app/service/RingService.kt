@@ -52,9 +52,21 @@ class RingService : Service() {
         val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
         val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
         val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
+        val originalHour = if (intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR)) {
+            intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, hour)
+        } else {
+            null
+        }
+        val originalMinute = if (intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE)) {
+            intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, minute)
+        } else {
+            null
+        }
 
-        startAsForeground(kind, alarmId, dayIndex, hour, minute, label)
-        launchRingActivity(kind, alarmId, dayIndex, hour, minute, label)
+        startAsForeground(kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute)
+        launchRingActivity(
+            kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute
+        )
         acquireWakeLock()
         runCatching { RingtonePlayer.play(this) }
             .onFailure { Log.e(TAG, "ringtone init failed", it) }
@@ -110,7 +122,9 @@ class RingService : Service() {
         dayIndex: Int,
         hour: Int,
         minute: Int,
-        label: String
+        label: String,
+        originalHour: Int?,
+        originalMinute: Int?
     ) {
         runCatching {
             startActivity(
@@ -122,6 +136,12 @@ class RingService : Service() {
                     .putExtra(AlarmScheduler.EXTRA_HOUR, hour)
                     .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
                     .putExtra(AlarmScheduler.EXTRA_LABEL, label)
+                    .apply {
+                        if (originalHour != null && originalMinute != null) {
+                            putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)
+                            putExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, originalMinute)
+                        }
+                    }
             )
         }
     }
@@ -141,7 +161,9 @@ class RingService : Service() {
         dayIndex: Int,
         hour: Int,
         minute: Int,
-        label: String
+        label: String,
+        originalHour: Int?,
+        originalMinute: Int?
     ) {
         val timeText = DisplayPrefs.formatTime(this, hour, minute)
         // 周期与按日期闹钟的数据库 id 可能相同，PendingIntent requestCode 必须用调度 id 区分
@@ -155,7 +177,13 @@ class RingService : Service() {
                 .putExtra(AlarmScheduler.EXTRA_DAY_INDEX, dayIndex)
                 .putExtra(AlarmScheduler.EXTRA_HOUR, hour)
                 .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
-                .putExtra(AlarmScheduler.EXTRA_LABEL, label),
+                .putExtra(AlarmScheduler.EXTRA_LABEL, label)
+                .apply {
+                    if (originalHour != null && originalMinute != null) {
+                        putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)
+                        putExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, originalMinute)
+                    }
+                },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val stopIntent = PendingIntent.getBroadcast(
@@ -163,7 +191,8 @@ class RingService : Service() {
             schedulerId,
             Intent(this, AlarmReceiver::class.java)
                 .setAction(AlarmScheduler.ACTION_STOP_RING)
-                .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId),
+                .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification: Notification = NotificationCompat.Builder(this, NotificationChannels.RING)
@@ -207,7 +236,9 @@ class RingService : Service() {
             minute: Int,
             label: String,
             snoozed: Boolean,
-            kind: String = AlarmScheduler.KIND_CYCLE
+            kind: String = AlarmScheduler.KIND_CYCLE,
+            originalHour: Int? = null,
+            originalMinute: Int? = null
         ): Intent = Intent(context, RingService::class.java)
             .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
             .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
@@ -216,5 +247,11 @@ class RingService : Service() {
             .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
             .putExtra(AlarmScheduler.EXTRA_LABEL, label)
             .putExtra(AlarmScheduler.EXTRA_SNOOZED, snoozed)
+            .apply {
+                if (originalHour != null && originalMinute != null) {
+                    putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)
+                    putExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, originalMinute)
+                }
+            }
     }
 }

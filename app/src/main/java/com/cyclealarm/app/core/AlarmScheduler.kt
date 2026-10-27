@@ -6,12 +6,19 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.room.withTransaction
+import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.HolidayEntity
+import com.cyclealarm.app.data.SnoozeEntity
 import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.receiver.AlarmReceiver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,6 +46,9 @@ object AlarmScheduler {
     const val EXTRA_MINUTE = "minute"
     const val EXTRA_LABEL = "label"
     const val EXTRA_SNOOZED = "snoozed"
+    const val EXTRA_SNOOZE_ID = "snoozeId"
+    const val EXTRA_ORIGINAL_HOUR = "originalHour"
+    const val EXTRA_ORIGINAL_MINUTE = "originalMinute"
 
     /** 周期闹钟（第 1..N 天 / 周一..周日）。 */
     const val KIND_CYCLE = "cycle"
@@ -53,6 +63,8 @@ object AlarmScheduler {
 
     /** 全屏响铃 Activity 的独立 requestCode 偏移，避免与 showIntent / snooze 槽位混用。 */
     const val FULLSCREEN_REQUEST_OFFSET = 200_000
+
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** 把 (类型, 数据库 id) 换算成全局唯一的调度 id。 */
     fun schedulerId(kind: String, alarmId: Int): Int =
@@ -139,6 +151,7 @@ object AlarmScheduler {
     /** 取消某条周期闹钟（含未触发的“稍后提醒”）。 */
     fun cancelAlarm(context: Context, alarm: AlarmEntity) {
         cancelBySchedulerId(context, alarm.id)
+        clearSnoozeForAlarm(context, KIND_CYCLE, alarm.id)
     }
 
     // ---------------------------------------------------------------------
@@ -205,6 +218,7 @@ object AlarmScheduler {
     /** 取消某条按日期闹钟（含未触发的“稍后提醒”）。 */
     fun cancelDateAlarm(context: Context, alarm: DateAlarmEntity) {
         cancelBySchedulerId(context, schedulerId(KIND_DATE, alarm.id))
+        clearSnoozeForAlarm(context, KIND_DATE, alarm.id)
     }
 
     // ---------------------------------------------------------------------
@@ -242,7 +256,7 @@ object AlarmScheduler {
     // ---------------------------------------------------------------------
 
     /** 稍后提醒（周期闹钟）。 */
-    fun snooze(context: Context, alarm: AlarmEntity, minutes: Int = 10) =
+    suspend fun snooze(context: Context, alarm: AlarmEntity, minutes: Int = 10): Boolean =
         snoozeAt(
             context = context,
             kind = KIND_CYCLE,
@@ -258,7 +272,7 @@ object AlarmScheduler {
      * 稍后提醒（通用）：响铃页对周期/按日期闹钟都走这里。
      * kind 决定 requestCode 命名空间，避免两类闹钟互相覆盖。
      */
-    fun snoozeAt(
+    suspend fun snoozeAt(
         context: Context,
         kind: String,
         alarmId: Int,
@@ -266,30 +280,85 @@ object AlarmScheduler {
         hour: Int,
         minute: Int,
         label: String,
-        minutes: Int = 10
-    ) {
-        if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return
-        val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val triggerAt = System.currentTimeMillis() + minutes * 60_000L
-        val schedulerId = schedulerId(kind, alarmId)
+        minutes: Int = 10,
+        originalHour: Int = hour,
+        originalMinute: Int = minute
+    ): Boolean {
+        if (!RingLaunchValidator.hasValidAlarmId(alarmId) || minutes <= 0) return false
+        val db = AppDatabase.get(context)
+        val now = System.currentTimeMillis()
+        val target = SnoozeTimePolicy.target(now, minutes)
+        val requestCode = schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET
+        val snooze = db.withTransaction {
+            db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
+            val entity = SnoozeEntity(
+                kind = kind,
+                alarmId = alarmId.toLong(),
+                dayIndex = dayIndex,
+                hour = originalHour,
+                minute = originalMinute,
+                label = label,
+                triggerAt = target.triggerAt,
+                requestCode = requestCode
+            )
+            entity.copy(id = db.snoozeDao().insert(entity))
+        }
+        if (!rescheduleStoredSnooze(context, snooze)) {
+            runCatching { db.snoozeDao().deleteById(snooze.id) }
+                .onFailure { Log.e(TAG, "delete failed snooze row id=${snooze.id}", it) }
+            return false
+        }
+        return true
+    }
+
+    /** 从持久化记录重建一条未到期的 snooze。 */
+    fun rescheduleStoredSnooze(context: Context, snooze: SnoozeEntity): Boolean {
+        if (!SnoozeTimePolicy.shouldRestore(snooze.triggerAt, System.currentTimeMillis())) {
+            return false
+        }
+        val am = context.getSystemService(AlarmManager::class.java) ?: return false
+        val target = Instant.ofEpochMilli(snooze.triggerAt)
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
         val operation = firePendingIntent(
             context = context,
-            requestCode = schedulerId + SNOOZE_REQUEST_OFFSET,
-            kind = kind,
-            alarmId = alarmId,
-            dayIndex = dayIndex,
-            hour = hour,
-            minute = minute,
-            label = label,
-            snoozed = true
+            requestCode = snooze.requestCode,
+            kind = snooze.kind,
+            alarmId = snooze.alarmId.toInt(),
+            dayIndex = snooze.dayIndex,
+            hour = target.hour,
+            minute = target.minute,
+            label = snooze.label,
+            snoozed = true,
+            snoozeId = snooze.id,
+            originalHour = snooze.hour,
+            originalMinute = snooze.minute
         )
-        runCatching {
+        return runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !am.canScheduleExactAlarms()) {
-                am.set(AlarmManager.RTC_WAKEUP, triggerAt, operation)
+                am.set(AlarmManager.RTC_WAKEUP, snooze.triggerAt, operation)
             } else {
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, operation)
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, snooze.triggerAt, operation)
             }
-        }.onFailure { Log.e(TAG, "snooze failed kind=$kind alarmId=$alarmId", it) }
+            true
+        }.onFailure {
+            Log.e(TAG, "snooze failed kind=${snooze.kind} alarmId=${snooze.alarmId}", it)
+        }.getOrDefault(false)
+    }
+
+    /** 清掉某条原闹钟残留的 snooze 记录；不阻塞调用线程。 */
+    fun clearSnoozeForAlarm(context: Context, kind: String, alarmId: Int) {
+        if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return
+        val appContext = context.applicationContext
+        cleanupScope.launch {
+            runCatching {
+                AppDatabase.get(appContext)
+                    .snoozeDao()
+                    .deleteByAlarm(kind, alarmId.toLong())
+            }.onFailure {
+                Log.e(TAG, "clear snooze failed kind=$kind alarmId=$alarmId", it)
+            }
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -355,7 +424,10 @@ object AlarmScheduler {
         hour: Int,
         minute: Int,
         label: String,
-        snoozed: Boolean
+        snoozed: Boolean,
+        snoozeId: Long? = null,
+        originalHour: Int? = null,
+        originalMinute: Int? = null
     ): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java)
             .setAction(ACTION_FIRE)
@@ -366,6 +438,11 @@ object AlarmScheduler {
             .putExtra(EXTRA_MINUTE, minute)
             .putExtra(EXTRA_LABEL, label)
         if (snoozed) intent.putExtra(EXTRA_SNOOZED, true)
+        if (snoozeId != null) intent.putExtra(EXTRA_SNOOZE_ID, snoozeId)
+        if (originalHour != null && originalMinute != null) {
+            intent.putExtra(EXTRA_ORIGINAL_HOUR, originalHour)
+            intent.putExtra(EXTRA_ORIGINAL_MINUTE, originalMinute)
+        }
         return PendingIntent.getBroadcast(
             context,
             requestCode,
