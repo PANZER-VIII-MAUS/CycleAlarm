@@ -109,6 +109,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val holidays by viewModel.holidays.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val cycleLength by viewModel.cycleLength.collectAsState()
+    val databaseError by viewModel.databaseError.collectAsState()
 
     val context = LocalContext.current
     val prefs = remember {
@@ -301,6 +302,17 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     if (showPermissionGuide) {
         PermissionGuideDialog(onDismiss = ::finishOnboarding)
+    }
+
+    databaseError?.let { message ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("无法打开数据库") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearDatabaseError) { Text("知道了") }
+            }
+        )
     }
 
     editingAlarm?.let { alarm ->

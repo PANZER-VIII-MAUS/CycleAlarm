@@ -1,6 +1,7 @@
 package com.cyclealarm.app.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** 循环方式常量。 */
@@ -15,7 +16,10 @@ object CycleTypes {
  * dayIndex：0..N-1，对应周期里的第 dayIndex+1 天。
  * mutedDuringHoliday：假期模式开启时该闹钟是否静音（默认 true）。
  */
-@Entity(tableName = "alarms")
+@Entity(
+    tableName = "alarms",
+    indices = [Index(value = ["dayIndex", "hour", "minute"])]
+)
 data class AlarmEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val dayIndex: Int,
@@ -100,4 +104,33 @@ data class AppSettingsEntity(
     val holidayModeEnabled: Boolean = true,
     /** v6 的一次性 seed 标记：只有 false 时才执行「清空旧闹钟 + 建默认计划」。 */
     val plansSeeded: Boolean = false
+)
+
+/** 稍后提醒的持久化记录，用于重启后重建尚未到期的 snooze。 */
+@Entity(
+    tableName = "snoozes",
+    indices = [
+        Index(value = ["triggerAt"]),
+        Index(value = ["alarmId"])
+    ]
+)
+data class SnoozeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val kind: String,
+    val alarmId: Long,
+    val dayIndex: Int,
+    val hour: Int,
+    val minute: Int,
+    val label: String,
+    val triggerAt: Long,
+    val requestCode: Int
+)
+
+/** 导入前快照（单行），用于跨进程重启后撤销最近一次导入。 */
+@Entity(tableName = "import_snapshots")
+data class ImportSnapshotEntity(
+    @PrimaryKey val id: Int = 1,
+    val payload: String,
+    val createdAt: Long,
+    val expiresAt: Long
 )

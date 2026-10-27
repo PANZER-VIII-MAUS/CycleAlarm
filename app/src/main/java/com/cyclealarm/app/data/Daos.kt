@@ -23,6 +23,9 @@ interface AlarmDao {
     @Query("DELETE FROM alarms WHERE id = :id")
     suspend fun deleteById(id: Int)
 
+    @Query("DELETE FROM alarms")
+    suspend fun deleteAll()
+
     @Query("UPDATE alarms SET mutedDuringHoliday = :muted")
     suspend fun setAllMutedDuringHoliday(muted: Boolean)
 
@@ -134,4 +137,43 @@ interface SettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(settings: AppSettingsEntity)
+}
+
+@Dao
+interface SnoozeDao {
+    @Query("SELECT * FROM snoozes ORDER BY triggerAt ASC")
+    suspend fun getAll(): List<SnoozeEntity>
+
+    @Query("SELECT * FROM snoozes WHERE id = :id")
+    suspend fun getById(id: Long): SnoozeEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(snooze: SnoozeEntity): Long
+
+    @Query("DELETE FROM snoozes WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM snoozes WHERE kind = :kind AND alarmId = :alarmId")
+    suspend fun deleteByAlarm(kind: String, alarmId: Long)
+
+    @Query("DELETE FROM snoozes WHERE triggerAt <= :now")
+    suspend fun deleteExpired(now: Long)
+
+    @Query("DELETE FROM snoozes")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface ImportSnapshotDao {
+    @Query("SELECT * FROM import_snapshots WHERE id = 1")
+    suspend fun get(): ImportSnapshotEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(snapshot: ImportSnapshotEntity)
+
+    @Query("DELETE FROM import_snapshots WHERE expiresAt <= :now")
+    suspend fun deleteExpired(now: Long)
+
+    @Query("DELETE FROM import_snapshots")
+    suspend fun deleteAll()
 }

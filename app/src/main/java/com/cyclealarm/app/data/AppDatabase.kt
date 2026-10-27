@@ -14,14 +14,17 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DayPlanEntity::class,
         DateAlarmEntity::class,
         HolidayEntity::class,
-        AppSettingsEntity::class
+        AppSettingsEntity::class,
+        SnoozeEntity::class,
+        ImportSnapshotEntity::class
     ],
     // v2：同一日期支持多条闹钟；v3：假期改为多段（法定节假日可一键导入）；
     // v4：循环方式选择（每天 / 每周 / 自定义 N 天）；
     // v5：按日期的一次性闹钟（课表/排班表按日期导入）；
-    // v6：循环安排（安排类型 + 每天一个安排，自动生成闹钟）。必须走 Migration，禁止清空用户数据。
-    version = 6,
-    exportSchema = false
+    // v6：循环安排（安排类型 + 每天一个安排，自动生成闹钟）。
+    // v7：持久化 snooze 与导入快照。必须走 Migration，禁止清空用户数据。
+    version = 7,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -31,6 +34,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dateAlarmDao(): DateAlarmDao
     abstract fun holidayDao(): HolidayDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun snoozeDao(): SnoozeDao
+    abstract fun importSnapshotDao(): ImportSnapshotDao
 
     companion object {
         @Volatile
@@ -85,6 +90,44 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v6 → v7：只新增 snoozes、import_snapshots 与必要索引。 */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `snoozes` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`kind` TEXT NOT NULL, " +
+                        "`alarmId` INTEGER NOT NULL, " +
+                        "`dayIndex` INTEGER NOT NULL, " +
+                        "`hour` INTEGER NOT NULL, " +
+                        "`minute` INTEGER NOT NULL, " +
+                        "`label` TEXT NOT NULL, " +
+                        "`triggerAt` INTEGER NOT NULL, " +
+                        "`requestCode` INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `import_snapshots` (" +
+                        "`id` INTEGER NOT NULL, " +
+                        "`payload` TEXT NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "`expiresAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_snoozes_triggerAt` " +
+                        "ON `snoozes` (`triggerAt`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_snoozes_alarmId` " +
+                        "ON `snoozes` (`alarmId`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_alarms_dayIndex_hour_minute` " +
+                        "ON `alarms` (`dayIndex`, `hour`, `minute`)"
+                )
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -92,7 +135,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cycle_alarm.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                     .also { INSTANCE = it }
             }

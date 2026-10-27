@@ -1,6 +1,7 @@
 package com.cyclealarm.app.viewmodel
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.AlarmScheduler
@@ -18,6 +19,7 @@ import com.cyclealarm.app.data.DayPlanEntity
 import com.cyclealarm.app.data.HolidayEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -26,6 +28,8 @@ import java.time.LocalDate
 class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db = AppDatabase.get(app)
+    private val _databaseError = MutableStateFlow<String?>(null)
+    val databaseError: StateFlow<String?> = _databaseError
 
     val alarms: StateFlow<List<AlarmEntity>> = db.alarmDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -53,9 +57,25 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            ensureSeeded()
-            ensurePlansSeeded()
+            runCatching {
+                ensureSeeded()
+                ensurePlansSeeded()
+            }.onFailure { throwable ->
+                Log.e(TAG, "database initialization failed", throwable)
+                _databaseError.value = if (
+                    throwable is IllegalStateException &&
+                    throwable.message?.contains("migration", ignoreCase = true) == true
+                ) {
+                    "数据库版本过旧，请卸载重装"
+                } else {
+                    "数据库初始化失败，请重启应用"
+                }
+            }
         }
+    }
+
+    fun clearDatabaseError() {
+        _databaseError.value = null
     }
 
     /** 首次启动只建 settings（闹钟改由「循环安排」生成）。 */
@@ -401,5 +421,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             db.settingsDao().get(),
             db.holidayDao().getAll()
         )
+    }
+
+    private companion object {
+        const val TAG = "AlarmViewModel"
     }
 }
