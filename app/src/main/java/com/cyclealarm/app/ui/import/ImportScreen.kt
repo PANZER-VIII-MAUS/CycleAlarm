@@ -57,6 +57,7 @@ import com.cyclealarm.app.importer.ScheduleKind
 import com.cyclealarm.app.importer.SectionTimeTable
 import com.cyclealarm.app.data.ImportWeeklyPolicy
 import com.cyclealarm.app.ui.import.components.PreviewTable
+import com.cyclealarm.app.ui.theme.timePickerContext
 import com.cyclealarm.app.viewmodel.ImportUiState
 import com.cyclealarm.app.viewmodel.ImportViewModel
 import java.time.LocalTime
@@ -484,7 +485,7 @@ private fun OptionsDialog(
                 OutlinedButton(
                     onClick = {
                         TimePickerDialog(
-                            context,
+                            timePickerContext(context),
                             { _, h, m -> fallback = LocalTime.of(h, m) },
                             fallback.hour,
                             fallback.minute,
@@ -510,7 +511,7 @@ private fun OptionsDialog(
                         OutlinedButton(
                             onClick = {
                                 TimePickerDialog(
-                                    context,
+                                    timePickerContext(context),
                                     { _, h, m -> sections = sections + (section to LocalTime.of(h, m)) },
                                     time.hour,
                                     time.minute,

@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CycleAlarm" parent="android:Theme.Material.Light.NoActionBar" />
-    <style name="Theme.CycleAlarm.Ring" parent="android:Theme.Material.Light.NoActionBar.Fullscreen" />
+    <style name="Theme.CycleAlarm" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F2F4F8</item>
+    </style>
+    <style name="Theme.CycleAlarm.Ring" parent="android:Theme.Material.Light.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">#000000</item>
+    </style>
+    <style name="ThemeOverlay.CycleAlarm.TimePicker.Light" parent="android:Theme.Material.Light.Dialog.Alert" />
+    <style name="ThemeOverlay.CycleAlarm.TimePicker.Dark" parent="android:Theme.Material.Dialog.Alert" />
 </resources>

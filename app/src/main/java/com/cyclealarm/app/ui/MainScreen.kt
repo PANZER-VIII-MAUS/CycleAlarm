@@ -103,6 +103,7 @@ import com.cyclealarm.app.ui.plan.PlanTimeDialog
 import com.cyclealarm.app.ui.plan.PlanTypeManagerDialog
 import com.cyclealarm.app.ui.theme.LocalExtraColors
 import com.cyclealarm.app.ui.theme.DarkBackground
+import com.cyclealarm.app.ui.theme.timePickerContext
 import com.cyclealarm.app.viewmodel.AlarmViewModel
 import java.time.LocalDate
 import java.time.Instant
@@ -1046,7 +1047,7 @@ private fun EditAlarmDialog(
                 OutlinedButton(
                     onClick = {
                         TimePickerDialog(
-                            context,
+                            timePickerContext(context),
                             { _, h, m ->
                                 hour = h
                                 minute = m

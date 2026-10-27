@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
+import com.cyclealarm.app.ui.theme.timePickerContext
 
 /**
  * 安排类型管理：增删改、上下移、显示使用天数。
@@ -227,7 +228,7 @@ private fun PlanTypeEditDialog(
                 OutlinedButton(
                     onClick = {
                         TimePickerDialog(
-                            context,
+                            timePickerContext(context),
                             { _, h, m ->
                                 hour = h
                                 minute = m

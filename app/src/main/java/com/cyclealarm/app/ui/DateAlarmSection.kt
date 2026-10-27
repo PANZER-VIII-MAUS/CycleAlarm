@@ -33,6 +33,7 @@ import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.HolidayEntity
 import com.cyclealarm.app.ui.components.CycleCard
+import com.cyclealarm.app.ui.theme.timePickerContext
 import java.util.Locale
 
 /**
@@ -146,7 +147,7 @@ private fun DateAlarmEditDialog(
                 OutlinedButton(
                     onClick = {
                         TimePickerDialog(
-                            context,
+                            timePickerContext(context),
                             { _, h, m ->
                                 hour = h
                                 minute = m

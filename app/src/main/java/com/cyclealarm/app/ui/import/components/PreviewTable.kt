@@ -35,6 +35,7 @@ import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.ImportedEntry
 import com.cyclealarm.app.importer.ScheduleKind
 import com.cyclealarm.app.ui.formatEpochDay
+import com.cyclealarm.app.ui.theme.timePickerContext
 
 /** 导入预览表：可勾选、可编辑单行、可删除。 */
 @Composable
@@ -125,7 +126,7 @@ private fun EditEntryDialog(
                 OutlinedButton(
                     onClick = {
                         TimePickerDialog(
-                            context,
+                            timePickerContext(context),
                             { _, h, m ->
                                 hour = h
                                 minute = m

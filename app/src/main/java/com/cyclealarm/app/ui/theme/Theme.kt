@@ -31,11 +31,7 @@ fun CycleAlarmTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
     remember { ThemeManager.init(context) }
     val mode by ThemeManager.mode.collectAsState()
-    val darkTheme = when (mode) {
-        ThemeManager.MODE_LIGHT -> false
-        ThemeManager.MODE_DARK -> true
-        else -> isSystemInDarkTheme()
-    }
+    val darkTheme = ThemeManager.resolveDark(mode, isSystemInDarkTheme())
     CompositionLocalProvider(LocalExtraColors provides extraColorsFor(darkTheme)) {
         // 系统栏图标深浅：按 App 实际主题（ThemeManager 三档）而不是系统深浅，
         // 否则「App 强制浅色 + 系统深色」时图标会变白看不见。

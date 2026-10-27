@@ -38,4 +38,10 @@ object ThemeManager {
             .apply()
         _mode.value = mode
     }
+
+    fun resolveDark(mode: String, systemDark: Boolean): Boolean = when (mode) {
+        MODE_LIGHT -> false
+        MODE_DARK -> true
+        else -> systemDark
+    }
 }
