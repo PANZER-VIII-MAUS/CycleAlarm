@@ -53,6 +53,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,14 +65,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.core.NextAlarm
+import com.cyclealarm.app.core.NextAlarmDisplay
+import com.cyclealarm.app.core.NextAlarmFinder
+import com.cyclealarm.app.core.NextAlarmKind
+import com.cyclealarm.app.core.cycleDayOf
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AppSettingsEntity
@@ -88,7 +98,11 @@ import com.cyclealarm.app.ui.plan.PlanTypeManagerDialog
 import com.cyclealarm.app.ui.theme.LocalExtraColors
 import com.cyclealarm.app.viewmodel.AlarmViewModel
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private val weekLabels = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 
@@ -99,11 +113,74 @@ private fun dayLabel(settings: AppSettingsEntity?, dayIndex: Int): String = when
     else -> "第 ${dayIndex + 1} 天"
 }
 
+@Composable
+private fun NextAlarmCard(
+    nextAlarm: NextAlarm?,
+    now: Long,
+    settings: AppSettingsEntity?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    CycleCard(modifier = modifier) {
+        if (nextAlarm == null || settings == null) {
+            Text(
+                text = "暂无开启的闹钟",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "去下面打开任意一天",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = DisplayPrefs.formatClock(context, nextAlarm.hour, nextAlarm.minute),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = LocalExtraColors.current.navy
+                    )
+                    Text(
+                        text = NextAlarmDisplay.countdownText(nextAlarm.triggerAt, now),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = nextAlarmSourceLabel(nextAlarm, settings),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End
+                )
+            }
+        }
+    }
+}
+
+private fun nextAlarmSourceLabel(
+    alarm: NextAlarm,
+    settings: AppSettingsEntity
+): String = when (alarm.kind) {
+    NextAlarmKind.CYCLE -> {
+        val triggerDay = Instant.ofEpochMilli(alarm.triggerAt)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .toEpochDay()
+        "第 ${cycleDayOf(settings, triggerDay)} 天"
+    }
+
+    NextAlarmKind.DATE -> "按日期"
+    NextAlarmKind.SNOOZE -> "稍后提醒"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val alarms by viewModel.alarms.collectAsState()
     val dateAlarms by viewModel.dateAlarms.collectAsState()
+    val snoozes by viewModel.snoozes.collectAsState()
     val activityTypes by viewModel.activityTypes.collectAsState()
     val dayPlans by viewModel.dayPlans.collectAsState()
     val holidays by viewModel.holidays.collectAsState()
@@ -112,6 +189,22 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val databaseError by viewModel.databaseError.collectAsState()
 
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var refreshTick by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(60_000)
+            refreshTick++
+        }
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshTick++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val prefs = remember {
         context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     }
@@ -130,6 +223,19 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val plansByDay = remember(dayPlans) { dayPlans.associateBy { it.dayIndex } }
     val typesById = remember(activityTypes) { activityTypes.associateBy { it.id } }
     val typeUsage = remember(dayPlans) { dayPlans.groupingBy { it.typeId }.eachCount() }
+    val now = remember(refreshTick) { System.currentTimeMillis() }
+    val nextAlarm = remember(now, alarms, dateAlarms, snoozes, settings, holidays) {
+        settings?.let { currentSettings ->
+            NextAlarmFinder.find(
+                now = now,
+                cycleAlarms = alarms,
+                dateAlarms = dateAlarms,
+                snoozes = snoozes,
+                settings = currentSettings,
+                holidays = holidays
+            )
+        }
+    }
 
     fun finishOnboarding() {
         prefs.edit().putBoolean("onboarding_done", true).apply()
@@ -205,6 +311,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            NextAlarmCard(
+                nextAlarm = nextAlarm,
+                now = now,
+                settings = settings,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)
+            )
             // 固定标题区：滚动列表时保持不动
             Text(
                 text = todayText,
@@ -213,7 +325,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
             )
             LazyColumn(
                 modifier = Modifier.weight(1f),

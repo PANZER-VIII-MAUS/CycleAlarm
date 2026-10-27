@@ -142,6 +142,9 @@ interface SettingsDao {
 @Dao
 interface SnoozeDao {
     @Query("SELECT * FROM snoozes ORDER BY triggerAt ASC")
+    fun observeAll(): Flow<List<SnoozeEntity>>
+
+    @Query("SELECT * FROM snoozes ORDER BY triggerAt ASC")
     suspend fun getAll(): List<SnoozeEntity>
 
     @Query("SELECT * FROM snoozes WHERE id = :id")

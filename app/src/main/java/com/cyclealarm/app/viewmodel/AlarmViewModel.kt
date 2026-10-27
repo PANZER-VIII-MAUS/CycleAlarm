@@ -18,6 +18,7 @@ import com.cyclealarm.app.data.CycleTypes
 import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.DayPlanEntity
 import com.cyclealarm.app.data.HolidayEntity
+import com.cyclealarm.app.data.SnoozeEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,10 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 按日期的一次性闹钟（课表/排班表按日期导入）。 */
     val dateAlarms: StateFlow<List<DateAlarmEntity>> = db.dateAlarmDao().observeAll()
+        .guardDatabase(emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val snoozes: StateFlow<List<SnoozeEntity>> = db.snoozeDao().observeAll()
         .guardDatabase(emptyList())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
