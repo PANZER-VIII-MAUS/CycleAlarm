@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
@@ -26,6 +27,7 @@ import java.time.ZoneId
  *    按日期闹钟则直接跳过当天（一次性语义），因此假期结束会自动恢复，无需额外定时任务。
  */
 object AlarmScheduler {
+    private const val TAG = "AlarmScheduler"
 
     const val ACTION_FIRE = "com.cyclealarm.app.action.FIRE"
     const val ACTION_STOP_RING = "com.cyclealarm.app.action.STOP_RING"
@@ -214,8 +216,14 @@ object AlarmScheduler {
         settings: AppSettingsEntity?,
         holidays: List<HolidayEntity>
     ) {
-        alarms.forEach { scheduleAlarm(context, it, settings, holidays) }
-        dateAlarms.forEach { scheduleDateAlarm(context, it, settings, holidays) }
+        alarms.forEach { alarm ->
+            runCatching { scheduleAlarm(context, alarm, settings, holidays) }
+                .onFailure { Log.e(TAG, "resync alarm failed id=${alarm.id}", it) }
+        }
+        dateAlarms.forEach { alarm ->
+            runCatching { scheduleDateAlarm(context, alarm, settings, holidays) }
+                .onFailure { Log.e(TAG, "resync date alarm failed id=${alarm.id}", it) }
+        }
     }
 
     /** 兼容旧调用：只重建周期闹钟。 */
@@ -277,7 +285,7 @@ object AlarmScheduler {
             } else {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, operation)
             }
-        }
+        }.onFailure { Log.e(TAG, "snooze failed kind=$kind alarmId=$alarmId", it) }
     }
 
     // ---------------------------------------------------------------------

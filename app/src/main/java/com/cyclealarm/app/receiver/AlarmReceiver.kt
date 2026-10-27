@@ -3,8 +3,15 @@ package com.cyclealarm.app.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
+import com.cyclealarm.app.core.AlarmFireCoordinator
+import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.service.RingService
 import kotlinx.coroutines.CoroutineScope
@@ -38,32 +45,85 @@ class AlarmReceiver : BroadcastReceiver() {
                         val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
                         val snoozed = intent.getBooleanExtra(AlarmScheduler.EXTRA_SNOOZED, false)
 
-                        ContextCompat.startForegroundService(
-                            context,
-                            RingService.ringIntent(
-                                context, alarmId, dayIndex, hour, minute, label, snoozed, kind
-                            )
-                        )
-
-                        // 周期闹钟响铃后立即计算下一次触发（假期自动跳过/恢复的逻辑在这里生效）；
-                        // 按日期闹钟是一次性的，触发后其时间点已过，无需再排期。
-                        if (!snoozed && kind == AlarmScheduler.KIND_CYCLE) {
-                            val db = AppDatabase.get(context)
-                            val alarm = db.alarmDao().getById(alarmId)
-                            if (alarm != null && alarm.enabled) {
-                                AlarmScheduler.scheduleAlarm(
+                        AlarmFireCoordinator.run(
+                            shouldReschedule = !snoozed && kind == AlarmScheduler.KIND_CYCLE,
+                            reschedule = {
+                                // 周期闹钟响铃后立即计算下一次触发（假期自动跳过/恢复的逻辑在这里生效）；
+                                // 按日期闹钟是一次性的，触发后其时间点已过，无需再排期。
+                                val db = AppDatabase.get(context)
+                                val alarm = db.alarmDao().getById(alarmId)
+                                if (alarm != null && alarm.enabled) {
+                                    AlarmScheduler.scheduleAlarm(
+                                        context,
+                                        alarm,
+                                        db.settingsDao().get(),
+                                        db.holidayDao().getAll()
+                                    )
+                                }
+                            },
+                            startService = {
+                                ContextCompat.startForegroundService(
                                     context,
-                                    alarm,
-                                    db.settingsDao().get(),
-                                    db.holidayDao().getAll()
+                                    RingService.ringIntent(
+                                        context, alarmId, dayIndex, hour, minute, label, snoozed, kind
+                                    )
                                 )
+                            },
+                            onFailure = { stage, throwable ->
+                                when (stage) {
+                                    AlarmFireCoordinator.FailureStage.RESCHEDULE -> {
+                                        Log.e(TAG, "reschedule failed", throwable)
+                                    }
+
+                                    AlarmFireCoordinator.FailureStage.START_SERVICE -> {
+                                        Log.e(TAG, "fgs failed", throwable)
+                                        notifyRingServiceFailure(
+                                            context, kind, alarmId, dayIndex, hour, minute, label
+                                        )
+                                    }
+                                }
                             }
-                        }
+                        )
                     } finally {
                         pendingResult.finish()
                     }
                 }
             }
         }
+    }
+
+    private fun notifyRingServiceFailure(
+        context: Context,
+        kind: String,
+        alarmId: Int,
+        dayIndex: Int,
+        hour: Int,
+        minute: Int,
+        label: String
+    ) {
+        runCatching {
+            NotificationChannels.createAll(context)
+            val schedulerId = AlarmScheduler.schedulerId(kind, alarmId)
+            val detail = label.ifBlank {
+                if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "第 ${dayIndex + 1} 天"
+            }
+            val notification = NotificationCompat.Builder(context, NotificationChannels.RING)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("闹钟响铃服务启动失败")
+                .setContentText("${DisplayPrefs.formatTime(context, hour, minute)} · $detail")
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setAutoCancel(true)
+                .build()
+            NotificationManagerCompat.from(context)
+                .notify(FALLBACK_NOTIFICATION_BASE + schedulerId, notification)
+        }.onFailure {
+            Log.e(TAG, "fallback notification failed", it)
+        }
+    }
+
+    private companion object {
+        const val TAG = "AlarmReceiver"
+        const val FALLBACK_NOTIFICATION_BASE = 2_000_000
     }
 }

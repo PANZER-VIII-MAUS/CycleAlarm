@@ -15,7 +15,8 @@ object RingtonePlayer {
         val uri: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        if (uri == null) return
+        if (uri == null) error("No default ringtone available")
+        var pendingPlayer: MediaPlayer? = null
         try {
             val p = MediaPlayer().apply {
                 setAudioAttributes(
@@ -29,9 +30,12 @@ object RingtonePlayer {
                 prepare()
                 start()
             }
+            pendingPlayer = p
             player = p
-        } catch (_: Exception) {
+        } catch (throwable: Exception) {
             player = null
+            runCatching { pendingPlayer?.release() }
+            throw throwable
         }
     }
 

@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.cyclealarm.app.R
@@ -51,8 +52,10 @@ class RingService : Service() {
 
         startAsForeground(kind, alarmId, dayIndex, hour, minute, label)
         launchRingActivity(kind, alarmId, dayIndex, hour, minute, label)
-        RingtonePlayer.play(this)
-        VibratorUtil.start(this)
+        runCatching { RingtonePlayer.play(this) }
+            .onFailure { Log.e(TAG, "ringtone init failed", it) }
+        runCatching { VibratorUtil.start(this) }
+            .onFailure { Log.e(TAG, "vibration init failed", it) }
 
         val durationSec = RingPrefs.durationSeconds(this)
         timeout?.let { handler.removeCallbacks(it) }
@@ -165,6 +168,8 @@ class RingService : Service() {
     }
 
     companion object {
+        private const val TAG = "RingService"
+
         /** 构建拉起响铃服务的 Intent（供 AlarmReceiver / 试听按钮使用）。 */
         fun ringIntent(
             context: Context,
