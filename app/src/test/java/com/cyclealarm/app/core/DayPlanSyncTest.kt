@@ -154,6 +154,18 @@ class DayPlanSyncTest {
     }
 
     @Test
+    fun `detached manual alarm never produces an update`() {
+        val detached = manualAlarm(33, 0, 8, 0).copy(label = "用户修改")
+        val ops = DayPlanSync.diff(
+            plans = listOf(PlanRow(0, 1, 7, 30, true)),
+            types = listOf(classType),
+            alarms = listOf(detached)
+        )
+
+        assertTrue(ops.none { it is AlarmOp.Update && it.alarmId == detached.id })
+    }
+
+    @Test
     fun `diff is stable across identical runs`() {
         val plans = listOf(
             PlanRow(3, 1, 7, 30, true),

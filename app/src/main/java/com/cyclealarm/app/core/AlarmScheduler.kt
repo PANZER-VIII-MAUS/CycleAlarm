@@ -116,8 +116,14 @@ object AlarmScheduler {
         epochDay: Long,
         holidayModeEnabled: Boolean
     ): Boolean {
-        if (!alarm.mutedDuringHoliday || !holidayModeEnabled) return false
-        return holidays.any { it.enabled && epochDay in it.startEpochDay..it.endEpochDay }
+        val inHolidayRange = holidays.any {
+            it.enabled && epochDay in it.startEpochDay..it.endEpochDay
+        }
+        return HolidayMutePolicy.shouldMute(
+            holidayModeEnabled,
+            alarm.mutedDuringHoliday,
+            inHolidayRange
+        )
     }
 
     /** 用 setAlarmClock() 设置周期闹钟；无下一次触发则取消。 */
@@ -183,8 +189,14 @@ object AlarmScheduler {
         epochDay: Long,
         holidayModeEnabled: Boolean
     ): Boolean {
-        if (!alarm.mutedDuringHoliday || !holidayModeEnabled) return false
-        return holidays.any { it.enabled && epochDay in it.startEpochDay..it.endEpochDay }
+        val inHolidayRange = holidays.any {
+            it.enabled && epochDay in it.startEpochDay..it.endEpochDay
+        }
+        return HolidayMutePolicy.shouldMute(
+            holidayModeEnabled,
+            alarm.mutedDuringHoliday,
+            inHolidayRange
+        )
     }
 
     /** 排一条按日期的一次性闹钟；已过/静音则取消。 */

@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.AlarmScheduler
+import com.cyclealarm.app.core.AlarmEditPolicy
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
 import com.cyclealarm.app.core.PlanSeedPolicy
@@ -173,12 +174,12 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setEnabled(alarm: AlarmEntity, enabled: Boolean) = viewModelScope.launch {
-        db.alarmDao().upsert(alarm.copy(enabled = enabled))
+        db.alarmDao().upsert(AlarmEditPolicy.detachFromPlan(alarm.copy(enabled = enabled)))
         syncPlans()
     }
 
     fun saveAlarm(alarm: AlarmEntity) = viewModelScope.launch {
-        db.alarmDao().upsert(alarm)
+        db.alarmDao().upsert(AlarmEditPolicy.detachFromPlan(alarm))
         syncPlans()
     }
 
@@ -330,14 +331,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * 假期模式总开关：
      * - 开启：假期段内的“假期静音”闹钟自动静默；
-     * - 关闭：所有假期段不生效，并批量把全部闹钟的“假期静音”置为关（省去逐个关闭）。
+     * - 关闭：所有假期段不生效，但保留每条闹钟自己的“假期静音”标记。
      */
     fun setHolidayMode(enabled: Boolean) = viewModelScope.launch {
         val settings = db.settingsDao().get() ?: return@launch
         db.settingsDao().upsert(settings.copy(holidayModeEnabled = enabled))
-        if (!enabled) {
-            db.alarmDao().setAllMutedDuringHoliday(false)
-        }
         reschedule()
     }
 
