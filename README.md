@@ -9,9 +9,23 @@
 - 支持「从课表 / 排班表导入」：Excel(.xlsx) 与 CSV，导入前有可编辑预览
 - 支持"假期模式"：多段假期 + 总开关，可一键导入中国法定节假日，假期结束自动恢复
 - Kotlin + Jetpack Compose 界面，Room 持久化，AlarmManager 精确排期，WorkManager 每日兜底重排 + 前台服务响铃
-- 针对 OPPO Find X7 / ColorOS 做了权限引导、`setAlarmClock()` 高优先级、常驻前台服务等适配
+- 适配 ColorOS / HyperOS 等国产 ROM：自启动、电池优化、后台弹出界面等权限引导，`setAlarmClock()` 高优先级排期，常驻前台服务降低被杀概率
 
-<!-- 真机截图放好后插入：![主界面](docs/screenshots/main-light.png) -->
+> 兼容性：最低 Android 8.0（minSdk 26）；精确闹钟、通知权限、全屏提醒等按 Android 12 / 13 / 14 的行为分别做了处理。
+> 目前的真机验证环境是 OPPO Find X7（ColorOS / Android 14），其它机型尚未逐一实测——遇到问题欢迎提 Issue。
+
+<p align="center">
+  <img src="docs/screenshots/main-light.jpg" width="230" alt="主界面（浅色）">
+  <img src="docs/screenshots/main-dark.jpg" width="230" alt="主界面（深色）">
+  <img src="docs/screenshots/holiday-light.jpg" width="230" alt="假期模式">
+</p>
+
+<details>
+<summary>更多截图：设置页</summary>
+
+<img src="docs/screenshots/settings-light.jpg" width="250" alt="设置页">
+
+</details>
 
 ## 下载安装
 
@@ -275,7 +289,7 @@ Release 签名与正式 APK 的生成方式见下方「打包发布（正式签�
 - `settings.plansSeeded` 是一次性 seed 标记：只有为 false 时才「清空旧闹钟 + 建默认计划」，先置 true 再动数据，
   避免"全部未安排"被二次清零
 
-## OPPO Find X7 / ColorOS 适配
+## 国产 ROM（ColorOS / HyperOS 等）适配
 
 Manifest 已声明：
 
