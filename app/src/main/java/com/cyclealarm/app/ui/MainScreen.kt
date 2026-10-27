@@ -4,6 +4,7 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +17,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -96,6 +100,7 @@ import com.cyclealarm.app.ui.plan.PlanPickerDialog
 import com.cyclealarm.app.ui.plan.PlanTimeDialog
 import com.cyclealarm.app.ui.plan.PlanTypeManagerDialog
 import com.cyclealarm.app.ui.theme.LocalExtraColors
+import com.cyclealarm.app.ui.theme.DarkBackground
 import com.cyclealarm.app.viewmodel.AlarmViewModel
 import java.time.LocalDate
 import java.time.Instant
@@ -384,6 +389,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         .sortedBy { it.hour * 60 + it.minute }
                     DayPlanCard(
                         dayText = dayLabel(settings, dayIndex),
+                        isToday = dayIndex == todayIndex,
                         plan = plan,
                         planType = type,
                         manualAlarms = manualAlarms,
@@ -796,6 +802,7 @@ private fun CycleInfoCard(
 @Composable
 private fun DayPlanCard(
     dayText: String,
+    isToday: Boolean,
     plan: DayPlanEntity?,
     planType: ActivityTypeEntity?,
     manualAlarms: List<AlarmEntity>,
@@ -847,14 +854,34 @@ private fun DayPlanCard(
         checkedThumbColor = Color.White,
         uncheckedThumbColor = Color.White
     )
+    val highlightColor = if (MaterialTheme.colorScheme.background == DarkBackground) {
+        LocalExtraColors.current.primaryDark
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+    val cardModifier = if (isToday) {
+        Modifier.border(1.5.dp, highlightColor, RoundedCornerShape(24.dp))
+    } else {
+        Modifier
+    }
 
-    CycleCard(onClick = onOpenPlan) {
+    CycleCard(modifier = cardModifier, onClick = onOpenPlan) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                dayText,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    dayText,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (isToday) {
+                    Box(
+                        Modifier
+                            .padding(start = 6.dp)
+                            .size(6.dp)
+                            .background(highlightColor, CircleShape)
+                    )
+                }
+            }
             Spacer(Modifier.width(16.dp))
             // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
             Column(
