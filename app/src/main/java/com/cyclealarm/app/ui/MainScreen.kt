@@ -28,8 +28,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
@@ -63,6 +65,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -597,103 +600,142 @@ private fun HolidayCard(
     onSetAllMuted: (Boolean) -> Unit,
     onDeleteHoliday: (Int) -> Unit
 ) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val summary = if (holidayModeEnabled) {
+        "假期模式 · ${holidays.size} 段假期"
+    } else {
+        "假期模式 · 已关闭"
+    }
+
     CycleCard {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("假期模式", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (holidayModeEnabled) {
+                    Box(
+                        Modifier
+                            .padding(end = 8.dp)
+                            .size(6.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                }
+                Text(
+                    summary,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) {
+                        Icons.Default.KeyboardArrowDown
+                    } else {
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight
+                    },
+                    contentDescription = if (expanded) "收起假期设置" else "展开假期设置",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (expanded) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("启用假期模式", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "关闭后所有假期暂时不生效，但保留每条闹钟的假期静音设置",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Switch(checked = holidayModeEnabled, onCheckedChange = onToggleMode)
+                }
+
+                if (holidays.isEmpty()) {
                     Text(
-                        "开启后假期内的闹钟自动静默；关闭时会一并关闭所有闹钟的假期静音",
+                        "还没有假期段。可一键导入法定节假日，或手动添加自定义区间。",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
+                } else {
+                    holidays.forEach { h ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .alpha(if (holidayModeEnabled) 1f else 0.45f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onEdit(h) }
+                            ) {
+                                Text(
+                                    h.label.ifBlank { "自定义假期" },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            IconButton(onClick = { onEdit(h) }) {
+                                Icon(Icons.Outlined.Edit, contentDescription = "编辑这段假期")
+                            }
+                            IconButton(onClick = { onDeleteHoliday(h.id) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "删除这段假期")
+                            }
+                            Switch(
+                                checked = h.enabled,
+                                onCheckedChange = { onToggleHoliday(h, it) }
+                            )
+                        }
+                    }
                 }
-                Switch(checked = holidayModeEnabled, onCheckedChange = onToggleMode)
-            }
 
-            if (holidays.isEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onImportChina,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("导入法定节假日")
+                    }
+                    OutlinedButton(
+                        onClick = onAddCustom,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("＋自定义假期")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { onSetAllMuted(true) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("全部开启假期静音")
+                    }
+                    OutlinedButton(
+                        onClick = { onSetAllMuted(false) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("全部关闭假期静音")
+                    }
+                }
                 Text(
-                    "还没有假期段。可一键导入法定节假日，或手动添加自定义区间。",
+                    "对下方所有闹钟生效",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
-            } else {
-                holidays.forEach { h ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .alpha(if (holidayModeEnabled) 1f else 0.45f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onEdit(h) }
-                        ) {
-                            Text(
-                                h.label.ifBlank { "自定义假期" },
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                        IconButton(onClick = { onEdit(h) }) {
-                            Icon(Icons.Outlined.Edit, contentDescription = "编辑这段假期")
-                        }
-                        IconButton(onClick = { onDeleteHoliday(h.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "删除这段假期")
-                        }
-                        Switch(
-                            checked = h.enabled,
-                            onCheckedChange = { onToggleHoliday(h, it) }
-                        )
-                    }
-                }
+                Text(
+                    "内置 2025/2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onImportChina,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("导入法定节假日")
-                }
-                OutlinedButton(
-                    onClick = onAddCustom,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("＋自定义假期")
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { onSetAllMuted(true) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("全部开启假期静音")
-                }
-                OutlinedButton(
-                    onClick = { onSetAllMuted(false) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("全部关闭假期静音")
-                }
-            }
-            Text(
-                "对下方所有闹钟生效",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                "内置 2025/2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
         }
     }
 }
