@@ -301,20 +301,24 @@ object AlarmScheduler {
         val now = System.currentTimeMillis()
         val target = SnoozeTimePolicy.target(now, minutes)
         val requestCode = schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET
-        val snooze = db.withTransaction {
-            db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
-            val entity = SnoozeEntity(
-                kind = kind,
-                alarmId = alarmId.toLong(),
-                dayIndex = dayIndex,
-                hour = originalHour,
-                minute = originalMinute,
-                label = label,
-                triggerAt = target.triggerAt,
-                requestCode = requestCode
-            )
-            entity.copy(id = db.snoozeDao().insert(entity))
-        }
+        val snooze = runCatching {
+            db.withTransaction {
+                db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
+                val entity = SnoozeEntity(
+                    kind = kind,
+                    alarmId = alarmId.toLong(),
+                    dayIndex = dayIndex,
+                    hour = originalHour,
+                    minute = originalMinute,
+                    label = label,
+                    triggerAt = target.triggerAt,
+                    requestCode = requestCode
+                )
+                entity.copy(id = db.snoozeDao().insert(entity))
+            }
+        }.onFailure {
+            Log.e(TAG, "persist snooze failed kind=$kind alarmId=$alarmId", it)
+        }.getOrNull() ?: return false
         if (!rescheduleStoredSnooze(context, snooze)) {
             runCatching { db.snoozeDao().deleteById(snooze.id) }
                 .onFailure { Log.e(TAG, "delete failed snooze row id=${snooze.id}", it) }
