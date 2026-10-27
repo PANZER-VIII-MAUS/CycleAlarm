@@ -60,7 +60,7 @@ fun DateAlarmSection(
             Text(
                 "按日期导入的一次性闹钟；响过或日期已过就不再响",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             alarms.forEach { alarm ->
                 val next = AlarmScheduler.nextTriggerForDateAlarm(alarm, settings, holidays)
@@ -78,7 +78,7 @@ fun DateAlarmSection(
                             "${DisplayPrefs.formatTime(context, alarm.hour, alarm.minute)} · " +
                                 alarm.label.ifBlank { "按日期闹钟" },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             when {
@@ -88,7 +88,7 @@ fun DateAlarmSection(
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (!alarm.enabled || next == null) {
-                                MaterialTheme.colorScheme.outline
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             } else {
                                 MaterialTheme.colorScheme.primary
                             }
@@ -166,7 +166,7 @@ private fun DateAlarmEditDialog(
                         Text(
                             "这条按日期闹钟是否生效",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = enabled, onCheckedChange = { enabled = it })
@@ -177,7 +177,7 @@ private fun DateAlarmEditDialog(
                         Text(
                             "开启后落在假期里的这一天不响",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = muted, onCheckedChange = { muted = it })

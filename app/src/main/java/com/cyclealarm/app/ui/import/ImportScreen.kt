@@ -214,7 +214,7 @@ private fun IdleContent(
         Text(
             "支持 Excel(.xlsx) 与 CSV。周课表会切换为「每周」循环；带具体日期的排班表会生成为一次性闹钟。",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Button(onClick = onPick, modifier = Modifier.fillMaxWidth()) {
             Text("选择 Excel / CSV 文件")
@@ -289,7 +289,7 @@ private fun PreviewContent(
         Text(
             "工作表：${state.sheetName}",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (requiresWeeklySwitch) {
             Card(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
@@ -326,7 +326,7 @@ private fun PreviewContent(
                     Text(
                         "可以手动指定表头行、星期列与时间列后重试。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedButton(onClick = onManual, modifier = Modifier.fillMaxWidth()) {
                         Text("手动指定表格结构")
@@ -384,14 +384,14 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
                 Text(
                     "· ${warning.message}" + if (warning.sourceRef.isNotBlank()) "（${warning.sourceRef}）" else "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (warnings.size > 6) {
                 Text(
                     "…… 还有 ${warnings.size - 6} 条",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -414,7 +414,7 @@ private fun DoneContent(
         Text(
             "周期闹钟 ${state.cycleCount} 条，按日期闹钟 ${state.dateCount} 条",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (state.switchedToWeekly) {
             Text(
@@ -479,7 +479,7 @@ private fun OptionsDialog(
                 Text(
                     "表格里没有时间时使用的默认上课时间",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedButton(
                     onClick = {

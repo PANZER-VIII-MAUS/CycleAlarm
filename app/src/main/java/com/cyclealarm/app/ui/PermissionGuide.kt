@@ -86,7 +86,7 @@ fun PermissionGuideDialog(onDismiss: () -> Unit) {
                     text = RomHelper.extraTips().joinToString("\n") { "· $it" } +
                         "\n· 多任务界面下拉本应用卡片，点锁锁定后台",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
@@ -112,7 +112,7 @@ private fun GuideRow(
             Text(
                 desc,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         if (granted == true) {

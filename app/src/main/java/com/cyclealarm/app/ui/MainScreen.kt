@@ -69,7 +69,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -423,7 +422,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         text = "提示：循环天数固定后，只能在对应的第 X 天里添加闹钟；" +
                             "同一天可加多个闹钟；右上角设置可修改循环方式。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
@@ -659,7 +658,7 @@ private fun HolidayCard(
                         Text(
                             "关闭后所有假期暂时不生效，但保留每条闹钟的假期静音设置",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = holidayModeEnabled, onCheckedChange = onToggleMode)
@@ -669,14 +668,12 @@ private fun HolidayCard(
                     Text(
                         "还没有假期段。可一键导入法定节假日，或手动添加自定义区间。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     holidays.forEach { h ->
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .alpha(if (holidayModeEnabled) 1f else 0.45f),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(
@@ -689,9 +686,14 @@ private fun HolidayCard(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}",
+                                    "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}" +
+                                        when {
+                                            !holidayModeEnabled -> " · 总开关已关闭"
+                                            !h.enabled -> " · 已停用"
+                                            else -> ""
+                                        },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             IconButton(onClick = { onEdit(h) }) {
@@ -739,12 +741,12 @@ private fun HolidayCard(
                 Text(
                     "对下方所有闹钟生效",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     "内置 2025/2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -840,7 +842,7 @@ private fun CycleInfoCard(
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             TextButton(onClick = onSettingsClick) { Text("设置") }
@@ -1083,7 +1085,7 @@ private fun EditAlarmDialog(
                         Text(
                             "这条闹钟是否生效",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = enabled, onCheckedChange = { enabled = it })
@@ -1094,7 +1096,7 @@ private fun EditAlarmDialog(
                         Text(
                             "假期模式开启时这条不响（取消勾选则假期照常响）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = muted, onCheckedChange = { muted = it })
@@ -1103,7 +1105,7 @@ private fun EditAlarmDialog(
                     Text(
                         "修改后不再随安排自动同步",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

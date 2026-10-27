@@ -66,7 +66,7 @@ fun PlanTypeManagerDialog(
                     Text(
                         "还没有安排类型",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp)
                     )
                 }
@@ -87,7 +87,7 @@ fun PlanTypeManagerDialog(
                                     append(" · 使用 ${usage[type.id] ?: 0} 天")
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         IconButton(
@@ -253,7 +253,7 @@ private fun PlanTypeEditDialog(
                         Text(
                             "关闭表示这类安排不产生闹钟（如休息）",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(checked = rings, onCheckedChange = { rings = it })

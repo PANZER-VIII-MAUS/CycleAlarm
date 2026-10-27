@@ -70,7 +70,7 @@ fun PreviewTable(
                         Text(
                             entry.title.ifBlank { "未命名" },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { editingIndex = index }) {
@@ -147,7 +147,7 @@ private fun EditEntryDialog(
                                     color = if (weekday == day) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
-                                        MaterialTheme.colorScheme.outline
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     }
                                 )
                             }
@@ -157,7 +157,7 @@ private fun EditEntryDialog(
                     Text(
                         entry.epochDay?.let { formatEpochDay(it) }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

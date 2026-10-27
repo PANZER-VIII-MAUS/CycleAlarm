@@ -219,7 +219,7 @@ fun SettingsScreen(
                     Text(
                         "App 无法修改系统时间或时区。修改系统时区后，闹钟排期会自动重建，无需手动重排。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     TextButton(
@@ -246,7 +246,7 @@ fun SettingsScreen(
                     Text(
                         "循环闹钟 · 个人自用",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }

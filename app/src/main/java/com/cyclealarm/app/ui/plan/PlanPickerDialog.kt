@@ -46,7 +46,7 @@ fun PlanPickerDialog(
                     Text(
                         "还没有安排类型，请先到「管理安排类型」里新增。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp)
                     )
                 }
@@ -71,7 +71,7 @@ fun PlanPickerDialog(
                                     "不响铃"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         if (selected) {
@@ -83,7 +83,7 @@ fun PlanPickerDialog(
                 Text(
                     "未安排",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onClear() }
