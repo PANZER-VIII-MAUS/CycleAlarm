@@ -3,8 +3,10 @@ package com.cyclealarm.app.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat
 import com.cyclealarm.app.core.AlarmResyncHelper
+import com.cyclealarm.app.core.BootResyncPolicy
 import com.cyclealarm.app.service.AlarmGuardService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,23 +16,30 @@ import kotlinx.coroutines.launch
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_MY_PACKAGE_REPLACED,
-            Intent.ACTION_TIMEZONE_CHANGED -> {
-                val pendingResult = goAsync()
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        runCatching { AlarmResyncHelper.resyncAll(context) }
-                        ContextCompat.startForegroundService(
+        if (!BootResyncPolicy.shouldResync(intent.action)) return
+
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                runCatching { AlarmResyncHelper.resyncAll(context) }
+                    .onFailure {
+                        Log.e(TAG, "scheduled resync failed for ${intent.action}", it)
+                    }
+                runCatching {
+                    ContextCompat.startForegroundService(
                             context,
                             Intent(context, AlarmGuardService::class.java)
                         )
-                    } finally {
-                        pendingResult.finish()
-                    }
+                }.onFailure {
+                    Log.e(TAG, "guard service start failed for ${intent.action}", it)
                 }
+            } finally {
+                pendingResult.finish()
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "BootReceiver"
     }
 }

@@ -1,5 +1,6 @@
 package com.cyclealarm.app.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
@@ -10,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -33,6 +35,7 @@ class RingService : Service() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var timeout: Runnable? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -52,6 +55,7 @@ class RingService : Service() {
 
         startAsForeground(kind, alarmId, dayIndex, hour, minute, label)
         launchRingActivity(kind, alarmId, dayIndex, hour, minute, label)
+        acquireWakeLock()
         runCatching { RingtonePlayer.play(this) }
             .onFailure { Log.e(TAG, "ringtone init failed", it) }
         runCatching { VibratorUtil.start(this) }
@@ -73,7 +77,30 @@ class RingService : Service() {
     private fun stopRing() {
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
+        releaseWakeLock()
         stopSelf()
+    }
+
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWakeLock() {
+        releaseWakeLock()
+        val powerManager = getSystemService(PowerManager::class.java) ?: return
+        val lock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "CycleAlarm:Ring"
+        ).apply {
+            setReferenceCounted(false)
+        }
+        runCatching { lock.acquire() }
+            .onSuccess { wakeLock = lock }
+            .onFailure { Log.e(TAG, "wake lock acquire failed", it) }
+    }
+
+    private fun releaseWakeLock() {
+        val lock = wakeLock ?: return
+        wakeLock = null
+        runCatching { if (lock.isHeld) lock.release() }
+            .onFailure { Log.e(TAG, "wake lock release failed", it) }
     }
 
     /** 直接拉起响铃界面，保证任何时候都有“停止/稍后”按钮可操作。 */
@@ -102,6 +129,7 @@ class RingService : Service() {
     override fun onDestroy() {
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
+        releaseWakeLock()
         RingtonePlayer.stop()
         VibratorUtil.stop(this)
         super.onDestroy()
