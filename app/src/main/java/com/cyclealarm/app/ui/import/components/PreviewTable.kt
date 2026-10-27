@@ -31,10 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.ImportedEntry
 import com.cyclealarm.app.importer.ScheduleKind
 import com.cyclealarm.app.ui.formatEpochDay
-import java.util.Locale
 
 /** 导入预览表：可勾选、可编辑单行、可删除。 */
 @Composable
@@ -45,6 +45,7 @@ fun PreviewTable(
     onEdit: (Int, ImportedEntry) -> Unit,
     onDelete: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     var editingIndex by remember { mutableStateOf<Int?>(null) }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -64,7 +65,7 @@ fun PreviewTable(
                             .clickable { editingIndex = index }
                     ) {
                         Text(
-                            "${entryLabel(entry)}  ${String.format(Locale.CHINA, "%02d:%02d", entry.hour, entry.minute)}",
+                            "${entryLabel(entry)}  ${DisplayPrefs.formatTime(context, entry.hour, entry.minute)}",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -131,12 +132,12 @@ private fun EditEntryDialog(
                             },
                             hour,
                             minute,
-                            true
+                            DisplayPrefs.is24Hour(context)
                         ).show()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("时间：${String.format(Locale.CHINA, "%02d:%02d", hour, minute)}")
+                    Text("时间：${DisplayPrefs.formatTime(context, hour, minute)}")
                 }
                 if (entry.kind == ScheduleKind.WEEKLY) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

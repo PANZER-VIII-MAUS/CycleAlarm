@@ -34,8 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
-import java.util.Locale
 
 /**
  * 安排类型管理：增删改、上下移、显示使用天数。
@@ -51,6 +51,7 @@ fun PlanTypeManagerDialog(
     onMove: (id: Int, up: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     var editing by remember { mutableStateOf<ActivityTypeEntity?>(null) }
     var pendingTimeChange by remember { mutableStateOf<ActivityTypeEntity?>(null) }
     var deleting by remember { mutableStateOf<ActivityTypeEntity?>(null) }
@@ -80,7 +81,7 @@ fun PlanTypeManagerDialog(
                             Text(
                                 buildString {
                                     if (type.rings) {
-                                        append(String.format(Locale.CHINA, "%02d:%02d 响铃", type.hour, type.minute))
+                                        append("${DisplayPrefs.formatTime(context, type.hour, type.minute)} 响铃")
                                     } else {
                                         append("不响铃")
                                     }
@@ -233,7 +234,7 @@ private fun PlanTypeEditDialog(
                             },
                             hour,
                             minute,
-                            true
+                            DisplayPrefs.is24Hour(context)
                         ).show()
                     },
                     enabled = rings,
@@ -241,7 +242,7 @@ private fun PlanTypeEditDialog(
                 ) {
                     Text(
                         if (rings) {
-                            String.format(Locale.CHINA, "响铃时间：%02d:%02d", hour, minute)
+                            "响铃时间：${DisplayPrefs.formatTime(context, hour, minute)}"
                         } else {
                             "不响铃（无时间）"
                         }

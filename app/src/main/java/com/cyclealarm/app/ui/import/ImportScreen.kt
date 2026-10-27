@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.DetectedLayout
 import com.cyclealarm.app.importer.ImportOptions
 import com.cyclealarm.app.importer.ImportWarning
@@ -59,7 +60,6 @@ import com.cyclealarm.app.ui.import.components.PreviewTable
 import com.cyclealarm.app.viewmodel.ImportUiState
 import com.cyclealarm.app.viewmodel.ImportViewModel
 import java.time.LocalTime
-import java.util.Locale
 
 private val MIME_TYPES = arrayOf(
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -488,12 +488,14 @@ private fun OptionsDialog(
                             { _, h, m -> fallback = LocalTime.of(h, m) },
                             fallback.hour,
                             fallback.minute,
-                            true
+                            DisplayPrefs.is24Hour(context)
                         ).show()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("默认时间：${fallback.withSecond(0)}")
+                    Text(
+                        "默认时间：${DisplayPrefs.formatTime(context, fallback.hour, fallback.minute)}"
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("覆盖现有闹钟", modifier = Modifier.weight(1f))
@@ -512,11 +514,11 @@ private fun OptionsDialog(
                                     { _, h, m -> sections = sections + (section to LocalTime.of(h, m)) },
                                     time.hour,
                                     time.minute,
-                                    true
+                                    DisplayPrefs.is24Hour(context)
                                 ).show()
                             }
                         ) {
-                            Text(String.format(Locale.CHINA, "%02d:%02d", time.hour, time.minute))
+                            Text(DisplayPrefs.formatTime(context, time.hour, time.minute))
                         }
                     }
                 }

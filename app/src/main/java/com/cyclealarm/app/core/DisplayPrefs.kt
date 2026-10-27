@@ -21,7 +21,11 @@ object DisplayPrefs {
 
     /** 统一的时间格式化：24 小时制 "07:30"；12 小时制 "上午 7:30" / "下午 12:30"。 */
     fun formatTime(c: Context, hour: Int, minute: Int): String {
-        return if (is24Hour(c)) {
+        return formatTime(is24Hour(c), hour, minute)
+    }
+
+    fun formatTime(is24Hour: Boolean, hour: Int, minute: Int): String {
+        return if (is24Hour) {
             String.format(Locale.CHINA, "%02d:%02d", hour, minute)
         } else {
             val am = hour < 12
@@ -36,7 +40,10 @@ object DisplayPrefs {
 
     /** 24 小时制 "07:30"；12 小时制 "7:30"（不带上午/下午）。 */
     fun formatClock(c: Context, hour: Int, minute: Int): String =
-        if (is24Hour(c)) String.format(Locale.CHINA, "%02d:%02d", hour, minute)
+        formatClock(is24Hour(c), hour, minute)
+
+    fun formatClock(is24Hour: Boolean, hour: Int, minute: Int): String =
+        if (is24Hour) String.format(Locale.CHINA, "%02d:%02d", hour, minute)
         else String.format(Locale.CHINA, "%d:%02d", hour12(hour), minute)
 
     fun hour12(hour: Int): Int = when {

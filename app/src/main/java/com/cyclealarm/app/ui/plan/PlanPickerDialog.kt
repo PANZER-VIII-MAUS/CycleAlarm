@@ -19,10 +19,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.DayPlanEntity
-import java.util.Locale
 
 /** 选择某一天的安排：类型列表 + 未安排 + 管理类型。 */
 @Composable
@@ -35,6 +36,7 @@ fun PlanPickerDialog(
     onManage: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("$dayText 的安排") },
@@ -66,7 +68,7 @@ fun PlanPickerDialog(
                             )
                             Text(
                                 if (type.rings) {
-                                    String.format(Locale.CHINA, "%02d:%02d 响铃", type.hour, type.minute)
+                                    "${DisplayPrefs.formatTime(context, type.hour, type.minute)} 响铃"
                                 } else {
                                     "不响铃"
                                 },

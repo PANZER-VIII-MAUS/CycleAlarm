@@ -153,7 +153,7 @@ private fun DateAlarmEditDialog(
                             },
                             hour,
                             minute,
-                            true
+                            DisplayPrefs.is24Hour(context)
                         ).show()
                     },
                     modifier = Modifier.fillMaxWidth()
