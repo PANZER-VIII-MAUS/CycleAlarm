@@ -77,6 +77,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -1000,6 +1001,7 @@ private fun DayPlanCard(
                 modifier = Modifier
                     .weight(1f)
                     .semantics(mergeDescendants = true) {
+                        contentDescription = "$dayText $baseSubtitle $timeText"
                         stateDescription = planStateDescription
                     },
                 verticalAlignment = Alignment.CenterVertically
