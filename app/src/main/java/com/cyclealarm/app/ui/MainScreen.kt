@@ -268,6 +268,13 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         }
     }
     val todayIndex = todayDay - 1
+    val orderedDayIndices = remember(cycleLength, todayIndex) {
+        if (todayIndex in 0 until cycleLength) {
+            listOf(todayIndex) + (0 until cycleLength).filter { it != todayIndex }
+        } else {
+            (0 until cycleLength).toList()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -383,7 +390,11 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     )
                 }
 
-                items(count = cycleLength, key = { index -> "day$index" }) { dayIndex ->
+                items(
+                    count = orderedDayIndices.size,
+                    key = { index -> "day${orderedDayIndices[index]}" }
+                ) { position ->
+                    val dayIndex = orderedDayIndices[position]
                     val plan = plansByDay[dayIndex]
                     val type = plan?.let { typesById[it.typeId] }
                     val manualAlarms = alarms
