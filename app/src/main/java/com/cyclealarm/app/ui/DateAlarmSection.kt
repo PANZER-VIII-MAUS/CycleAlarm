@@ -27,6 +27,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
@@ -74,6 +78,7 @@ fun DateAlarmSection(
                         modifier = Modifier
                             .weight(1f)
                             .clickable { editing = alarm }
+                            .semantics { role = Role.Button }
                     ) {
                         Text(
                             formatEpochDay(alarm.epochDay),
@@ -104,7 +109,10 @@ fun DateAlarmSection(
                     }
                     Switch(
                         checked = alarm.enabled,
-                        onCheckedChange = { onToggle(alarm, it) }
+                        onCheckedChange = { onToggle(alarm, it) },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+                        }
                     )
                 }
             }
@@ -174,7 +182,13 @@ private fun DateAlarmEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = enabled, onCheckedChange = { enabled = it })
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (enabled) "已开启" else "已关闭"
+                        }
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -185,7 +199,13 @@ private fun DateAlarmEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = muted, onCheckedChange = { muted = it })
+                    Switch(
+                        checked = muted,
+                        onCheckedChange = { muted = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (muted) "假期静音已开启" else "假期静音已关闭"
+                        }
+                    )
                 }
             }
         },

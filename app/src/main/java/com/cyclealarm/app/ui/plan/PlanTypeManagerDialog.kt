@@ -34,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
@@ -266,7 +268,13 @@ private fun PlanTypeEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = rings, onCheckedChange = { rings = it })
+                    Switch(
+                        checked = rings,
+                        onCheckedChange = { rings = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (rings) "响铃已开启" else "不响铃"
+                        }
+                    )
                 }
             }
         },

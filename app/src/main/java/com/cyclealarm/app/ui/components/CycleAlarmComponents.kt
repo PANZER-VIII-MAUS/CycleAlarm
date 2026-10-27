@@ -19,6 +19,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
@@ -32,7 +35,13 @@ fun CycleCard(
     contentPadding: PaddingValues = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val clickModifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+    val clickModifier = if (onClick != null) {
+        Modifier
+            .clickable(onClick = onClick)
+            .semantics { role = Role.Button }
+    } else {
+        Modifier
+    }
     Card(
         modifier = modifier.fillMaxWidth().then(clickModifier),
         shape = RoundedCornerShape(24.dp),

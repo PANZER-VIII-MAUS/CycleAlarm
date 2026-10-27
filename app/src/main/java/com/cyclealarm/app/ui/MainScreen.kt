@@ -71,6 +71,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -561,6 +565,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                                     // 改「安排时间」仍然走点卡片那条路径。
                                     editingAlarm = AlarmEntity(dayIndex = index, hour = 7, minute = 0)
                                 }
+                                .semantics { role = Role.Button }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -629,7 +634,11 @@ private fun HolidayCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded },
+                    .clickable { expanded = !expanded }
+                    .semantics {
+                        role = Role.Button
+                        stateDescription = if (expanded) "已展开" else "已折叠"
+                    },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (holidayModeEnabled) {
@@ -666,7 +675,13 @@ private fun HolidayCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = holidayModeEnabled, onCheckedChange = onToggleMode)
+                    Switch(
+                        checked = holidayModeEnabled,
+                        onCheckedChange = onToggleMode,
+                        modifier = Modifier.semantics {
+                            stateDescription = if (holidayModeEnabled) "已开启" else "已关闭"
+                        }
+                    )
                 }
 
                 if (holidays.isEmpty()) {
@@ -685,6 +700,7 @@ private fun HolidayCard(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clickable { onEdit(h) }
+                                    .semantics { role = Role.Button }
                             ) {
                                 Text(
                                     h.label.ifBlank { "自定义假期" },
@@ -709,7 +725,14 @@ private fun HolidayCard(
                             }
                             Switch(
                                 checked = h.enabled,
-                                onCheckedChange = { onToggleHoliday(h, it) }
+                                onCheckedChange = { onToggleHoliday(h, it) },
+                                modifier = Modifier.semantics {
+                                    stateDescription = when {
+                                        !holidayModeEnabled -> "总开关已关闭"
+                                        h.enabled -> "已开启"
+                                        else -> "已停用"
+                                    }
+                                }
                             )
                         }
                     }
@@ -904,6 +927,11 @@ private fun DayPlanCard(
     // 开关语义 = 今天会不会响：休息/未安排置灰关闭；启用=开（可关掉暂停）；已暂停=关（可点开恢复）
     val switchOn = ringsToday && plan?.enabled == true
     val switchEnabled = ringsToday
+    val planStateDescription = when {
+        !ringsToday -> "不响铃"
+        switchOn -> "已开启"
+        else -> "已关闭"
+    }
     val switchColors = SwitchDefaults.colors(
         checkedTrackColor = MaterialTheme.colorScheme.primary,
         uncheckedTrackColor = LocalExtraColors.current.switchOffTrack,
@@ -923,41 +951,49 @@ private fun DayPlanCard(
 
     CycleCard(modifier = cardModifier, onClick = onOpenPlan) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    dayText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (isToday) {
-                    Box(
-                        Modifier
-                            .padding(start = 6.dp)
-                            .size(6.dp)
-                            .background(highlightColor, CircleShape)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) {
+                        stateDescription = planStateDescription
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        dayText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (isToday) {
+                        Box(
+                            Modifier
+                                .padding(start = 6.dp)
+                                .size(6.dp)
+                                .background(highlightColor, CircleShape)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
+                Column(
+                    modifier = Modifier.widthIn(min = 80.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        timeText,
+                        style = timeStyle,
+                        color = timeColor,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            Spacer(Modifier.width(16.dp))
-            // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
-            Column(
-                modifier = Modifier.widthIn(min = 80.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    timeText,
-                    style = timeStyle,
-                    color = timeColor,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.weight(1f))
             IconButton(onClick = onAddAlarm) {
                 Icon(
                     Icons.Default.Add,
@@ -969,7 +1005,10 @@ private fun DayPlanCard(
                 checked = switchOn,
                 onCheckedChange = onTogglePlan,
                 enabled = switchEnabled,
-                colors = switchColors
+                colors = switchColors,
+                modifier = Modifier.semantics {
+                    stateDescription = planStateDescription
+                }
             )
         }
         manualAlarms.forEach { alarm ->
@@ -1002,6 +1041,10 @@ private fun ManualAlarmRow(
             modifier = Modifier
                 .weight(1f)
                 .clickable(onClick = onEdit)
+                .semantics {
+                    role = Role.Button
+                    stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+                }
         ) {
             Text(
                 "${DisplayPrefs.formatTime(context, alarm.hour, alarm.minute)} · " +
@@ -1017,7 +1060,14 @@ private fun ManualAlarmRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = alarm.enabled, onCheckedChange = onToggle, colors = switchColors)
+        Switch(
+            checked = alarm.enabled,
+            onCheckedChange = onToggle,
+            colors = switchColors,
+            modifier = Modifier.semantics {
+                stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+            }
+        )
     }
 }
 
@@ -1093,7 +1143,13 @@ private fun EditAlarmDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = enabled, onCheckedChange = { enabled = it })
+                    Switch(
+                        checked = enabled,
+                        onCheckedChange = { enabled = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (enabled) "已开启" else "已关闭"
+                        }
+                    )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -1104,7 +1160,13 @@ private fun EditAlarmDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = muted, onCheckedChange = { muted = it })
+                    Switch(
+                        checked = muted,
+                        onCheckedChange = { muted = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (muted) "假期静音已开启" else "假期静音已关闭"
+                        }
+                    )
                 }
                 if (alarm.planGenerated) {
                     Text(

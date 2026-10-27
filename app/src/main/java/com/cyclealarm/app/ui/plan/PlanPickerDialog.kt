@@ -20,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.ActivityTypeEntity
@@ -58,6 +61,7 @@ fun PlanPickerDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(type) }
+                            .semantics { role = Role.Button }
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -89,6 +93,7 @@ fun PlanPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onClear() }
+                        .semantics { role = Role.Button }
                         .padding(horizontal = 12.dp, vertical = 12.dp)
                 )
                 TextButton(onClick = onManage, modifier = Modifier.fillMaxWidth()) {

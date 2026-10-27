@@ -46,6 +46,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -259,7 +263,10 @@ private fun SheetPickContent(names: List<String>, onPick: (String) -> Unit) {
         item { Text("请选择要导入的工作表", style = MaterialTheme.typography.titleMedium) }
         items(names) { name ->
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { onPick(name) }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPick(name) }
+                    .semantics { role = Role.Button }
             ) {
                 Text(name, modifier = Modifier.padding(16.dp))
             }
@@ -508,8 +515,21 @@ private fun OptionsDialog(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("覆盖现有闹钟", modifier = Modifier.weight(1f))
-                    Switch(checked = overwrite, onCheckedChange = { overwrite = it })
+                    Text(
+                        "覆盖现有闹钟",
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics {
+                                stateDescription = if (overwrite) "已开启" else "已关闭"
+                            }
+                    )
+                    Switch(
+                        checked = overwrite,
+                        onCheckedChange = { overwrite = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (overwrite) "已开启" else "已关闭"
+                        }
+                    )
                 }
                 HorizontalDivider()
                 Text("节次时间表", style = MaterialTheme.typography.titleSmall)
@@ -667,7 +687,7 @@ private fun ColumnPicker(
                             modifier = Modifier.fillMaxWidth().clickable {
                                 onSelect(-1)
                                 expanded = false
-                            }.padding(12.dp)
+                            }.semantics { role = Role.Button }.padding(12.dp)
                         )
                     }
                     (0..20).forEach { index ->
@@ -676,7 +696,7 @@ private fun ColumnPicker(
                             modifier = Modifier.fillMaxWidth().clickable {
                                 onSelect(index)
                                 expanded = false
-                            }.padding(12.dp)
+                            }.semantics { role = Role.Button }.padding(12.dp)
                         )
                     }
                 }
