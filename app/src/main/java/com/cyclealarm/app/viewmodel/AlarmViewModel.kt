@@ -9,6 +9,7 @@ import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
 import com.cyclealarm.app.core.DeleteUndoPolicy
 import com.cyclealarm.app.core.InstallMarker
+import com.cyclealarm.app.core.PlanDeletePolicy
 import com.cyclealarm.app.core.PlanSeedPolicy
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AlarmEntity
@@ -348,6 +349,43 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteActivityType(id: Int) = viewModelScope.launch {
         db.dayPlanDao().deleteByType(id)
         db.activityTypeDao().deleteById(id)
+        syncPlans()
+    }
+
+    /** 删除某天的安排，并返回被删除的行（供撤销恢复）。 */
+    suspend fun deleteDayPlan(dayIndex: Int): DayPlanEntity? {
+        val existing = db.dayPlanDao().getByDay(dayIndex) ?: return null
+        db.dayPlanDao().deleteByDay(dayIndex)
+        syncPlans()
+        return existing
+    }
+
+    /** 撤销「删除安排」：把原行写回并重排。 */
+    fun restoreDayPlan(plan: DayPlanEntity) = viewModelScope.launch {
+        db.dayPlanDao().upsert(plan)
+        syncPlans()
+    }
+
+    /** 删除安排类型前的快照：类型行 + 被连带删除的 day_plan 行。 */
+    data class ActivityTypeDeleteSnapshot(
+        val type: ActivityTypeEntity,
+        val plans: List<DayPlanEntity>
+    )
+
+    /** 删除安排类型并返回快照（供撤销恢复）。 */
+    suspend fun deleteActivityTypeWithSnapshot(id: Int): ActivityTypeDeleteSnapshot? {
+        val type = db.activityTypeDao().getById(id) ?: return null
+        val plans = PlanDeletePolicy.plansUsingType(db.dayPlanDao().getAll(), id)
+        db.dayPlanDao().deleteByType(id)
+        db.activityTypeDao().deleteById(id)
+        syncPlans()
+        return ActivityTypeDeleteSnapshot(type, plans)
+    }
+
+    /** 撤销「删除安排类型」：恢复类型与被连带删除的安排，并重排。 */
+    fun restoreActivityType(snapshot: ActivityTypeDeleteSnapshot) = viewModelScope.launch {
+        db.activityTypeDao().upsert(snapshot.type)
+        snapshot.plans.forEach { db.dayPlanDao().upsert(it) }
         syncPlans()
     }
 

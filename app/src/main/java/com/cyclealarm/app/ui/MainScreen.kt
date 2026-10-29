@@ -248,6 +248,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     fun showUndoSnackbar(message: String, onUndo: () -> Unit) {
         uiScope.launch {
+            // 连删时替换上一条提示，避免排队等满 5 秒
+            snackbarHostState.currentSnackbarData?.dismiss()
             val result = withTimeoutOrNull(5_000L) {
                 snackbarHostState.showSnackbar(
                     message = message,
@@ -259,6 +261,17 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             when (result) {
                 SnackbarResult.ActionPerformed -> onUndo()
                 else -> snackbarHostState.currentSnackbarData?.dismiss()
+            }
+        }
+    }
+
+    fun deletePlanWithUndo(day: Int) {
+        uiScope.launch {
+            val removed = viewModel.deleteDayPlan(day)
+            if (removed != null) {
+                showUndoSnackbar("已删除${dayLabel(settings, day)}的安排") {
+                    viewModel.restoreDayPlan(removed)
+                }
             }
         }
     }
@@ -291,7 +304,6 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     }
     var planPickerDay by rememberSaveable { mutableStateOf<Int?>(null) }
     var planTimeDay by rememberSaveable { mutableStateOf<Int?>(null) }
-    var deletePlanDay by rememberSaveable { mutableStateOf<Int?>(null) }
     var showTypeManager by rememberSaveable { mutableStateOf(false) }
     var showDayPicker by rememberSaveable { mutableStateOf(false) }
 
@@ -569,7 +581,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 planPickerDay = null
             },
             onClear = {
-                viewModel.clearDayPlan(day)
+                deletePlanWithUndo(day)
                 planPickerDay = null
             },
             onEditCurrentTime = {
@@ -596,29 +608,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     planTimeDay = null
                 },
                 onDeletePlan = {
-                    viewModel.clearDayPlan(day)
+                    deletePlanWithUndo(day)
                     planTimeDay = null
                 },
                 onDismiss = { planTimeDay = null }
             )
         }
-    }
-
-    deletePlanDay?.let { day ->
-        AlertDialog(
-            onDismissRequest = { deletePlanDay = null },
-            title = { Text("删除安排闹钟") },
-            text = { Text("删除后这一天会变为「未安排」。确定吗？") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.clearDayPlan(day)
-                    deletePlanDay = null
-                }) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { deletePlanDay = null }) { Text("取消") }
-            }
-        )
     }
 
     if (showDayPicker) {
@@ -677,7 +672,16 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             onUpdate = { type, applyToExisting ->
                 viewModel.updateActivityType(type, applyToExisting)
             },
-            onDelete = { viewModel.deleteActivityType(it) },
+            onDelete = { id ->
+                uiScope.launch {
+                    val snapshot = viewModel.deleteActivityTypeWithSnapshot(id)
+                    if (snapshot != null) {
+                        showUndoSnackbar("已删除安排类型「${snapshot.type.name}」") {
+                            viewModel.restoreActivityType(snapshot)
+                        }
+                    }
+                }
+            },
             onMove = { id, up -> viewModel.moveActivityType(id, up) },
             onDismiss = { showTypeManager = false }
         )
