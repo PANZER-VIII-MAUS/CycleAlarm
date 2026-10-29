@@ -51,10 +51,20 @@
 | `VIBRATE` | 闹钟响铃时提供振动提醒。 |
 | `WAKE_LOCK` | 响铃期间短时保持 CPU 工作，避免屏幕唤醒后铃声或振动立即中断。 |
 | `SYSTEM_ALERT_WINDOW` | 仅用于检测和引导用户打开悬浮窗相关系统权限；应用核心闹钟功能不依赖悬浮窗覆盖其他应用。 |
+| `ACCESS_NETWORK_STATE` | 由 WorkManager 引入（用于判断调度约束）；应用自身不联网、不上传任何数据。 |
 
 ---
 
 ## 更新日志
+
+### 0.2.2（2026-10-29）
+
+- 修复响铃链路的崩溃风险：前台服务被 ROM 拒绝时不再崩溃，降级为普通通知并继续响铃
+- 「一直响」加 15 分钟硬上限：通知被拒时也不会无限响到只能强杀进程
+- 试听与真实响铃隔离：试听时点「稍后 / 停止」不再污染真实 snooze 记录
+- 响铃页支持返回键停止、屏幕常亮、跟随服务退出；连续两个闹钟不再串数据
+- 点卡片可直接换「安排」类型，不必先删除变「未安排」再重选
+- 周课表导入：写入层加「已确认」门禁；切每周时同步清理 `day_plans`，杜绝幽灵闹钟
 
 ### 0.2.1（2026-10-27）
 
@@ -131,7 +141,7 @@
 - 厂商识别 + 权限引导升级：自动识别 ColorOS / HyperOS / OriginOS / MagicOS 等 ROM，
   在首次引导页显示对应的自启动、电池耗电、后台弹出界面等设置指引。
 
-### 1.0.1（2026-08-19）
+### 1.0.1（2026-08-19，早期内部测试版；版本号后统一为 0.0.x）
 
 1. 发现了些已知的问题，修复了些已知的 bug。
 2. 探索了宇宙的边界。
@@ -273,7 +283,7 @@ Release 签名与正式 APK 的生成方式见下方「打包发布（正式签�
 
 - 每条闹钟使用数据库行 `id` 作为 `PendingIntent` 的 `requestCode`，互不覆盖
 - 使用 `setAlarmClock(AlarmClockInfo, operation)`：系统按最高优先级处理，状态栏显示闹钟图标，锁屏也能触发
-- 若用户收回"精确闹钟"权限，`SecurityException` 会降级到 `setWindow()`
+- 若用户收回"精确闹钟"权限或系统未授予，排期会降级为 `set(RTC_WAKEUP)`（非精确闹钟），并记录日志，不会崩溃
 - 响铃后立即为同一条闹钟计算并设置下一次触发，形成循环
 - `BootReceiver` 处理 `BOOT_COMPLETED / MY_PACKAGE_REPLACED / TIME_SET / TIMEZONE_CHANGED`，开机后重建
 
@@ -389,8 +399,11 @@ gradlew.bat assembleRelease
 
 - 铃声目前使用系统默认闹钟铃声；后续可在编辑页增加"自定义铃声"（使用 `RingtoneManager` 选择器）
 - 「图片识别」暂不支持：为避免引入联网与 API Key，课表 / 排班表请用 Excel(.xlsx) 或 CSV 导入
-- 数据库当前为 v6（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`）；
-  已提供 4→5→6 迁移链，从 v4 起升级不会清空数据；低于 v4 的极旧测试版缺迁移，会直接报错而不是静默清空
+- `allowBackup=true`：闹钟与设置会随系统 / Google 备份上云；由于周期锚点是绝对日期，
+  换机恢复后「今天是第几天」可能错位，必要时在设置里重新「今天对齐」
+- 数据库当前为 v7（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
+  / `snoozes` / `import_snapshots`）；已提供 4→5→6→7 迁移链，从 v4 起升级不会清空数据；
+  低于 v4 的极旧测试版缺迁移，会直接报错而不是静默清空
 - 法定节假日目前内置 2025/2026 两年；2027 年通知发布后需在代码里追加数据并重新打包（也可临时用"＋自定义假期"手动添加）
 - 若上架 Google Play：`specialUse` 前台服务与 `SCHEDULE_EXACT_ALARM` 需要按政策填写用途声明
 
