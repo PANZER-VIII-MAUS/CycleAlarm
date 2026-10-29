@@ -82,6 +82,23 @@ class AlarmReceiver : BroadcastReceiver() {
                             null
                         }
 
+                        // 幽灵守护：系统里可能残留「已被删除/已停用」的闹钟 PendingIntent。
+                        // 这种情况下不能响铃，否则用户会听到一条已不存在的闹钟。
+                        if (!snoozed) {
+                            val stillActive = runCatching {
+                                val db = AppDatabase.get(context)
+                                if (kind == AlarmScheduler.KIND_DATE) {
+                                    db.dateAlarmDao().getAll().any { it.id == alarmId && it.enabled }
+                                } else {
+                                    db.alarmDao().getById(alarmId)?.enabled == true
+                                }
+                            }.getOrDefault(true)
+                            if (!stillActive) {
+                                Log.w(TAG, "stale fire for missing/disabled alarm id=$alarmId, ignored")
+                                return@launch
+                            }
+                        }
+
                         // 记录「真实响过」，供漏响审计排除这一次（避免把正常响铃误报成漏响）
                         ResyncCheckpoint.markFired(context, System.currentTimeMillis())
 
