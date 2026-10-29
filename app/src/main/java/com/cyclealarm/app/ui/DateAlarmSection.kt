@@ -40,6 +40,7 @@ import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
 import com.cyclealarm.app.data.HolidayEntity
 import com.cyclealarm.app.ui.components.CycleCard
+import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.ui.theme.timePickerContext
 import com.cyclealarm.app.ui.DateAlarmEntitySaver
 import java.util.Locale
@@ -114,7 +115,7 @@ fun DateAlarmSection(
                     IconButton(onClick = { onDelete(alarm) }) {
                         Icon(Icons.Default.Delete, contentDescription = "删除这条按日期闹钟")
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = alarm.enabled,
                         onCheckedChange = { onToggle(alarm, it) },
                         modifier = Modifier.semantics {
@@ -189,7 +190,7 @@ private fun DateAlarmEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = enabled,
                         onCheckedChange = { enabled = it },
                         modifier = Modifier.semantics {
@@ -206,7 +207,7 @@ private fun DateAlarmEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = muted,
                         onCheckedChange = { muted = it },
                         modifier = Modifier.semantics {

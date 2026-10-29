@@ -3,6 +3,14 @@
     <style name="Theme.CycleAlarm" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">#F2F4F8</item>
     </style>
+
+    <!--
+      显式深色启动主题：MainActivity 在 super.onCreate 之前按 App 主题 setTheme，
+      避免「系统浅色 + App 强制深色」时启动瞬间闪白。
+    -->
+    <style name="Theme.CycleAlarm.OpaqueDark" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#14161A</item>
+    </style>
     <style name="Theme.CycleAlarm.Ring" parent="android:Theme.Material.Light.NoActionBar.Fullscreen">
         <item name="android:windowBackground">#000000</item>
     </style>

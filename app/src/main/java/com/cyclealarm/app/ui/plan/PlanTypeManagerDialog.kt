@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.ui.theme.timePickerContext
 import com.cyclealarm.app.ui.ActivityTypeEntitySaver
@@ -268,7 +269,7 @@ private fun PlanTypeEditDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = rings,
                         onCheckedChange = { rings = it },
                         modifier = Modifier.semantics {

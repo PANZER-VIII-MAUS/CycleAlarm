@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.importer.DetectedLayout
 import com.cyclealarm.app.importer.ImportOptions
 import com.cyclealarm.app.importer.ImportWarning
@@ -523,7 +524,7 @@ private fun OptionsDialog(
                                 stateDescription = if (overwrite) "已开启" else "已关闭"
                             }
                     )
-                    Switch(
+                    CycleSwitch(
                         checked = overwrite,
                         onCheckedChange = { overwrite = it },
                         modifier = Modifier.semantics {

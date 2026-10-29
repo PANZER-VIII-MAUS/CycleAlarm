@@ -14,13 +14,27 @@ import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.service.AlarmGuardService
 import com.cyclealarm.app.ui.MainScreen
+import com.cyclealarm.app.ui.theme.ThemeManager
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
 import com.cyclealarm.app.worker.DailyResyncWorker
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    /** 在 super.onCreate 之前设置窗口背景，消除「系统浅色 + App 强制深色」的白闪。 */
+    private fun applyStoredTheme() {
+        val mode = ThemeManager.readStoredMode(this)
+        val systemDark = (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (ThemeManager.resolveDark(mode, systemDark)) {
+            setTheme(R.style.Theme_CycleAlarm_OpaqueDark)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 启动背景按 App 主题选择（而不是只跟系统 night），避免强制深色时闪白
+        applyStoredTheme()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 

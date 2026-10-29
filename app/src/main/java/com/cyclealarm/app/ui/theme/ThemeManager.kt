@@ -22,6 +22,12 @@ object ThemeManager {
     @Volatile
     private var initialized = false
 
+    /** 读取已保存的主题模式（可在 ThemeManager.init 之前调用，用于启动时选主题）。 */
+    fun readStoredMode(context: Context): String =
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY, MODE_SYSTEM) ?: MODE_SYSTEM
+
     fun init(context: Context) {
         if (initialized) return
         val prefs = context.applicationContext

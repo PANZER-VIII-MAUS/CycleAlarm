@@ -107,6 +107,7 @@ import com.cyclealarm.app.data.DayPlanEntity
 import com.cyclealarm.app.data.HolidayEntity
 import com.cyclealarm.app.service.RingService
 import com.cyclealarm.app.ui.components.CycleCard
+import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.ui.components.PillButton
 import com.cyclealarm.app.ui.import.ImportActivity
 import com.cyclealarm.app.ui.settings.SettingsActivity
@@ -759,7 +760,7 @@ private fun HolidayCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = holidayModeEnabled,
                         onCheckedChange = onToggleMode,
                         modifier = Modifier.semantics {
@@ -807,7 +808,7 @@ private fun HolidayCard(
                             IconButton(onClick = { onDeleteHoliday(h) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除这段假期")
                             }
-                            Switch(
+                            CycleSwitch(
                                 checked = h.enabled,
                                 onCheckedChange = { onToggleHoliday(h, it) },
                                 modifier = Modifier.semantics {
@@ -1090,7 +1091,7 @@ private fun DayPlanCard(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Switch(
+            CycleSwitch(
                 checked = switchOn,
                 onCheckedChange = onTogglePlan,
                 enabled = switchEnabled,
@@ -1149,7 +1150,7 @@ private fun ManualAlarmRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(
+        CycleSwitch(
             checked = alarm.enabled,
             onCheckedChange = onToggle,
             colors = switchColors,
@@ -1233,7 +1234,7 @@ private fun EditAlarmDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = enabled,
                         onCheckedChange = { enabled = it },
                         modifier = Modifier.semantics {
@@ -1250,7 +1251,7 @@ private fun EditAlarmDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(
+                    CycleSwitch(
                         checked = muted,
                         onCheckedChange = { muted = it },
                         modifier = Modifier.semantics {
