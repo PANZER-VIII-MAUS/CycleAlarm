@@ -1216,13 +1216,6 @@ private fun EditAlarmDialog(
                         }
                     )
                 }
-                if (alarm.planGenerated) {
-                    Text(
-                        "修改后不再随安排自动同步",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         },
         confirmButton = {

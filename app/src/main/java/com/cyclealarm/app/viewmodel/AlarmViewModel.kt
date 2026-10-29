@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.AlarmScheduler
-import com.cyclealarm.app.core.AlarmEditPolicy
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
 import com.cyclealarm.app.core.DeleteUndoPolicy
@@ -198,12 +197,13 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setEnabled(alarm: AlarmEntity, enabled: Boolean) = viewModelScope.launch {
-        db.alarmDao().upsert(AlarmEditPolicy.detachFromPlan(alarm.copy(enabled = enabled)))
+        // 计划生成的闹钟不在 UI 可编辑列表里；这里只处理手动闹钟，不再做 detach
+        db.alarmDao().upsert(alarm.copy(enabled = enabled))
         syncPlans()
     }
 
     fun saveAlarm(alarm: AlarmEntity) = viewModelScope.launch {
-        db.alarmDao().upsert(AlarmEditPolicy.detachFromPlan(alarm))
+        db.alarmDao().upsert(alarm)
         syncPlans()
     }
 
