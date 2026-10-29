@@ -32,12 +32,13 @@ import androidx.compose.ui.window.Dialog
 fun CycleCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null,
     contentPadding: PaddingValues = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     val clickModifier = if (onClick != null) {
         Modifier
-            .clickable(onClick = onClick)
+            .clickable(onClickLabel = onClickLabel, onClick = onClick)
             .semantics { role = Role.Button }
     } else {
         Modifier

@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.cyclealarm.app.core.AlarmScheduler
+import com.cyclealarm.app.core.DateAlarmState
+import com.cyclealarm.app.core.DateAlarmStatus
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.data.AppSettingsEntity
 import com.cyclealarm.app.data.DateAlarmEntity
@@ -90,17 +92,22 @@ fun DateAlarmSection(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(
-                            when {
-                                !alarm.enabled -> "已停用"
-                                next == null -> "已过期"
-                                else -> "待响铃"
+                        val state = DateAlarmStatus.resolve(
+                            enabled = alarm.enabled,
+                            mutedDuringHoliday = alarm.mutedDuringHoliday,
+                            holidayModeEnabled = settings?.holidayModeEnabled == true,
+                            inHoliday = holidays.any {
+                                it.enabled && alarm.epochDay in it.startEpochDay..it.endEpochDay
                             },
+                            hasNextTrigger = next != null
+                        )
+                        Text(
+                            DateAlarmStatus.label(state),
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (!alarm.enabled || next == null) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
+                            color = if (state == DateAlarmState.PENDING) {
                                 MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
                     }

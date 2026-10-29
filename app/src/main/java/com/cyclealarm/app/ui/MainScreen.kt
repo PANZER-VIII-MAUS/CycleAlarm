@@ -423,34 +423,6 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item(key = "holiday") {
-                    HolidayCard(
-                        holidayModeEnabled = settings?.holidayModeEnabled ?: true,
-                        holidays = holidays,
-                        onToggleMode = { viewModel.setHolidayMode(it) },
-                        onImportChina = { viewModel.importChinaHolidays() },
-                        onAddCustom = {
-                            val today = LocalDate.now().toEpochDay()
-                            editingHoliday = HolidayEntity(
-                                startEpochDay = today,
-                                endEpochDay = today,
-                                enabled = true
-                            )
-                        },
-                        onEdit = { editingHoliday = it },
-                        onToggleHoliday = { h, enabled ->
-                            viewModel.setHolidayEnabled(h.id, enabled)
-                        },
-                        onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
-                        onDeleteHoliday = { holiday ->
-                            viewModel.deleteHoliday(holiday.id)
-                            showUndoSnackbar("已删除假期") {
-                                viewModel.restoreHoliday(holiday)
-                            }
-                        }
-                    )
-                }
-
                 item(key = "cycle") {
                     CycleInfoCard(
                         settings = settings,
@@ -506,6 +478,34 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                             viewModel.deleteAlarm(alarm.id)
                             showUndoSnackbar("已删除闹钟") {
                                 viewModel.restoreAlarm(alarm)
+                            }
+                        }
+                    )
+                }
+
+                item(key = "holiday") {
+                    HolidayCard(
+                        holidayModeEnabled = settings?.holidayModeEnabled ?: true,
+                        holidays = holidays,
+                        onToggleMode = { viewModel.setHolidayMode(it) },
+                        onImportChina = { viewModel.importChinaHolidays() },
+                        onAddCustom = {
+                            val today = LocalDate.now().toEpochDay()
+                            editingHoliday = HolidayEntity(
+                                startEpochDay = today,
+                                endEpochDay = today,
+                                enabled = true
+                            )
+                        },
+                        onEdit = { editingHoliday = it },
+                        onToggleHoliday = { h, enabled ->
+                            viewModel.setHolidayEnabled(h.id, enabled)
+                        },
+                        onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
+                        onDeleteHoliday = { holiday ->
+                            viewModel.deleteHoliday(holiday.id)
+                            showUndoSnackbar("已删除假期") {
+                                viewModel.restoreHoliday(holiday)
                             }
                         }
                     )
@@ -1033,7 +1033,11 @@ private fun DayPlanCard(
         Modifier
     }
 
-    CycleCard(modifier = cardModifier, onClick = onOpenPlan) {
+    CycleCard(
+        modifier = cardModifier,
+        onClick = onOpenPlan,
+        onClickLabel = "查看或修改这一天的安排"
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
                 modifier = Modifier
