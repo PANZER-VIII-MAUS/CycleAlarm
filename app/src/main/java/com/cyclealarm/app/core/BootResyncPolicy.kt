@@ -8,5 +8,6 @@ object BootResyncPolicy {
         action == Intent.ACTION_BOOT_COMPLETED ||
             action == Intent.ACTION_MY_PACKAGE_REPLACED ||
             action == Intent.ACTION_TIMEZONE_CHANGED ||
-            action == Intent.ACTION_TIME_CHANGED
+            action == Intent.ACTION_TIME_CHANGED ||
+            action == "android.app.action.NEXT_ALARM_CLOCK_CHANGED"
 }
