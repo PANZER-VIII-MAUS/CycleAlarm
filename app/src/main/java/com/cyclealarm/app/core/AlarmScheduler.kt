@@ -67,9 +67,21 @@ object AlarmScheduler {
 
     private const val SNOOZE_REQUEST_OFFSET = 100_000
 
+    /**
+     * 允许的数据库 id 上限：requestCode 用「相加偏移」分区（主响铃 / 停止 / showIntent /
+     * snooze / 全屏五组），前提是 id 远小于偏移量。这里把隐含前提变成显式断言。
+     */
+    const val MAX_ALARM_ID = SNOOZE_REQUEST_OFFSET - 1
+
     /** 稍后提醒的 requestCode：kind 决定命名空间，id 决定槽位。 */
     fun snoozeRequestCode(kind: String, alarmId: Int): Int =
         schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET
+
+    init {
+        require(DATE_REQUEST_BASE > MAX_ALARM_ID) {
+            "DATE_REQUEST_BASE($DATE_REQUEST_BASE) 必须大于 MAX_ALARM_ID($MAX_ALARM_ID)"
+        }
+    }
 
     /** 全屏响铃 Activity 的独立 requestCode 偏移，避免与 showIntent / snooze 槽位混用。 */
     const val FULLSCREEN_REQUEST_OFFSET = 200_000
@@ -77,8 +89,12 @@ object AlarmScheduler {
     private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** 把 (类型, 数据库 id) 换算成全局唯一的调度 id。 */
-    fun schedulerId(kind: String, alarmId: Int): Int =
-        if (kind == KIND_DATE) DATE_REQUEST_BASE + alarmId else alarmId
+    fun schedulerId(kind: String, alarmId: Int): Int {
+        require(alarmId in 0..MAX_ALARM_ID) {
+            "alarmId 超出 requestCode 命名空间: $alarmId（上限 $MAX_ALARM_ID）"
+        }
+        return if (kind == KIND_DATE) DATE_REQUEST_BASE + alarmId else alarmId
+    }
 
     // ---------------------------------------------------------------------
     // 周期闹钟（原有逻辑保持不变）
