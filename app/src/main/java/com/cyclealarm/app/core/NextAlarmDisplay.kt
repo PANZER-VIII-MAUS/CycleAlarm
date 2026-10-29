@@ -22,6 +22,11 @@ object NextAlarmDisplay {
             nowDate.plusDays(1) -> "明天"
             else -> "${triggerDate.monthValue} 月 ${triggerDate.dayOfMonth} 日"
         }
+        // 超过 48 小时不再用「还有 154 小时」这种读不出意义的数字，改成按天
+        if (totalMinutes >= 48 * 60) {
+            val days = remaining / (24 * 60 * 60_000L)
+            return "$dayLabel · 还有 $days 天"
+        }
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60
         val remainingText = if (minutes > 0) {

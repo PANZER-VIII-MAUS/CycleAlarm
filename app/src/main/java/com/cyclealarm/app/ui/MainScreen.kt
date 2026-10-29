@@ -157,11 +157,23 @@ private fun NextAlarmCard(
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = DisplayPrefs.formatClock(context, nextAlarm.hour, nextAlarm.minute),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = LocalExtraColors.current.navy
-                    )
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = DisplayPrefs.formatClock(
+                                context, nextAlarm.hour, nextAlarm.minute
+                            ),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = LocalExtraColors.current.navy
+                        )
+                        if (!DisplayPrefs.is24Hour(context)) {
+                            Text(
+                                text = DisplayPrefs.amPmLabel(context, nextAlarm.hour).orEmpty(),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 2.dp, bottom = 4.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = NextAlarmDisplay.countdownText(nextAlarm.triggerAt, now),
                         style = MaterialTheme.typography.bodyMedium,
@@ -184,15 +196,29 @@ private fun nextAlarmSourceLabel(
     settings: AppSettingsEntity
 ): String = when (alarm.kind) {
     NextAlarmKind.CYCLE -> {
-        val triggerDay = Instant.ofEpochMilli(alarm.triggerAt)
+        val triggerDate = Instant.ofEpochMilli(alarm.triggerAt)
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
-            .toEpochDay()
-        "第 ${cycleDayOf(settings, triggerDay)} 天"
+        when (settings.cycleType) {
+            CycleTypes.WEEKLY -> weekdayShort(triggerDate.dayOfWeek.value)
+            CycleTypes.DAILY -> "每天"
+            else -> "第 ${cycleDayOf(settings, triggerDate.toEpochDay())} 天"
+        }
     }
 
     NextAlarmKind.DATE -> "按日期"
     NextAlarmKind.SNOOZE -> "稍后提醒"
+}
+
+/** 周一..周日（ISO dayOfWeek：1=周一）。 */
+private fun weekdayShort(dayOfWeek: Int): String = when (dayOfWeek) {
+    1 -> "周一"
+    2 -> "周二"
+    3 -> "周三"
+    4 -> "周四"
+    5 -> "周五"
+    6 -> "周六"
+    else -> "周日"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

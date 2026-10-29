@@ -1,7 +1,9 @@
 package com.cyclealarm.app.core
 
 import java.time.LocalDate
+import java.time.Instant
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -46,4 +48,24 @@ class NextAlarmDisplayTest {
 
     private fun at(hour: Int, minute: Int): Long =
         today.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+
+    @Test
+    fun `more than two days counts in days`() {
+        val now = Instant.parse("2026-10-29T08:00:00Z")
+        val triggerAt = now.plus(3, ChronoUnit.DAYS).toEpochMilli()
+        assertEquals(
+            "11 月 1 日 · 还有 3 天",
+            NextAlarmDisplay.countdownText(triggerAt, now.toEpochMilli(), ZoneId.of("UTC"))
+        )
+    }
+
+    @Test
+    fun `two days and one hour counts in days`() {
+        val now = Instant.parse("2026-10-29T08:00:00Z")
+        val triggerAt = now.plus(49, ChronoUnit.HOURS).toEpochMilli()
+        assertEquals(
+            "10 月 31 日 · 还有 2 天",
+            NextAlarmDisplay.countdownText(triggerAt, now.toEpochMilli(), ZoneId.of("UTC"))
+        )
+    }
 }
