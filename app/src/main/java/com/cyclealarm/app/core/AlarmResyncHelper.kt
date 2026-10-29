@@ -117,10 +117,14 @@ object AlarmResyncHelper {
         val manager = context.getSystemService(AlarmManager::class.java) ?: return
         val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
         val actual = manager.nextAlarmClock?.triggerTime ?: return
-        if (actual != expected) {
-            // 只有真正不一致才重排：这也保证「自己重排 → 广播 → 对账」不会无限循环
-            Log.w(TAG, "next alarm mismatch expected=$expected actual=$actual, rescheduling")
+        if (actual > expected) {
+            // 系统里的下一次比我们算的晚（或压根没有）→ 说明排期没落地，补一次
+            Log.w(TAG, "next alarm later than expected ($actual > $expected), rescheduling")
             AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
+        } else if (actual < expected) {
+            // 系统里有一个更早的闹钟（通常是历史遗留的 PendingIntent）。
+            // 这里只记录：反复重排也清不掉它，而且会变成「每次回前台都重排」的噪声。
+            Log.w(TAG, "stale earlier alarm in system ($actual < $expected), keeping schedule")
         }
     }
 
