@@ -62,6 +62,25 @@ object AlarmResyncHelper {
         ResyncCheckpoint.markChecked(context, now)
     }
 
+    /**
+     * 只做对账，不重排、不做漏响审计：供 NEXT_ALARM_CLOCK_CHANGED 使用。
+     *
+     * 自己重排后系统会再发一次该广播，此时「期望值 == 实际值」，对账什么都不做，
+     * 因此不会形成循环。
+     */
+    suspend fun auditNextAlarm(context: Context) {
+        val db = AppDatabase.get(context)
+        val now = System.currentTimeMillis()
+        reconcileNextAlarm(
+            context = context,
+            now = now,
+            cycleAlarms = db.alarmDao().getAll(),
+            dateAlarms = db.dateAlarmDao().getAll(),
+            settings = db.settingsDao().get(),
+            holidays = db.holidayDao().getAll()
+        )
+    }
+
     private fun auditMissed(
         context: Context,
         now: Long,
@@ -99,6 +118,7 @@ object AlarmResyncHelper {
         val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
         val actual = manager.nextAlarmClock?.triggerTime ?: return
         if (actual != expected) {
+            // 只有真正不一致才重排：这也保证「自己重排 → 广播 → 对账」不会无限循环
             Log.w(TAG, "next alarm mismatch expected=$expected actual=$actual, rescheduling")
             AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
         }

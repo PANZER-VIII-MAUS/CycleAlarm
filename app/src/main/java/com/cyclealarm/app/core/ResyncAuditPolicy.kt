@@ -28,6 +28,13 @@ object ResyncAuditPolicy {
     /** 单条闹钟在窗口内最多报几次，防御异常配置导致的长循环。 */
     const val MAX_HITS_PER_ALARM = 4
 
+    /** 两次整轮重排之间的最小间隔：防止任何来源的广播回环。 */
+    const val FULL_RESYNC_MIN_GAP_MS = 5_000L
+
+    /** 距上次完整重排太近时跳过（返回 true = 跳过）。 */
+    fun shouldSkipFullResync(lastCheckAt: Long, now: Long): Boolean =
+        lastCheckAt > 0L && now > lastCheckAt && now - lastCheckAt < FULL_RESYNC_MIN_GAP_MS
+
     fun shouldAudit(lastCheckAt: Long, now: Long): Boolean {
         if (lastCheckAt <= 0L || now <= lastCheckAt) return false
         val delta = now - lastCheckAt

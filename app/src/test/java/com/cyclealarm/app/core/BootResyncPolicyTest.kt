@@ -24,4 +24,10 @@ class BootResyncPolicyTest {
         assertFalse(BootResyncPolicy.shouldResync(Intent.ACTION_SCREEN_ON))
         assertFalse(BootResyncPolicy.shouldResync(null))
     }
+
+    @Test
+    fun `next alarm clock change never triggers a full resync`() {
+        assertFalse(BootResyncPolicy.shouldResync(BootResyncPolicy.ACTION_NEXT_ALARM_CLOCK_CHANGED))
+        assertTrue(BootResyncPolicy.shouldAuditOnly(BootResyncPolicy.ACTION_NEXT_ALARM_CLOCK_CHANGED))
+    }
 }

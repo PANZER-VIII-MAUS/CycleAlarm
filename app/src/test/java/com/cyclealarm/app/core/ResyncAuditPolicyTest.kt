@@ -107,4 +107,11 @@ class ResyncAuditPolicyTest {
         assertTrue(withFired.size <= allMissed.size)
         assertTrue(justFired > lastCheck)
     }
+
+    @Test
+    fun `full resync is debounced right after the previous one`() {
+        assertTrue(ResyncAuditPolicy.shouldSkipFullResync(now - 1_000L, now))
+        assertFalse(ResyncAuditPolicy.shouldSkipFullResync(now - 60_000L, now))
+        assertFalse(ResyncAuditPolicy.shouldSkipFullResync(0L, now))
+    }
 }
