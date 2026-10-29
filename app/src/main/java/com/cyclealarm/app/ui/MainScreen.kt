@@ -453,8 +453,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         planType = type,
                         manualAlarms = manualAlarms,
                         onOpenPlan = {
-                            // 两类点击分流：无安排 → 选安排；有安排 → 改这一天的安排时间
-                            if (plan == null) planPickerDay = dayIndex else planTimeDay = dayIndex
+                            // 总是先进安排选择器：既能直接换类型，也能从「当前安排」行进到改时间
+                            planPickerDay = dayIndex
                         },
                         onTogglePlan = { enabled -> viewModel.setPlanEnabled(dayIndex, enabled) },
                         onAddAlarm = { viewModel.addAlarmToDay(dayIndex) },
@@ -545,6 +545,10 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             onClear = {
                 viewModel.clearDayPlan(day)
                 planPickerDay = null
+            },
+            onEditCurrentTime = {
+                planPickerDay = null
+                planTimeDay = day
             },
             onManage = {
                 planPickerDay = null
