@@ -8,6 +8,7 @@ import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
 import com.cyclealarm.app.core.DeleteUndoPolicy
+import com.cyclealarm.app.core.InstallMarker
 import com.cyclealarm.app.core.PlanSeedPolicy
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AlarmEntity
@@ -132,16 +133,22 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         // 类型表为空则补默认类型；这不表示要重建用户的闹钟或安排。
         if (db.activityTypeDao().count() == 0) insertDefaultTypes()
 
+        val freshInstall = !InstallMarker.hasMarker(getApplication())
+        InstallMarker.markInstalled(getApplication())
+
         if (!settings.plansSeeded) {
             val alarmCount = db.alarmDao().getAll().size
             val dayPlanCount = db.dayPlanDao().getAll().size
-            if (PlanSeedPolicy.shouldCreateDefaultPlans(alarmCount, dayPlanCount)) {
+            // 只有「从未安装过（无标记）」且两张表都为空时才注入默认计划；
+            // 老用户把闹钟/安排删光也不会被当成新装再注入一遍。
+            if (freshInstall && PlanSeedPolicy.shouldCreateDefaultPlans(alarmCount, dayPlanCount)) {
                 // 只有全新安装 / 两张表都为空时才建默认计划：第 1..N-1 天上课，第 N 天休息
                 val types = db.activityTypeDao().getAll()
                 val classType = types.firstOrNull { it.name == "上课" }
                     ?: types.firstOrNull { it.rings }
                 val restType = types.firstOrNull { !it.rings }
-                val length = settings.cycleLength.coerceAtLeast(1)
+                // 注入上限 6 天：30 天周期不该一次塞 29 条默认闹钟
+                val length = settings.cycleLength.coerceAtLeast(1).coerceAtMost(MAX_SEED_DAYS)
                 if (classType != null && length <= 1) {
                     db.dayPlanDao().upsert(
                         DayPlanEntity(
@@ -462,5 +469,8 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     private companion object {
         const val TAG = "AlarmViewModel"
+
+        /** 默认计划注入的最大天数（防止长周期一次注入过多闹钟）。 */
+        const val MAX_SEED_DAYS = 6
     }
 }

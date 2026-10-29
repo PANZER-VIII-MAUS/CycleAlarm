@@ -26,6 +26,17 @@ class DatabaseSchemaTest {
         assertTrue(schema.contains("\"name\": \"index_alarms_dayIndex_hour_minute\""))
     }
 
+
+    @Test
+    fun `v8 schema keeps all v7 tables`() {
+        val schema = schemaJson(version = 8)
+
+        assertTrue(schema.contains("\"version\": 8"))
+        assertTrue(schema.contains("\"tableName\": \"alarms\""))
+        assertTrue(schema.contains("\"tableName\": \"snoozes\""))
+        assertTrue(schema.contains("\"tableName\": \"day_plans\""))
+    }
+
     private fun schemaJson(version: Int): String {
         val relative = "schemas/com.cyclealarm.app.data.AppDatabase/$version.json"
         val candidates = listOf(File(relative), File("app/$relative"))

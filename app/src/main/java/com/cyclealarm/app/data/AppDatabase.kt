@@ -23,7 +23,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     // v5：按日期的一次性闹钟（课表/排班表按日期导入）；
     // v6：循环安排（安排类型 + 每天一个安排，自动生成闹钟）。
     // v7：持久化 snooze 与导入快照。必须走 Migration，禁止清空用户数据。
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -97,6 +97,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v7 → v8：纯数据回填（假期静音 + plansSeeded），不改表结构。 */
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Migration7To8Sql.statements.forEach(db::execSQL)
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -104,7 +111,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cycle_alarm.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                     .also { INSTANCE = it }
             }
