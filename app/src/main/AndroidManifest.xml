@@ -22,6 +22,18 @@
     <!-- 悬浮窗（引导页会跳转到系统设置，声明以备检测） -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <queries>
+        <!-- 厂商自启动/权限设置页需要包可见性（Android 11+） -->
+        <package android:name="com.oplus.safecenter" />
+        <package android:name="com.coloros.safecenter" />
+        <package android:name="com.coloros.safecenter.permission" />
+        <package android:name="com.oppo.safe" />
+        <package android:name="com.vivo.permissionmanager" />
+        <package android:name="com.miui.securitycenter" />
+        <package android:name="com.huawei.systemmanager" />
+        <package android:name="com.hihonor.systemmanager" />
+    </queries>
+
     <application
         android:name=".CycleAlarmApp"
         android:allowBackup="true"
