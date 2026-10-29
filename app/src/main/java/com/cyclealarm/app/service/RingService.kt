@@ -18,6 +18,7 @@ import androidx.core.app.ServiceCompat
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.NotificationChannels
+import com.cyclealarm.app.core.RingForegroundGuard
 import com.cyclealarm.app.core.RingtonePlayer
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.core.DisplayPrefs
@@ -212,20 +213,50 @@ class RingService : Service() {
             .setAutoCancel(false)
             .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            ServiceCompat.startForeground(
-                this,
-                2,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            startForeground(2, notification)
+        val outcome = RingForegroundGuard.attempt {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                ServiceCompat.startForeground(
+                    this,
+                    2,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(2, notification)
+            }
         }
+        if (!outcome.foregrounded) {
+            // 前台化失败必须降级而不是崩溃：记录失败供下次打开 App 提示，改发普通通知，
+            // 铃声与振动继续（同函数后续逻辑不受影响）。
+            Log.e(TAG, "startForeground failed", outcome.error)
+            outcome.error?.let { RingForegroundGuard.recordFailure(this, it) }
+            postFallbackNotification(fullScreenIntent)
+        }
+    }
+
+    /** 前台化失败时的降级入口：普通通知（id 与响铃通知 2 区分），点开进响铃页。 */
+    private fun postFallbackNotification(contentIntent: PendingIntent) {
+        runCatching {
+            val fallback = NotificationCompat.Builder(this, NotificationChannels.RING)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("闹钟正在响")
+                .setContentText("前台服务不可用，点开可停止")
+                .setContentIntent(contentIntent)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .build()
+            getSystemService(android.app.NotificationManager::class.java)
+                ?.notify(FALLBACK_NOTIFICATION_ID, fallback)
+        }.onFailure { Log.e(TAG, "fallback notification failed", it) }
     }
 
     companion object {
         private const val TAG = "RingService"
+
+        /** 前台化失败时降级通知的 id（与响铃前台通知 2 区分）。 */
+        private const val FALLBACK_NOTIFICATION_ID = 3
 
         /** 构建拉起响铃服务的 Intent（供 AlarmReceiver / 试听按钮使用）。 */
         fun ringIntent(
