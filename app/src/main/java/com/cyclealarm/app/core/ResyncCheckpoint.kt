@@ -13,6 +13,7 @@ object ResyncCheckpoint {
     private const val KEY_LAST_CHECK = "last_check_at"
     private const val KEY_LAST_MISSED_AT = "last_missed_at"
     private const val KEY_LAST_MISSED_COUNT = "last_missed_count"
+    private const val KEY_LAST_FIRE_AT = "last_fire_at"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
@@ -33,6 +34,16 @@ object ResyncCheckpoint {
                 .putLong(KEY_LAST_MISSED_AT, now)
                 .putInt(KEY_LAST_MISSED_COUNT, count)
                 .apply()
+        }
+    }
+
+    /** 最后一次真实响铃的时间；0 = 从未响过。 */
+    fun lastFireAt(context: Context): Long =
+        runCatching { prefs(context).getLong(KEY_LAST_FIRE_AT, 0L) }.getOrDefault(0L)
+
+    fun markFired(context: Context, now: Long) {
+        runCatching {
+            prefs(context).edit().putLong(KEY_LAST_FIRE_AT, now).apply()
         }
     }
 

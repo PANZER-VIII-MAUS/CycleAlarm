@@ -16,6 +16,7 @@ import com.cyclealarm.app.core.AlarmFireCoordinator
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.core.NotificationPermissionCheck
+import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.service.RingService
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +81,9 @@ class AlarmReceiver : BroadcastReceiver() {
                         } else {
                             null
                         }
+
+                        // 记录「真实响过」，供漏响审计排除这一次（避免把正常响铃误报成漏响）
+                        ResyncCheckpoint.markFired(context, System.currentTimeMillis())
 
                         // snooze 行在「响铃服务成功拉起」之后才消费：
                         // 先删行再起服务的话，一旦起服务失败，这次稍后提醒就永久消失。

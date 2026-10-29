@@ -77,7 +77,8 @@ object AlarmResyncHelper {
             cycleAlarms = cycleAlarms,
             dateAlarms = dateAlarms,
             settings = settings,
-            holidays = holidays
+            holidays = holidays,
+            lastFireAt = ResyncCheckpoint.lastFireAt(context)
         )
         if (missed.isEmpty()) return
         Log.w(TAG, "detected ${missed.size} missed alarms since $lastCheck")

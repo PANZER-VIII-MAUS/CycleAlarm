@@ -34,13 +34,17 @@ object ResyncAuditPolicy {
         return delta >= CHECK_INTERVAL_MS && delta <= MAX_LOOKBACK_MS
     }
 
+    /** 真实响铃时间与「应有触发」在这个窗口内视为同一个闹钟，不算漏响。 */
+    const val FIRED_TOLERANCE_MS = 2 * 60_000L
+
     fun findMissed(
         now: Long,
         lastCheckAt: Long,
         cycleAlarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>,
         settings: AppSettingsEntity?,
-        holidays: List<HolidayEntity>
+        holidays: List<HolidayEntity>,
+        lastFireAt: Long = 0L
     ): List<MissedAlarm> {
         if (settings == null || !shouldAudit(lastCheckAt, now)) return emptyList()
         val missed = mutableListOf<MissedAlarm>()
@@ -74,6 +78,12 @@ object ResyncAuditPolicy {
             }
         }
 
-        return missed.sortedBy { it.expectedAt }
+        // 正常响过的闹钟不能算漏响（lastFireAt 附近视为已响）
+        val notFired = if (lastFireAt > 0L) {
+            missed.filter { kotlin.math.abs(it.expectedAt - lastFireAt) > FIRED_TOLERANCE_MS }
+        } else {
+            missed
+        }
+        return notFired.sortedBy { it.expectedAt }
     }
 }
