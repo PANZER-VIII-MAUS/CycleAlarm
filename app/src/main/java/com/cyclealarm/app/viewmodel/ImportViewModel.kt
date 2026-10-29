@@ -284,12 +284,14 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     fun undo() {
         viewModelScope.launch {
             try {
-                val undone = withContext(Dispatchers.IO) { writer.undo() }
+                val result = withContext(Dispatchers.IO) { writer.undo() }
                 _undoAvailable.value = false
-                _state.value = if (undone) {
-                    lastPreview ?: ImportUiState.Idle
-                } else {
-                    ImportUiState.Error("没有可撤销的导入")
+                _state.value = when (result) {
+                    AlarmImportWriter.UndoResult.Success -> lastPreview ?: ImportUiState.Idle
+                    AlarmImportWriter.UndoResult.Corrupted ->
+                        ImportUiState.Error("上次导入记录已损坏，已清除，无法撤销")
+                    AlarmImportWriter.UndoResult.NoSnapshot ->
+                        ImportUiState.Error("没有可撤销的导入")
                 }
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "撤销失败")
@@ -299,12 +301,8 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 
     fun closeImport(onFinished: () -> Unit) {
         viewModelScope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) { writer.clearSnapshot() }
-            }.onFailure {
-                Log.e(TAG, "clear import snapshot failed", it)
-            }
-            _undoAvailable.value = false
+            // 快照保留到 24 小时过期：离开导入页不再删除，重开 App 仍可撤销
+            refreshUndoAvailability()
             onFinished()
         }
     }

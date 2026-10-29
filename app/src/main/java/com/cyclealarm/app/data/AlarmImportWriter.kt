@@ -52,16 +52,18 @@ class AlarmImportWriter(private val context: Context) {
     ): WriteResult {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
+        // 快照读取与编码放在事务外：编码是纯 CPU 工作，不该占着数据库锁
+        val snapshot = Snapshot(
+            alarms = db.alarmDao().getAll(),
+            dateAlarms = db.dateAlarmDao().getAll(),
+            settings = db.settingsDao().get()
+        )
+        val snapshotPayload = ImportSnapshotCodec.encode(snapshot)
         val transaction = db.withTransaction {
-            val snapshot = Snapshot(
-                alarms = db.alarmDao().getAll(),
-                dateAlarms = db.dateAlarmDao().getAll(),
-                settings = db.settingsDao().get()
-            )
             db.importSnapshotDao().deleteExpired(now)
             db.importSnapshotDao().upsert(
                 ImportSnapshotEntity(
-                    payload = ImportSnapshotCodec.encode(snapshot),
+                    payload = snapshotPayload,
                     createdAt = now,
                     expiresAt = now + SNAPSHOT_LIFETIME_MS
                 )
@@ -170,18 +172,40 @@ class AlarmImportWriter(private val context: Context) {
         return true to alarmsToCancel
     }
 
-    /** 撤销：在同一事务内读取快照、替换数据并清空快照。 */
-    suspend fun undo(): Boolean {
+    /** 撤销结果：区分「没有快照」与「快照损坏」，UI 才能给出不同提示。 */
+    sealed interface UndoResult {
+        data object Success : UndoResult
+        data object NoSnapshot : UndoResult
+        data object Corrupted : UndoResult
+    }
+
+    private sealed interface UndoOutcome {
+        data class Success(val undo: TransactionUndo) : UndoOutcome
+        data object Corrupted : UndoOutcome
+    }
+
+    /**
+     * 撤销：事务内恢复快照。
+     * - 快照损坏时清掉它并返回 [UndoResult.Corrupted]，避免永久卡死撤销；
+     * - 只取消「导入后新增」的闹钟排期，旧闹钟与它们的 snooze 不动（由 resync 重建）。
+     */
+    suspend fun undo(): UndoResult {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
-        val transaction = db.withTransaction {
+        val outcome: UndoOutcome? = db.withTransaction {
             val stored = db.importSnapshotDao().get()
             if (stored == null || stored.expiresAt <= now) {
                 db.importSnapshotDao().deleteAll()
                 return@withTransaction null
             }
 
-            val snapshot = ImportSnapshotCodec.decode(stored.payload)
+            val snapshot = runCatching { ImportSnapshotCodec.decode(stored.payload) }
+                .getOrElse {
+                    Log.e(TAG, "decode import snapshot failed, dropping it", it)
+                    db.importSnapshotDao().deleteAll()
+                    return@withTransaction UndoOutcome.Corrupted
+                }
+
             val currentAlarms = db.alarmDao().getAll()
             val currentDated = db.dateAlarmDao().getAll()
             db.alarmDao().deleteAll()
@@ -192,24 +216,45 @@ class AlarmImportWriter(private val context: Context) {
 
             val planAlarmsToCancel = DayPlanAlarmSync.syncFromDatabaseOnly(db)
             db.importSnapshotDao().deleteAll()
-            TransactionUndo(
-                alarmsToCancel = (currentAlarms + planAlarmsToCancel).distinctBy { it.id },
-                dateAlarmsToCancel = currentDated.distinctBy { it.id }
-            )
-        } ?: return false
 
-        cancelSchedules(transaction.alarmsToCancel, transaction.dateAlarmsToCancel)
-        runCatching { AlarmResyncHelper.resyncAll(context) }
-            .onFailure { Log.e(TAG, "resync after undo failed", it) }
-        return true
+            val removedAlarmIds = ImportUndoPolicy.idsToCancelAfterUndo(
+                currentIds = currentAlarms.map { it.id },
+                snapshotIds = snapshot.alarms.map { it.id }
+            ).toSet()
+            val removedDateIds = ImportUndoPolicy.idsToCancelAfterUndo(
+                currentIds = currentDated.map { it.id },
+                snapshotIds = snapshot.dateAlarms.map { it.id }
+            ).toSet()
+            UndoOutcome.Success(
+                TransactionUndo(
+                    alarmsToCancel = (
+                        currentAlarms.filter { it.id in removedAlarmIds } + planAlarmsToCancel
+                        ).distinctBy { it.id },
+                    dateAlarmsToCancel = currentDated
+                        .filter { it.id in removedDateIds }
+                        .distinctBy { it.id }
+                )
+            )
+        }
+
+        return when (outcome) {
+            is UndoOutcome.Success -> {
+                cancelSchedules(outcome.undo.alarmsToCancel, outcome.undo.dateAlarmsToCancel)
+                runCatching { AlarmResyncHelper.resyncAll(context) }
+                    .onFailure { Log.e(TAG, "resync after undo failed", it) }
+                UndoResult.Success
+            }
+
+            is UndoOutcome.Corrupted -> UndoResult.Corrupted
+            null -> UndoResult.NoSnapshot
+        }
     }
 
     suspend fun hasUndoSnapshot(now: Long = System.currentTimeMillis()): Boolean {
         val db = AppDatabase.get(context)
-        return db.withTransaction {
-            db.importSnapshotDao().deleteExpired(now)
-            db.importSnapshotDao().get() != null
-        }
+        // 只读检查：不需要写事务
+        db.importSnapshotDao().deleteExpired(now)
+        return db.importSnapshotDao().get() != null
     }
 
     suspend fun clearSnapshot() {
