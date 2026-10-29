@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.cyclealarm.app.core.ImportPrefs
 import com.cyclealarm.app.data.AlarmImportWriter
+import com.cyclealarm.app.data.ImportWeeklyPolicy
 import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.importer.csv.CsvSheetReader
 import com.cyclealarm.app.importer.DetectedLayout
@@ -259,8 +260,14 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = ImportUiState.Writing
         viewModelScope.launch {
             try {
+                // UI 上「仍然导入并切换每周」按钮本身就是确认动作
+                val confirmedWeeklySwitch = ImportWeeklyPolicy.requiresWeeklySwitch(entries)
                 val result = withContext(Dispatchers.IO) {
-                    writer.write(entries, preview.options.overwrite)
+                    writer.write(
+                        entries = entries,
+                        overwrite = preview.options.overwrite,
+                        weeklySwitchConfirmed = confirmedWeeklySwitch
+                    )
                 }
                 _undoAvailable.value = true
                 _state.value = ImportUiState.Done(

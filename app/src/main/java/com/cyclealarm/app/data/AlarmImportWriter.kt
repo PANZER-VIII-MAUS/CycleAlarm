@@ -25,7 +25,9 @@ class AlarmImportWriter(private val context: Context) {
     data class WriteResult(
         val cycleCount: Int,
         val dateCount: Int,
-        val switchedToWeekly: Boolean
+        val switchedToWeekly: Boolean,
+        /** 因未确认循环切换而被跳过的周条目数（正常 UI 路径为 0）。 */
+        val skippedWeeklyCount: Int = 0
     )
 
     private data class TransactionWrite(
@@ -39,7 +41,15 @@ class AlarmImportWriter(private val context: Context) {
         val dateAlarmsToCancel: List<DateAlarmEntity>
     )
 
-    suspend fun write(entries: List<ImportedEntry>, overwrite: Boolean): WriteResult {
+    /**
+     * @param weeklySwitchConfirmed 调用方是否已明确同意「把循环方式改为每周」。
+     *   UI 的确认卡片会传 true；其它调用方默认 false，此时周条目不会被写入，循环配置保持不变。
+     */
+    suspend fun write(
+        entries: List<ImportedEntry>,
+        overwrite: Boolean,
+        weeklySwitchConfirmed: Boolean = false
+    ): WriteResult {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
         val transaction = db.withTransaction {
@@ -68,8 +78,12 @@ class AlarmImportWriter(private val context: Context) {
 
             val weeklyEntries = entries.filter { it.kind == ScheduleKind.WEEKLY }
             val datedEntries = entries.filter { it.kind == ScheduleKind.DATED }
-            val weeklySwitch = if (weeklyEntries.isNotEmpty()) ensureWeekly(db) else false to emptyList()
+            // 写入层门禁：未经确认不得改用户的循环配置（UI 只是其中一个调用方）
+            val allowWeeklySwitch =
+                ImportWeeklyPolicy.allowCycleSwitch(entries, weeklySwitchConfirmed)
+            val weeklySwitch = if (allowWeeklySwitch) ensureWeekly(db) else false to emptyList()
             alarmsToCancel += weeklySwitch.second
+            val weeklySource = if (allowWeeklySwitch) weeklyEntries else emptyList()
 
             val existingCycle = ImportWritePolicy.existingCycleKeys(
                 snapshot.alarms,
@@ -80,7 +94,7 @@ class AlarmImportWriter(private val context: Context) {
                 overwrite
             ).toMutableSet()
 
-            val newCycle = weeklyEntries.mapNotNull { entry ->
+            val newCycle = weeklySource.mapNotNull { entry ->
                 val weekday = entry.weekday ?: return@mapNotNull null
                 val key = Triple(weekday - 1, entry.hour, entry.minute)
                 if (!existingCycle.add(key)) return@mapNotNull null
@@ -117,7 +131,8 @@ class AlarmImportWriter(private val context: Context) {
                 result = WriteResult(
                     cycleCount = newCycle.size,
                     dateCount = newDated.size,
-                    switchedToWeekly = weeklySwitch.first
+                    switchedToWeekly = weeklySwitch.first,
+                    skippedWeeklyCount = if (allowWeeklySwitch) 0 else weeklyEntries.size
                 ),
                 alarmsToCancel = alarmsToCancel.distinctBy { it.id },
                 dateAlarmsToCancel = dateAlarmsToCancel.distinctBy { it.id }
@@ -142,6 +157,9 @@ class AlarmImportWriter(private val context: Context) {
 
         val alarmsToCancel = db.alarmDao().getAll().filter { it.dayIndex >= 7 }
         db.alarmDao().deleteFromIndex(7)
+        // 必须同步清理 day_plans：否则本事务末尾的 DayPlanAlarmSync 会把 dayIndex >= 7
+        // 的计划闹钟重新补回来，产生 UI 看不见、却会参与排期与确认计数的「幽灵闹钟」。
+        db.dayPlanDao().deleteFromIndex(7)
         db.settingsDao().upsert(
             settings.copy(
                 cycleType = CycleTypes.WEEKLY,
