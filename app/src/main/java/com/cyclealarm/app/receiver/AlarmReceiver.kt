@@ -1,5 +1,6 @@
 package com.cyclealarm.app.receiver
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -7,11 +8,14 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.R
+import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.AlarmFireCoordinator
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NotificationChannels
+import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.service.RingService
 import kotlinx.coroutines.CoroutineScope
@@ -34,6 +38,19 @@ class AlarmReceiver : BroadcastReceiver() {
                 val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
                 AlarmScheduler.clearSnoozeForAlarm(context, kind, alarmId)
                 context.stopService(Intent(context, RingService::class.java))
+            }
+
+            AlarmScheduler.ACTION_RESYNC -> {
+                val pendingResult = goAsync()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        AlarmResyncHelper.resyncAll(context)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "manual resync failed", e)
+                    } finally {
+                        pendingResult.finish()
+                    }
+                }
             }
 
             AlarmScheduler.ACTION_FIRE -> {
@@ -114,6 +131,8 @@ class AlarmReceiver : BroadcastReceiver() {
                                 when (stage) {
                                     AlarmFireCoordinator.FailureStage.RESCHEDULE -> {
                                         Log.e(TAG, "reschedule failed", throwable)
+                                        // 排期失败比「这次没响」更难被发现，必须留可感知提示
+                                        notifyRescheduleFailure(context, kind, hour, minute, label)
                                     }
 
                                     AlarmFireCoordinator.FailureStage.START_SERVICE -> {
@@ -142,22 +161,79 @@ class AlarmReceiver : BroadcastReceiver() {
         minute: Int,
         label: String
     ) {
+        val detail = label.ifBlank {
+            if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "第 ${dayIndex + 1} 天"
+        }
+        postFallback(
+            context = context,
+            notificationId = FALLBACK_NOTIFICATION_BASE + AlarmScheduler.schedulerId(kind, alarmId),
+            title = "闹钟响铃服务启动失败",
+            text = "${DisplayPrefs.formatTime(context, hour, minute)} · $detail"
+        )
+    }
+
+    private fun notifyRescheduleFailure(
+        context: Context,
+        kind: String,
+        hour: Int,
+        minute: Int,
+        label: String
+    ) {
+        val detail = label.ifBlank {
+            if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "闹钟"
+        }
+        postFallback(
+            context = context,
+            notificationId = RESCHEDULE_NOTIFICATION_ID,
+            title = "下一次闹钟排期失败",
+            text = "${DisplayPrefs.formatTime(context, hour, minute)} · $detail，请打开 App 检查"
+        )
+    }
+
+    /**
+     * 兜底通知：走独立渠道（不会被「响铃」渠道关闭连带影响）、发前检查权限、
+     * 点击进主界面、并带一个「立即重排」action。
+     */
+    private fun postFallback(
+        context: Context,
+        notificationId: Int,
+        title: String,
+        text: String
+    ) {
+        if (!NotificationPermissionCheck.canSignal(context, NotificationChannels.RING_FALLBACK)) {
+            Log.w(TAG, "fallback blocked: notification/channel unavailable ($title)")
+            return
+        }
         runCatching {
             NotificationChannels.createAll(context)
-            val schedulerId = AlarmScheduler.schedulerId(kind, alarmId)
-            val detail = label.ifBlank {
-                if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "第 ${dayIndex + 1} 天"
-            }
-            val notification = NotificationCompat.Builder(context, NotificationChannels.RING)
+            val contentIntent = PendingIntent.getActivity(
+                context,
+                notificationId,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val resyncIntent = PendingIntent.getBroadcast(
+                context,
+                notificationId,
+                Intent(context, AlarmReceiver::class.java)
+                    .setAction(AlarmScheduler.ACTION_RESYNC),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat
+                .Builder(context, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("闹钟响铃服务启动失败")
-                .setContentText("${DisplayPrefs.formatTime(context, hour, minute)} · $detail")
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setContentIntent(contentIntent)
+                .addAction(0, "立即重排", resyncIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
-            NotificationManagerCompat.from(context)
-                .notify(FALLBACK_NOTIFICATION_BASE + schedulerId, notification)
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
         }.onFailure {
             Log.e(TAG, "fallback notification failed", it)
         }
@@ -166,5 +242,6 @@ class AlarmReceiver : BroadcastReceiver() {
     private companion object {
         const val TAG = "AlarmReceiver"
         const val FALLBACK_NOTIFICATION_BASE = 2_000_000
+        const val RESCHEDULE_NOTIFICATION_ID = 2_000_001
     }
 }

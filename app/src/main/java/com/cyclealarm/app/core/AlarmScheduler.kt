@@ -39,6 +39,9 @@ object AlarmScheduler {
     const val ACTION_FIRE = "com.cyclealarm.app.action.FIRE"
     const val ACTION_STOP_RING = "com.cyclealarm.app.action.STOP_RING"
 
+    /** 兜底通知里的「立即重排」action。 */
+    const val ACTION_RESYNC = "com.cyclealarm.app.action.RESYNC"
+
     const val EXTRA_ALARM_ID = "alarmId"
     const val EXTRA_ALARM_KIND = "alarmKind"
     const val EXTRA_DAY_INDEX = "dayIndex"
