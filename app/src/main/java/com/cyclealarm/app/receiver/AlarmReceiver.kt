@@ -81,18 +81,9 @@ class AlarmReceiver : BroadcastReceiver() {
                             null
                         }
 
-                        if (snoozed) {
-                            runCatching {
-                                val db = AppDatabase.get(context)
-                                if (snoozeId > 0) {
-                                    db.snoozeDao().deleteById(snoozeId)
-                                } else {
-                                    db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
-                                }
-                            }.onFailure {
-                                Log.e(TAG, "delete consumed snooze failed", it)
-                            }
-                        }
+                        // snooze 行在「响铃服务成功拉起」之后才消费：
+                        // 先删行再起服务的话，一旦起服务失败，这次稍后提醒就永久消失。
+                        var serviceStarted = false
 
                         AlarmFireCoordinator.run(
                             shouldReschedule = !snoozed && kind == AlarmScheduler.KIND_CYCLE,
@@ -126,6 +117,7 @@ class AlarmReceiver : BroadcastReceiver() {
                                         originalMinute = originalMinute
                                     )
                                 )
+                                serviceStarted = true
                             },
                             onFailure = { stage, throwable ->
                                 when (stage) {
@@ -144,6 +136,19 @@ class AlarmReceiver : BroadcastReceiver() {
                                 }
                             }
                         )
+
+                        if (snoozed && serviceStarted) {
+                            runCatching {
+                                val db = AppDatabase.get(context)
+                                if (snoozeId > 0) {
+                                    db.snoozeDao().deleteById(snoozeId)
+                                } else {
+                                    db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
+                                }
+                            }.onFailure {
+                                Log.e(TAG, "delete consumed snooze failed", it)
+                            }
+                        }
                     } finally {
                         pendingResult.finish()
                     }

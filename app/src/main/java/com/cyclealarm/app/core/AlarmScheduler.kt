@@ -67,6 +67,10 @@ object AlarmScheduler {
 
     private const val SNOOZE_REQUEST_OFFSET = 100_000
 
+    /** 稍后提醒的 requestCode：kind 决定命名空间，id 决定槽位。 */
+    fun snoozeRequestCode(kind: String, alarmId: Int): Int =
+        schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET
+
     /** 全屏响铃 Activity 的独立 requestCode 偏移，避免与 showIntent / snooze 槽位混用。 */
     const val FULLSCREEN_REQUEST_OFFSET = 200_000
 
@@ -306,7 +310,7 @@ object AlarmScheduler {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
         val target = SnoozeTimePolicy.target(now, minutes)
-        val requestCode = schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET
+        val requestCode = snoozeRequestCode(kind, alarmId)
         val snooze = runCatching {
             db.withTransaction {
                 db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
@@ -344,7 +348,7 @@ object AlarmScheduler {
             .toLocalTime()
         val operation = firePendingIntent(
             context = context,
-            requestCode = snooze.requestCode,
+            requestCode = snoozeRequestCode(snooze.kind, snooze.alarmId.toInt()),
             kind = snooze.kind,
             alarmId = snooze.alarmId.toInt(),
             dayIndex = snooze.dayIndex,
@@ -368,12 +372,17 @@ object AlarmScheduler {
         }.getOrDefault(false)
     }
 
-    /** 清掉某条原闹钟残留的 snooze 记录；不阻塞调用线程。 */
+    /** 清掉某条原闹钟残留的 snooze 记录，并取消已武装的 PendingIntent（与 cancelAlarm 对称）。 */
     fun clearSnoozeForAlarm(context: Context, kind: String, alarmId: Int) {
         if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return
         val appContext = context.applicationContext
         cleanupScope.launch {
             runCatching {
+                // 先取消排期，避免「库清了但闹钟还响」
+                val am = appContext.getSystemService(AlarmManager::class.java)
+                if (am != null) {
+                    cancelByRequestCode(appContext, am, snoozeRequestCode(kind, alarmId))
+                }
                 AppDatabase.get(appContext)
                     .snoozeDao()
                     .deleteByAlarm(kind, alarmId.toLong())
