@@ -50,6 +50,9 @@ object AlarmScheduler {
     const val EXTRA_ORIGINAL_HOUR = "originalHour"
     const val EXTRA_ORIGINAL_MINUTE = "originalMinute"
 
+    /** 试听（预览）标记：禁止 snooze 与任何数据库写入。 */
+    const val EXTRA_PREVIEW = "preview"
+
     /** 周期闹钟（第 1..N 天 / 周一..周日）。 */
     const val KIND_CYCLE = "cycle"
 

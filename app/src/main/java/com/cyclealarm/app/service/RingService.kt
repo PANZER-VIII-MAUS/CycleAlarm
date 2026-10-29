@@ -19,6 +19,8 @@ import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.core.RingForegroundGuard
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.cyclealarm.app.core.RingtonePlayer
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.core.DisplayPrefs
@@ -64,9 +66,11 @@ class RingService : Service() {
             null
         }
 
+        val preview = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)
+        _isRinging.value = true
         startAsForeground(kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute)
         launchRingActivity(
-            kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute
+            kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute, preview
         )
         acquireWakeLock()
         runCatching { RingtonePlayer.play(this) }
@@ -76,14 +80,11 @@ class RingService : Service() {
 
         val durationSec = RingPrefs.durationSeconds(this)
         timeout?.let { handler.removeCallbacks(it) }
-        if (durationSec > 0) {
-            val task = Runnable { stopRing() }
-            timeout = task
-            handler.postDelayed(task, durationSec * 1000L)
-        } else {
-            // 一直响：不自动停止，等用户点「停止」
-            timeout = null
-        }
+        // 「一直响」也必须有硬上限：通知被拒时用户没有任何停止入口，否则只能强杀进程。
+        val effectiveSec = if (durationSec > 0) durationSec else RingPrefs.ALWAYS_RING_CAP_SECONDS
+        val task = Runnable { stopRing() }
+        timeout = task
+        handler.postDelayed(task, effectiveSec * 1000L)
         return START_STICKY
     }
 
@@ -91,6 +92,7 @@ class RingService : Service() {
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
         releaseWakeLock()
+        _isRinging.value = false
         stopSelf()
     }
 
@@ -125,7 +127,8 @@ class RingService : Service() {
         minute: Int,
         label: String,
         originalHour: Int?,
-        originalMinute: Int?
+        originalMinute: Int?,
+        preview: Boolean
     ) {
         runCatching {
             startActivity(
@@ -137,6 +140,7 @@ class RingService : Service() {
                     .putExtra(AlarmScheduler.EXTRA_HOUR, hour)
                     .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
                     .putExtra(AlarmScheduler.EXTRA_LABEL, label)
+                    .putExtra(AlarmScheduler.EXTRA_PREVIEW, preview)
                     .apply {
                         if (originalHour != null && originalMinute != null) {
                             putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)
@@ -150,6 +154,7 @@ class RingService : Service() {
     override fun onDestroy() {
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
+        _isRinging.value = false
         releaseWakeLock()
         RingtonePlayer.stop()
         VibratorUtil.stop(this)
@@ -258,6 +263,11 @@ class RingService : Service() {
         /** 前台化失败时降级通知的 id（与响铃前台通知 2 区分）。 */
         private const val FALLBACK_NOTIFICATION_ID = 3
 
+        private val _isRinging = MutableStateFlow(false)
+
+        /** 响铃进行中状态：RingActivity 用它在服务停止后跟随退出（同一进程）。 */
+        val isRinging: StateFlow<Boolean> = _isRinging
+
         /** 构建拉起响铃服务的 Intent（供 AlarmReceiver / 试听按钮使用）。 */
         fun ringIntent(
             context: Context,
@@ -269,7 +279,8 @@ class RingService : Service() {
             snoozed: Boolean,
             kind: String = AlarmScheduler.KIND_CYCLE,
             originalHour: Int? = null,
-            originalMinute: Int? = null
+            originalMinute: Int? = null,
+            preview: Boolean = false
         ): Intent = Intent(context, RingService::class.java)
             .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
             .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
@@ -278,6 +289,7 @@ class RingService : Service() {
             .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
             .putExtra(AlarmScheduler.EXTRA_LABEL, label)
             .putExtra(AlarmScheduler.EXTRA_SNOOZED, snoozed)
+            .putExtra(AlarmScheduler.EXTRA_PREVIEW, preview)
             .apply {
                 if (originalHour != null && originalMinute != null) {
                     putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)

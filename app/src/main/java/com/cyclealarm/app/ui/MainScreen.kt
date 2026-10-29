@@ -1173,7 +1173,8 @@ private fun EditAlarmDialog(
                                 alarm.hour,
                                 alarm.minute,
                                 label.trim().ifBlank { "闹钟" } + "（试听）",
-                                snoozed = false
+                                snoozed = false,
+                                preview = true
                             )
                         )
                     },

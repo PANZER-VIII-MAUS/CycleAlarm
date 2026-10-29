@@ -31,8 +31,11 @@ object RingPrefs {
     /** 重复间隔可选值（分钟）。 */
     val SNOOZE_OPTIONS = listOf(5, 10, 15, 20, 30)
 
+    /** 「一直响」的硬上限：通知被拒时没有任何停止入口，必须有兜底。 */
+    const val ALWAYS_RING_CAP_SECONDS = 15 * 60
+
     fun durationLabel(sec: Int): String = when {
-        sec == 0 -> "一直响"
+        sec == 0 -> "一直响（15 分钟上限）"
         sec < 60 -> "${sec} 秒"
         else -> "${sec / 60} 分钟"
     }
