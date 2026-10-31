@@ -1,6 +1,8 @@
 package com.cyclealarm.app.ui.theme
 
+import android.app.Activity
 import android.content.Context
+import com.cyclealarm.app.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -34,6 +36,22 @@ object ThemeManager {
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         _mode.value = prefs.getString(KEY, MODE_SYSTEM) ?: MODE_SYSTEM
         initialized = true
+    }
+
+    /**
+     * 在 `super.onCreate` 之前按 App 主题设置启动窗口背景。
+     *
+     * 主题可能被强制为深色而系统仍是浅色，此时若只靠 `values-night` 会在启动瞬间闪白。
+     * 三个 Activity 都调用这里，保证主界面/设置/导入的启动表现一致。
+     */
+    fun applyStartupTheme(activity: Activity) {
+        val mode = readStoredMode(activity)
+        val systemDark = (activity.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (resolveDark(mode, systemDark)) {
+            activity.setTheme(R.style.Theme_CycleAlarm_OpaqueDark)
+        }
     }
 
     fun set(context: Context, mode: String) {

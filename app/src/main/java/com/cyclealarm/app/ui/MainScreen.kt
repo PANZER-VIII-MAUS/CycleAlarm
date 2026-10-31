@@ -92,6 +92,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NextAlarm
@@ -152,7 +153,7 @@ private fun NextAlarmCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "去下面打开任意一天",
+                text = "去下面打开任意一天；若按日期闹钟已过期，需要重新添加",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -281,10 +282,13 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        while (isActive) {
-            delay(60_000)
-            refreshUiClock()
+    // 只在前台计时：后台空转的 60 秒循环没有意义，还会阻止进程休眠
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                delay(60_000)
+                refreshUiClock()
+            }
         }
     }
     DisposableEffect(lifecycleOwner) {

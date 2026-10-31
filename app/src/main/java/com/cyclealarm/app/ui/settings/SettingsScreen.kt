@@ -195,7 +195,7 @@ fun SettingsScreen(
                         onClick = { dialog = SettingsDialog.DURATION }
                     )
                     SettingRow(
-                        title = "重复间隔",
+                        title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
                     )
@@ -336,7 +336,7 @@ fun SettingsScreen(
         )
 
         SettingsDialog.SNOOZE -> OptionDialog(
-            title = "重复间隔",
+            title = "稍后提醒间隔",
             currentLabel = "$snoozeMinutes 分钟",
             options = RingPrefs.SNOOZE_OPTIONS.map { option ->
                 "$option 分钟" to {

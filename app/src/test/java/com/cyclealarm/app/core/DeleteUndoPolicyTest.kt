@@ -13,7 +13,8 @@ import org.junit.Test
 class DeleteUndoPolicyTest {
 
     private val zone = ZoneId.systemDefault()
-    private val today = LocalDate.now()
+    // 固定日期：不让单测结果随运行当天变化（复审 §8.4）
+    private val today = LocalDate.of(2026, 10, 31)
     private val now = today.atTime(6, 0).atZone(zone).toInstant().toEpochMilli()
 
     @Test
