@@ -51,8 +51,9 @@ class MainActivity : ComponentActivity() {
         // 每次升级后跑一次库结构自检：迁移是否真的把表/列建对，结果写进「排期诊断」
         lifecycleScope.launch {
             runCatching {
+                @Suppress("DEPRECATION") // versionCode 自 API 1 就有；longVersionCode 要 API 28
                 val versionCode = packageManager
-                    .getPackageInfo(packageName, 0).longVersionCode.toInt()
+                    .getPackageInfo(packageName, 0).versionCode
                 DatabaseSelfCheck.verifyOnce(applicationContext, versionCode)
             }
         }
