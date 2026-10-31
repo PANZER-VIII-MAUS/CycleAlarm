@@ -50,7 +50,7 @@ class WidgetTextPolicyTest {
             .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
         val text = WidgetTextPolicy.render(next(7, 30, trigger), now)
 
-        assertTrue(text.subtitle.startsWith("还有"))
+        assertTrue(text.subtitle.contains("天"))
         assertTrue(!text.subtitle.contains("月"))
     }
 
@@ -58,6 +58,15 @@ class WidgetTextPolicyTest {
     fun `countdown is reused from next alarm display`() {
         val text = WidgetTextPolicy.render(next(7, 30, now + 30 * 60_000L), now)
 
-        assertEquals("还有 30 分钟", text.subtitle)
+        assertEquals("30 分钟", text.subtitle)
+    }
+
+    @Test
+    fun `compact countdown uses minutes hours and days`() {
+        val base = 1_800_000_000_000L
+        assertEquals("30 分钟", WidgetTextPolicy.compactCountdown(base + 30 * 60_000L, base))
+        assertEquals("8 小时", WidgetTextPolicy.compactCountdown(base + 8 * 3_600_000L, base))
+        assertEquals("1 天 8 时", WidgetTextPolicy.compactCountdown(base + 32 * 3_600_000L, base))
+        assertEquals("2 天", WidgetTextPolicy.compactCountdown(base + 48 * 3_600_000L, base))
     }
 }

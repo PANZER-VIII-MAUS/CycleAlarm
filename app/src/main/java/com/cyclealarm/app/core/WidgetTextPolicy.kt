@@ -33,6 +33,21 @@ object WidgetTextPolicy {
         return formatter.format(Date(calendar.timeInMillis))
     }
 
+    /** 小组件专用超短倒计时：「1 天 8 时」「8 小时」「30 分钟」。 */
+    fun compactCountdown(triggerAt: Long, now: Long): String {
+        val remaining = (triggerAt - now).coerceAtLeast(0L)
+        val minutes = (remaining + 59_999L) / 60_000L
+        return when {
+            minutes < 60L -> "$minutes 分钟"
+            minutes < 24L * 60L -> "${minutes / 60L} 小时"
+            else -> {
+                val days = minutes / (24L * 60L)
+                val hours = (minutes % (24L * 60L)) / 60L
+                if (hours > 0L) "$days 天 $hours 时" else "$days 天"
+            }
+        }
+    }
+
     /**
      * @param next 下次响铃；null 表示当前没有开启的闹钟
      */
@@ -52,9 +67,6 @@ object WidgetTextPolicy {
             val label = if (next.hour < 12) "上午" else "下午"
             " $label"
         }
-        val countdown = NextAlarmDisplay.countdownText(next.triggerAt, now)
-        // 小组件格子小：去掉日期前缀（「11 月 2 日 · 」），只留「还有 X」，避免被截断
-        val compact = countdown.substringAfter("·", missingDelimiterValue = countdown).trim()
-        return WidgetText(time = time + amPm, subtitle = compact)
+        return WidgetText(time = time + amPm, subtitle = compactCountdown(next.triggerAt, now))
     }
 }
