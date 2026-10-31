@@ -53,6 +53,8 @@ object WidgetTextPolicy {
             " $label"
         }
         val countdown = NextAlarmDisplay.countdownText(next.triggerAt, now)
-        return WidgetText(time = time + amPm, subtitle = countdown)
+        // 小组件格子小：去掉日期前缀（「11 月 2 日 · 」），只留「还有 X」，避免被截断
+        val compact = countdown.substringAfter("·", missingDelimiterValue = countdown).trim()
+        return WidgetText(time = time + amPm, subtitle = compact)
     }
 }

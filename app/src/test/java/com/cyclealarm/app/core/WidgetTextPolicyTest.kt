@@ -43,6 +43,18 @@ class WidgetTextPolicyTest {
     }
 
     @Test
+    fun `date prefix is stripped for narrow widget`() {
+        val now = java.time.LocalDateTime.of(2026, 10, 31, 12, 0)
+            .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val trigger = java.time.LocalDateTime.of(2026, 11, 2, 7, 30)
+            .atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val text = WidgetTextPolicy.render(next(7, 30, trigger), now)
+
+        assertTrue(text.subtitle.startsWith("还有"))
+        assertTrue(!text.subtitle.contains("月"))
+    }
+
+    @Test
     fun `countdown is reused from next alarm display`() {
         val text = WidgetTextPolicy.render(next(7, 30, now + 30 * 60_000L), now)
 
