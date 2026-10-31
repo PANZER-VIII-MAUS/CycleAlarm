@@ -47,6 +47,11 @@ object AlarmScheduler {
     const val EXTRA_VIBRATE = "extra_vibrate"
     const val EXTRA_RAMP_VOLUME = "extra_ramp_volume"
 
+    /** v10：提前提醒（只发通知，不响铃）。 */
+    const val ACTION_PRE_ALERT = "com.cyclealarm.app.action.PRE_ALERT"
+    const val EXTRA_PRE_ALERT_MINUTES = "extra_pre_alert_minutes"
+    const val PRE_ALERT_REQUEST_OFFSET = 300_000
+
     const val EXTRA_ALARM_ID = "alarmId"
     const val EXTRA_ALARM_KIND = "alarmKind"
     const val EXTRA_DAY_INDEX = "dayIndex"
@@ -200,12 +205,83 @@ object AlarmScheduler {
             rampVolume = alarm.rampVolume
         )
         setAlarmClock(am, triggerAt, operation, showPendingIntent(context, requestCode))
+        schedulePreAlert(
+            context = context,
+            requestCode = requestCode,
+            kind = KIND_CYCLE,
+            alarmId = alarm.id,
+            hour = alarm.hour,
+            minute = alarm.minute,
+            label = alarm.label,
+            triggerAt = triggerAt,
+            minutes = alarm.preAlertMinutes
+        )
     }
 
-    /** 取消某条周期闹钟（含未触发的“稍后提醒”）。 */
+    /** 取消某条周期闹钟（含未触发的“稍后提醒”与提前提醒）。 */
     fun cancelAlarm(context: Context, alarm: AlarmEntity) {
         cancelBySchedulerId(context, alarm.id)
+        cancelPreAlert(context, alarm.id, KIND_CYCLE, alarm.preAlertMinutes)
         clearSnoozeForAlarm(context, KIND_CYCLE, alarm.id)
+    }
+
+    /** 排一条「提前提醒」：到点只发通知，不响铃。 */
+    private fun schedulePreAlert(
+        context: Context,
+        requestCode: Int,
+        kind: String,
+        alarmId: Int,
+        hour: Int,
+        minute: Int,
+        label: String,
+        triggerAt: Long,
+        minutes: Int
+    ) {
+        val at = PreAlertPolicy.preAlertAt(triggerAt, minutes, System.currentTimeMillis())
+        if (at == null) return
+        val am = context.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val pi = preAlertPendingIntent(
+            context, requestCode, kind, alarmId, hour, minute, label, minutes
+        )
+        runCatching {
+            am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+        }.onFailure { Log.e(TAG, "pre alert schedule failed id=$alarmId", it) }
+    }
+
+    private fun preAlertPendingIntent(
+        context: Context,
+        requestCode: Int,
+        kind: String,
+        alarmId: Int,
+        hour: Int,
+        minute: Int,
+        label: String,
+        minutes: Int
+    ): PendingIntent {
+        val intent = Intent(context, com.cyclealarm.app.receiver.AlarmReceiver::class.java)
+            .setAction(ACTION_PRE_ALERT)
+            .putExtra(EXTRA_ALARM_ID, alarmId)
+            .putExtra(EXTRA_ALARM_KIND, kind)
+            .putExtra(EXTRA_HOUR, hour)
+            .putExtra(EXTRA_MINUTE, minute)
+            .putExtra(EXTRA_LABEL, label)
+            .putExtra(EXTRA_PRE_ALERT_MINUTES, minutes)
+        return PendingIntent.getBroadcast(
+            context,
+            requestCode + PRE_ALERT_REQUEST_OFFSET,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun cancelPreAlert(context: Context, alarmId: Int, kind: String, minutes: Int) {
+        if (minutes <= 0) return
+        val am = context.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val requestCode = schedulerId(kind, alarmId)
+        val pi = preAlertPendingIntent(
+            context, requestCode, kind, alarmId, 0, 0, "", minutes
+        )
+        runCatching { am.cancel(pi) }
     }
 
     // ---------------------------------------------------------------------

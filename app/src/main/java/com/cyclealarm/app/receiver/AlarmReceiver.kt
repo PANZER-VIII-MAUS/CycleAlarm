@@ -42,6 +42,14 @@ class AlarmReceiver : BroadcastReceiver() {
                 context.stopService(Intent(context, RingService::class.java))
             }
 
+            AlarmScheduler.ACTION_PRE_ALERT -> {
+                val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
+                val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
+                val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
+                val minutes = intent.getIntExtra(AlarmScheduler.EXTRA_PRE_ALERT_MINUTES, 10)
+                notifyPreAlert(context, hour, minute, label, minutes)
+            }
+
             AlarmScheduler.ACTION_RESYNC -> {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
@@ -216,6 +224,43 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
 
+    /** 提前提醒：只发通知（走独立渠道 + 权限检查），不响铃。 */
+    private fun notifyPreAlert(
+        context: Context,
+        hour: Int,
+        minute: Int,
+        label: String,
+        minutes: Int
+    ) {
+        NotificationChannels.createAll(context)
+        if (!NotificationPermissionCheck.canSignal(context, NotificationChannels.RING_FALLBACK)) {
+            Log.w(TAG, "pre alert blocked: permission or channel unavailable")
+            return
+        }
+        runCatching {
+            val contentIntent = PendingIntent.getActivity(
+                context,
+                PRE_ALERT_NOTIFICATION_ID,
+                Intent(context, com.cyclealarm.app.MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = androidx.core.app.NotificationCompat
+                .Builder(context, NotificationChannels.RING_FALLBACK)
+                .setSmallIcon(com.cyclealarm.app.R.drawable.ic_notification)
+                .setContentTitle("闹钟快到了")
+                .setContentText(com.cyclealarm.app.core.PreAlertPolicy.text(hour, minute, label, minutes))
+                .setContentIntent(contentIntent)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .build()
+            androidx.core.app.NotificationManagerCompat.from(context)
+                .notify(PRE_ALERT_NOTIFICATION_ID, notification)
+        }.onFailure { Log.e(TAG, "pre alert notification failed", it) }
+    }
+
     private fun notifyRingServiceFailure(
         context: Context,
         kind: String,
@@ -311,5 +356,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // 通知 id 分区：1 = 前台服务；2 = 响铃；2_000_000 + schedulerId = 兜底；
         // 3_000_001 = 排期失败（避开兜底区间，三轮复审 §4.4-1）
         const val RESCHEDULE_NOTIFICATION_ID = 3_000_001
+        /** 提前提醒通知 id。 */
+        const val PRE_ALERT_NOTIFICATION_ID = 3_000_003
     }
 }
