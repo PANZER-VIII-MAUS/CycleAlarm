@@ -130,17 +130,20 @@ object AlarmResyncHelper {
         if (actual == null) {
             // 系统里一个 alarm clock 都不剩 —— 这正是「系统丢闹钟」的典型表现，必须自愈
             Log.w(TAG, "no alarm clock in system while expected=$expected, rescheduling")
+            ResyncCheckpoint.recordDiagnostic(context, now, "系统无闹钟，已重排")
             AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
             return
         }
         if (actual > expected) {
             // 系统里的下一次比我们算的晚（或压根没有）→ 说明排期没落地，补一次
             Log.w(TAG, "next alarm later than expected ($actual > $expected), rescheduling")
+            ResyncCheckpoint.recordDiagnostic(context, now, "系统排期偏晚，已重排")
             AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
         } else if (actual < expected) {
             // 系统里有一个更早的闹钟（通常是历史遗留的 PendingIntent）。
             // 这里只记录：反复重排也清不掉它，而且会变成「每次回前台都重排」的噪声。
             Log.w(TAG, "stale earlier alarm in system ($actual < $expected), keeping schedule")
+            ResyncCheckpoint.recordDiagnostic(context, now, "存在更早的历史闹钟（未动排期）")
         }
     }
 

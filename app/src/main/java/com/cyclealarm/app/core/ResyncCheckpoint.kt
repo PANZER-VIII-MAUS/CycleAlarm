@@ -15,6 +15,9 @@ object ResyncCheckpoint {
     private const val KEY_LAST_MISSED_COUNT = "last_missed_count"
     private const val KEY_RECENT_FIRES = "recent_fire_ats"
 
+    private const val KEY_DIAG_AT = "last_diagnostic_at"
+    private const val KEY_DIAG_REASON = "last_diagnostic_reason"
+
     /** 响铃时间戳的保留窗口与条数上限。 */
     private const val FIRE_HISTORY_WINDOW_MS = 24 * 60 * 60_000L
     private const val MAX_RECENT_FIRES = 24
@@ -70,4 +73,29 @@ object ResyncCheckpoint {
             .takeLast(MAX_RECENT_FIRES)
     }
 
+    /** 记录一次排期对账的诊断结果（只保留最近一次，供设置页展示）。 */
+    fun recordDiagnostic(context: Context, at: Long, reason: String) {
+        runCatching {
+            prefs(context).edit()
+                .putLong(KEY_DIAG_AT, at)
+                .putString(KEY_DIAG_REASON, reason)
+                .apply()
+        }
+    }
+
+    /** 最近一次对账诊断，null 表示没记录过（或一直对得上）。 */
+    fun lastDiagnostic(context: Context): Pair<Long, String>? {
+        val at = runCatching { prefs(context).getLong(KEY_DIAG_AT, 0L) }.getOrDefault(0L)
+        if (at <= 0L) return null
+        val reason = runCatching { prefs(context).getString(KEY_DIAG_REASON, null) }
+            .getOrNull() ?: return null
+        return at to reason
+    }
+
+    /** 设置页展示用的短标签。 */
+    fun lastDiagnosticLabel(context: Context): String {
+        val diagnostic = lastDiagnostic(context) ?: return "正常"
+        val formatter = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.CHINA)
+        return "${formatter.format(java.util.Date(diagnostic.first))} ${diagnostic.second}"
+    }
 }

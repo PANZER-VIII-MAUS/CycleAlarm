@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.data.CycleTypes
 import com.cyclealarm.app.ui.components.CycleCard
@@ -198,6 +199,17 @@ fun SettingsScreen(
                         title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
+                    )
+                    SettingRow(
+                        title = "排期诊断",
+                        value = ResyncCheckpoint.lastDiagnosticLabel(context),
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                "对账结果会记录在这里，正常时显示「正常」",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     )
                 }
             }

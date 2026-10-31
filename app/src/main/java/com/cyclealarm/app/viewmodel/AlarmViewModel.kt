@@ -135,7 +135,6 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         if (db.activityTypeDao().count() == 0) insertDefaultTypes()
 
         val freshInstall = !InstallMarker.hasMarker(getApplication())
-        InstallMarker.markInstalled(getApplication())
 
         if (!settings.plansSeeded) {
             val alarmCount = db.alarmDao().getAll().size
@@ -188,6 +187,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         db.settingsDao().upsert(settings.copy(plansSeeded = true))
+        // 注入成功后再写入新装标记：先标记再注入的话，一旦注入过程中异常，
+        // 这台设备会永远失去「全新安装」身份，默认计划再也补不回来。
+        InstallMarker.markInstalled(getApplication())
         syncPlans()
     }
 
