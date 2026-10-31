@@ -59,6 +59,7 @@ import com.cyclealarm.app.core.TemporaryMuteStore
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.data.CycleTypes
 import com.cyclealarm.app.ui.components.CycleCard
+import com.cyclealarm.app.ui.history.RingHistoryActivity
 import com.cyclealarm.app.ui.formatEpochDay
 import com.cyclealarm.app.ui.theme.ThemeManager
 import com.cyclealarm.app.viewmodel.AlarmViewModel
@@ -245,6 +246,15 @@ fun SettingsScreen(
                         title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
+                    )
+                    SettingRow(
+                        title = "响铃历史",
+                        value = "最近 7 天的响铃记录",
+                        onClick = {
+                            context.startActivity(
+                                Intent(context, RingHistoryActivity::class.java)
+                            )
+                        }
                     )
                     SettingRow(
                         title = "今天临时静音",

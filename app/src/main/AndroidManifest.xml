@@ -70,6 +70,10 @@
 
         <!-- 设置页 -->
         <activity
+            android:name=".ui.history.RingHistoryActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
 
