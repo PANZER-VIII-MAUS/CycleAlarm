@@ -14,7 +14,9 @@ data class NextAlarm(
     val minute: Int,
     val label: String,
     val kind: NextAlarmKind,
-    val isSnooze: Boolean = false
+    val isSnooze: Boolean = false,
+    /** 供「跳过下一次」定位到具体闹钟；模拟/派生场景为 0。 */
+    val alarmId: Int = 0
 )
 
 enum class NextAlarmKind { CYCLE, DATE, SNOOZE }
@@ -43,7 +45,8 @@ object NextAlarmFinder {
                             hour = alarm.hour,
                             minute = alarm.minute,
                             label = alarm.label,
-                            kind = NextAlarmKind.CYCLE
+                            kind = NextAlarmKind.CYCLE,
+                            alarmId = alarm.id
                         )
                     )
                 }
@@ -62,7 +65,8 @@ object NextAlarmFinder {
                             hour = alarm.hour,
                             minute = alarm.minute,
                             label = alarm.label,
-                            kind = NextAlarmKind.DATE
+                            kind = NextAlarmKind.DATE,
+                            alarmId = alarm.id
                         )
                     )
                 }
@@ -78,7 +82,8 @@ object NextAlarmFinder {
                         minute = target.minute,
                         label = snooze.label,
                         kind = NextAlarmKind.SNOOZE,
-                        isSnooze = true
+                        isSnooze = true,
+                        alarmId = snooze.alarmId.toInt()
                     )
                 )
             }

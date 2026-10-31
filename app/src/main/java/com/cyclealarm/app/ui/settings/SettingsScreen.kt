@@ -55,6 +55,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.ResyncCheckpoint
+import com.cyclealarm.app.core.TemporaryMuteStore
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.data.CycleTypes
 import com.cyclealarm.app.ui.components.CycleCard
@@ -244,6 +245,27 @@ fun SettingsScreen(
                         title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
+                    )
+                    SettingRow(
+                        title = "今天临时静音",
+                        value = if (
+                            TemporaryMuteStore.mutedDays(context)
+                                .contains(LocalDate.now().toEpochDay())
+                        ) {
+                            "已开启（明天恢复）"
+                        } else {
+                            "未开启"
+                        },
+                        onClick = {
+                            val today = LocalDate.now().toEpochDay()
+                            if (TemporaryMuteStore.mutedDays(context).contains(today)) {
+                                viewModel.unmuteToday()
+                                Toast.makeText(context, "已取消今天静音", Toast.LENGTH_SHORT).show()
+                            } else {
+                                viewModel.muteToday()
+                                Toast.makeText(context, "今天不再响铃", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     )
                     SettingRow(
                         title = "导出备份",

@@ -142,7 +142,8 @@ private fun NextAlarmCard(
     nextAlarm: NextAlarm?,
     now: Long,
     settings: AppSettingsEntity?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSkipNext: () -> Unit = {}
 ) {
     val context = LocalContext.current
     CycleCard(modifier = modifier) {
@@ -192,6 +193,12 @@ private fun NextAlarmCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.End
                 )
+            }
+            if (!nextAlarm.isSnooze) {
+                TextButton(
+                    onClick = onSkipNext,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) { Text("跳过下一次") }
             }
         }
     }
@@ -418,7 +425,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 nextAlarm = nextAlarm,
                 now = now,
                 settings = settings,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
+                onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
             )
             // 固定标题区：滚动列表时保持不动
             Text(

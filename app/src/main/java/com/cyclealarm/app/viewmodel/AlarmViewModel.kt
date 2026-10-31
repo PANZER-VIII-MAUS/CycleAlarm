@@ -8,7 +8,11 @@ import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DayPlanAlarmSync
 import com.cyclealarm.app.core.DayPlanSync
 import com.cyclealarm.app.core.DeleteUndoPolicy
+import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.InstallMarker
+import com.cyclealarm.app.core.NextAlarm
+import com.cyclealarm.app.core.NextAlarmKind
+import com.cyclealarm.app.core.TemporaryMuteStore
 import com.cyclealarm.app.core.PlanDeletePolicy
 import com.cyclealarm.app.core.PlanSeedPolicy
 import com.cyclealarm.app.data.ActivityTypeEntity
@@ -199,6 +203,30 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             ActivityTypeEntity(name = "自习", hour = 8, minute = 30, rings = true, sortOrder = 1),
             ActivityTypeEntity(name = "休息", hour = 0, minute = 0, rings = false, sortOrder = 2)
         ).forEach { db.activityTypeDao().upsert(it) }
+    }
+
+    /** 跳过下一次响铃：只跳过这一条具体触发点，之后的照常。 */
+    fun skipNextAlarm(next: NextAlarm) = viewModelScope.launch {
+        val kind = when (next.kind) {
+            NextAlarmKind.CYCLE -> AlarmScheduler.KIND_CYCLE
+            NextAlarmKind.DATE -> AlarmScheduler.KIND_DATE
+            NextAlarmKind.SNOOZE -> return@launch // 稍后提醒不参与「跳过下一次」
+        }
+        TemporaryMuteStore.skipNext(getApplication(), kind, next.alarmId, next.triggerAt)
+        AlarmResyncHelper.resyncAll(getApplication(), auditMissed = false)
+    }
+
+    /** 今天临时静音：今天的闹钟全部跳过一次，明天恢复。 */
+    fun muteToday() = viewModelScope.launch {
+        val today = java.time.LocalDate.now().toEpochDay()
+        TemporaryMuteStore.muteDay(getApplication(), today)
+        AlarmResyncHelper.resyncAll(getApplication(), auditMissed = false)
+    }
+
+    fun unmuteToday() = viewModelScope.launch {
+        val today = java.time.LocalDate.now().toEpochDay()
+        TemporaryMuteStore.clearMutedDay(getApplication(), today)
+        AlarmResyncHelper.resyncAll(getApplication(), auditMissed = false)
     }
 
     /** 安排 ↔ 闹钟 一致性同步（幂等，可在任何触发点调用）。 */
