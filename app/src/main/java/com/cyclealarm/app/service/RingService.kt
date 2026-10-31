@@ -18,6 +18,7 @@ import androidx.core.app.ServiceCompat
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.NotificationChannels
+import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.core.RingForegroundGuard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -239,10 +240,21 @@ class RingService : Service() {
         }
     }
 
-    /** 前台化失败时的降级入口：普通通知（id 与响铃通知 2 区分），点开进响铃页。 */
+    /**
+     * 前台化失败时的降级入口。
+     *
+     * 注意：catch 住异常不等于服务能活——系统可能随后以 RemoteServiceException 结束进程。
+     * 降级目标只是「尽快给用户一条可点的通知」，所以这里用独立渠道并先查权限，
+     * 否则通知会被用户关掉的响铃渠道连带挡掉（三轮复审 §4.3）。
+     */
     private fun postFallbackNotification(contentIntent: PendingIntent) {
+        NotificationChannels.createAll(this)
+        if (!NotificationPermissionCheck.canSignal(this, NotificationChannels.RING_FALLBACK)) {
+            Log.w(TAG, "fallback notification blocked: permission or channel unavailable")
+            return
+        }
         runCatching {
-            val fallback = NotificationCompat.Builder(this, NotificationChannels.RING)
+            val fallback = NotificationCompat.Builder(this, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("闹钟正在响")
                 .setContentText("前台服务不可用，点开可停止")

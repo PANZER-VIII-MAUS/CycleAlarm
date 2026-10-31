@@ -857,7 +857,8 @@ private fun HolidayCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "内置 2025/2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。",
+                    "内置 2025~2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。" +
+                        "2026 年已无后续法定假期，2027 年数据发布后需更新 App。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

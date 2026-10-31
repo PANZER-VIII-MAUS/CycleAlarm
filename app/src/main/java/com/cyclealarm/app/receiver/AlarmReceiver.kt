@@ -239,6 +239,8 @@ class AlarmReceiver : BroadcastReceiver() {
         title: String,
         text: String
     ) {
+        // 先建渠道再判断：冷启动时渠道可能还不存在，否则会被自己的检查挡掉
+        NotificationChannels.createAll(context)
         if (!NotificationPermissionCheck.canSignal(context, NotificationChannels.RING_FALLBACK)) {
             Log.w(TAG, "fallback blocked: notification/channel unavailable ($title)")
             return
@@ -281,6 +283,8 @@ class AlarmReceiver : BroadcastReceiver() {
     private companion object {
         const val TAG = "AlarmReceiver"
         const val FALLBACK_NOTIFICATION_BASE = 2_000_000
-        const val RESCHEDULE_NOTIFICATION_ID = 2_000_001
+        // 通知 id 分区：1 = 前台服务；2 = 响铃；2_000_000 + schedulerId = 兜底；
+        // 3_000_001 = 排期失败（避开兜底区间，三轮复审 §4.4-1）
+        const val RESCHEDULE_NOTIFICATION_ID = 3_000_001
     }
 }

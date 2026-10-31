@@ -257,10 +257,6 @@ class AlarmImportWriter(private val context: Context) {
         return db.importSnapshotDao().get() != null
     }
 
-    suspend fun clearSnapshot() {
-        AppDatabase.get(context).importSnapshotDao().deleteAll()
-    }
-
     private suspend fun cancelSchedules(
         alarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>

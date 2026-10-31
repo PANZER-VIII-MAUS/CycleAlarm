@@ -294,11 +294,6 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** 该天改为「未安排」。 */
-    fun clearDayPlan(dayIndex: Int) = viewModelScope.launch {
-        db.dayPlanDao().deleteByDay(dayIndex)
-        syncPlans()
-    }
-
     /** 临时停用/启用某天的安排（保留安排记录，不生成闹钟）。 */
     fun setPlanEnabled(dayIndex: Int, enabled: Boolean) = viewModelScope.launch {
         val plan = db.dayPlanDao().getByDay(dayIndex) ?: return@launch
@@ -342,13 +337,6 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
                     db.dayPlanDao().upsert(plan.copy(hour = type.hour, minute = type.minute))
                 }
         }
-        syncPlans()
-    }
-
-    /** 删除安排类型：引用它的那些天变为「未安排」。 */
-    fun deleteActivityType(id: Int) = viewModelScope.launch {
-        db.dayPlanDao().deleteByType(id)
-        db.activityTypeDao().deleteById(id)
         syncPlans()
     }
 

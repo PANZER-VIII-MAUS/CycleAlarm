@@ -70,18 +70,4 @@ object ResyncCheckpoint {
             .takeLast(MAX_RECENT_FIRES)
     }
 
-    fun lastMissedAt(context: Context): Long =
-        runCatching { prefs(context).getLong(KEY_LAST_MISSED_AT, 0L) }.getOrDefault(0L)
-
-    fun lastMissedCount(context: Context): Int =
-        runCatching { prefs(context).getInt(KEY_LAST_MISSED_COUNT, 0) }.getOrDefault(0)
-
-    fun clearMissed(context: Context) {
-        runCatching {
-            prefs(context).edit()
-                .remove(KEY_LAST_MISSED_AT)
-                .remove(KEY_LAST_MISSED_COUNT)
-                .apply()
-        }
-    }
 }
