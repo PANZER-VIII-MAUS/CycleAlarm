@@ -112,10 +112,7 @@ object AlarmResyncHelper {
                 .map { MissedAlarm(it.label, it.expectedAt, it.alarmKind) }
         }.getOrDefault(emptyList())
 
-        val missed = (computed + fromEvents)
-            .filter { it.expectedAt > lastCheck }
-            .distinctBy { it.kind to it.expectedAt }
-            .sortedBy { it.expectedAt }
+        val missed = MissedAlarmMergePolicy.merge(computed, fromEvents, lastCheck)
         if (missed.isEmpty()) return
         Log.w(TAG, "detected ${missed.size} missed alarms since $lastCheck")
         MissedAlarmNotifier.notifyMissed(context, missed)
