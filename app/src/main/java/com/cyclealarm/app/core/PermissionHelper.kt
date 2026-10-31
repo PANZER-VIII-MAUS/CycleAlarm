@@ -12,11 +12,10 @@ import android.provider.Settings
 /** 与 ColorOS / Android 权限体系相关的辅助方法。 */
 object PermissionHelper {
 
-    fun notificationsGranted(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
-        return context.getSystemService(NotificationManager::class.java)
-            .areNotificationsEnabled()
-    }
+    fun notificationsGranted(context: Context): Boolean = runCatching {
+        // 所有版本都问系统：API<33 没有运行时权限，但用户仍可在设置里关掉通知
+        androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }.getOrDefault(true)
 
     fun canScheduleExactAlarms(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true

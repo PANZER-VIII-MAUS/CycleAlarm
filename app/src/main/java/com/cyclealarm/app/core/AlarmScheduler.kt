@@ -218,6 +218,26 @@ object AlarmScheduler {
         )
     }
 
+    /**
+     * 某条闹钟的排期是否真的还在系统里（PendingIntent 是否存在）。
+     *
+     * 用 FLAG_NO_CREATE 只查询不创建；requestCode 与 action 足以定位（extras 不参与相等判断）。
+     */
+    fun isScheduled(context: Context, kind: String, alarmId: Int): Boolean {
+        val requestCode = schedulerId(kind, alarmId)
+        val intent = Intent(context, com.cyclealarm.app.receiver.AlarmReceiver::class.java)
+            .setAction(ACTION_FIRE)
+            .putExtra(EXTRA_ALARM_KIND, kind)
+            .putExtra(EXTRA_ALARM_ID, alarmId)
+        val existing = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        return existing != null
+    }
+
     /** 取消某条周期闹钟（含未触发的“稍后提醒”与提前提醒）。 */
     fun cancelAlarm(context: Context, alarm: AlarmEntity) {
         cancelBySchedulerId(context, alarm.id)
@@ -382,7 +402,9 @@ object AlarmScheduler {
         dateAlarms.forEach { alarm ->
             runCatching { scheduleDateAlarm(context, alarm, settings, holidays) }
                 .onFailure { Log.e(TAG, "resync date alarm failed id=${alarm.id}", it) }
-        }
+            // 标记「这次是 App 自己改的排期」，避免后续广播触发无意义的对账
+        ResyncCheckpoint.markSelfWrite(context, System.currentTimeMillis())
+    }
     }
 
     /** 兼容旧调用：只重建周期闹钟。 */

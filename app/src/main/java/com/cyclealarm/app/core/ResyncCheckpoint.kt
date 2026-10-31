@@ -15,6 +15,7 @@ object ResyncCheckpoint {
     private const val KEY_LAST_MISSED_COUNT = "last_missed_count"
     private const val KEY_RECENT_FIRES = "recent_fire_ats"
 
+    private const val KEY_SELF_WRITE_AT = "last_self_write_at"
     private const val KEY_DIAG_AT = "last_diagnostic_at"
     private const val KEY_DIAG_REASON = "last_diagnostic_reason"
 
@@ -72,6 +73,14 @@ object ResyncCheckpoint {
             .sorted()
             .takeLast(MAX_RECENT_FIRES)
     }
+
+    /** 本 App 刚改过系统排期：短时间内的 NEXT_ALARM_CLOCK_CHANGED 是自己触发的，不必再对账。 */
+    fun markSelfWrite(context: Context, now: Long) {
+        runCatching { prefs(context).edit().putLong(KEY_SELF_WRITE_AT, now).apply() }
+    }
+
+    fun lastSelfWriteAt(context: Context): Long =
+        runCatching { prefs(context).getLong(KEY_SELF_WRITE_AT, 0L) }.getOrDefault(0L)
 
     /** 记录一次排期对账的诊断结果（只保留最近一次，供设置页展示）。 */
     fun recordDiagnostic(context: Context, at: Long, reason: String) {

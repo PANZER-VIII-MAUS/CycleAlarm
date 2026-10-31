@@ -76,8 +76,14 @@ object AlarmResyncHelper {
      * 因此不会形成循环。
      */
     suspend fun auditNextAlarm(context: Context) {
-        val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
+        // 刚由本 App 改过排期：这条广播就是自己触发的，短时间内不再对账
+        val lastSelfWrite = ResyncCheckpoint.lastSelfWriteAt(context)
+        if (lastSelfWrite > 0L && now - lastSelfWrite in 0..3_000L) {
+            Log.d(TAG, "skip audit: self write ${now - lastSelfWrite}ms ago")
+            return
+        }
+        val db = AppDatabase.get(context)
         reconcileNextAlarm(
             context = context,
             now = now,
@@ -141,23 +147,35 @@ object AlarmResyncHelper {
         }
         val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
         val actual = manager.nextAlarmClock?.triggerTime
-        if (actual == null) {
-            // 系统里一个 alarm clock 都不剩 —— 这正是「系统丢闹钟」的典型表现，必须自愈
-            Log.w(TAG, "no alarm clock in system while expected=$expected, rescheduling")
-            ResyncCheckpoint.recordDiagnostic(context, now, "系统无闹钟，已重排")
-            AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
-            return
+
+        // 逐条检查：凡是我们算出「还有下一次」的闹钟，它的 PendingIntent 是否真的还在系统里。
+        // 只看最早的 nextAlarmClock 会漏掉第 2 条以后丢掉的闹钟（三轮复审 §4.1）。
+        var missing = 0
+        cycleAlarms.filter { it.enabled }.forEach { alarm ->
+            val next = AlarmScheduler.nextTriggerFor(alarm, settings, holidays, now) ?: return@forEach
+            if (next > now && !AlarmScheduler.isScheduled(context, AlarmScheduler.KIND_CYCLE, alarm.id)) {
+                missing++
+            }
         }
-        if (actual > expected) {
-            // 系统里的下一次比我们算的晚（或压根没有）→ 说明排期没落地，补一次
-            Log.w(TAG, "next alarm later than expected ($actual > $expected), rescheduling")
-            ResyncCheckpoint.recordDiagnostic(context, now, "系统排期偏晚，已重排")
-            AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
-        } else if (actual < expected) {
-            // 系统里有一个更早的闹钟（通常是历史遗留的 PendingIntent）。
-            // 这里只记录：反复重排也清不掉它，而且会变成「每次回前台都重排」的噪声。
-            Log.w(TAG, "stale earlier alarm in system ($actual < $expected), keeping schedule")
-            ResyncCheckpoint.recordDiagnostic(context, now, "存在更早的历史闹钟（未动排期）")
+        dateAlarms.filter { it.enabled }.forEach { alarm ->
+            val next = AlarmScheduler.nextTriggerForDateAlarm(alarm, settings, holidays, now) ?: return@forEach
+            if (next > now && !AlarmScheduler.isScheduled(context, AlarmScheduler.KIND_DATE, alarm.id)) {
+                missing++
+            }
+        }
+
+        val action = ReconcilePolicy.decide(expected, actual, missing)
+        ReconcilePolicy.diagnosticText(action)?.let { text ->
+            Log.w(TAG, "reconcile action=$action missing=$missing expected=$expected actual=$actual")
+            ResyncCheckpoint.recordDiagnostic(context, now, text)
+        }
+        when (action) {
+            ReconcilePolicy.Action.RESCHEDULE_MISSING,
+            ReconcilePolicy.Action.RESCHEDULE_EMPTY,
+            ReconcilePolicy.Action.RESCHEDULE_LATER ->
+                AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
+
+            ReconcilePolicy.Action.LOG_STALE, ReconcilePolicy.Action.NONE -> Unit
         }
     }
 
