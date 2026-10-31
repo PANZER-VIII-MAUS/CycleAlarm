@@ -21,7 +21,7 @@ class WidgetTextPolicyTest {
     fun `empty state shows guidance`() {
         val text = WidgetTextPolicy.render(next = null, now = now)
 
-        assertEquals(WidgetTextPolicy.EMPTY_TITLE, text.time)
+        assertEquals("暂无响铃", text.time)
         assertEquals(WidgetTextPolicy.EMPTY_SUBTITLE, text.subtitle)
     }
 

@@ -11,7 +11,7 @@ import java.util.TimeZone
  */
 object WidgetTextPolicy {
 
-    const val EMPTY_TITLE = "暂无开启的闹钟"
+    const val EMPTY_TITLE = "暂无响铃"
     const val EMPTY_SUBTITLE = "打开 App 添加或打开某一天"
 
     data class WidgetText(val time: String, val subtitle: String)

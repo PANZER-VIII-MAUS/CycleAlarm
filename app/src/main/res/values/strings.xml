@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">循环闹钟</string>
+    <string name="widget_description">显示下一次响铃时间与倒计时</string>
 </resources>
