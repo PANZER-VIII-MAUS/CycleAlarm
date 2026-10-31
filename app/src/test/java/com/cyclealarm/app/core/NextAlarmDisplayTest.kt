@@ -64,7 +64,17 @@ class NextAlarmDisplayTest {
         val now = Instant.parse("2026-10-29T08:00:00Z")
         val triggerAt = now.plus(49, ChronoUnit.HOURS).toEpochMilli()
         assertEquals(
-            "10 月 31 日 · 还有 2 天",
+            "10 月 31 日 · 还有 2 天 1 小时",
+            NextAlarmDisplay.countdownText(triggerAt, now.toEpochMilli(), ZoneId.of("UTC"))
+        )
+    }
+
+    @Test
+    fun `just under two days keeps hours for monotonic display`() {
+        val now = Instant.parse("2026-10-29T08:00:00Z")
+        val triggerAt = now.plus(47, ChronoUnit.HOURS).toEpochMilli()
+        assertEquals(
+            "10 月 31 日 · 还有 1 天 23 小时",
             NextAlarmDisplay.countdownText(triggerAt, now.toEpochMilli(), ZoneId.of("UTC"))
         )
     }

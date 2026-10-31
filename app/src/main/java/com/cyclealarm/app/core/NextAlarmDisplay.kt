@@ -23,9 +23,16 @@ object NextAlarmDisplay {
             else -> "${triggerDate.monthValue} 月 ${triggerDate.dayOfMonth} 日"
         }
         // 超过 48 小时不再用「还有 154 小时」这种读不出意义的数字，改成按天
-        if (totalMinutes >= 48 * 60) {
-            val days = remaining / (24 * 60 * 60_000L)
-            return "$dayLabel · 还有 $days 天"
+        if (totalMinutes >= 24 * 60) {
+            // 超过 24 小时按「N 天 M 小时」显示：既单调，也不会出现「47 小时」跳到「2 天」的怪数字
+            val dayMs = 24 * 60 * 60_000L
+            val days = remaining / dayMs
+            val hoursLeft = (remaining % dayMs) / (60 * 60_000L)
+            return if (hoursLeft > 0L) {
+                "$dayLabel · 还有 $days 天 $hoursLeft 小时"
+            } else {
+                "$dayLabel · 还有 $days 天"
+            }
         }
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60

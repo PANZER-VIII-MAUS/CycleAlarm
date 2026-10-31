@@ -117,6 +117,14 @@ object AlarmResyncHelper {
         holidays: List<HolidayEntity>
     ) {
         val manager = context.getSystemService(AlarmManager::class.java) ?: return
+        // 没有精确闹钟权限时排期会降级为不精确闹钟，nextAlarmClock 与期望值天然不一致，
+        // 此时反复重排没有意义（三轮复审 §4.2）
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+            !manager.canScheduleExactAlarms()
+        ) {
+            Log.w(TAG, "skip reconciliation: exact alarm permission not granted")
+            return
+        }
         val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
         val actual = manager.nextAlarmClock?.triggerTime
         if (actual == null) {

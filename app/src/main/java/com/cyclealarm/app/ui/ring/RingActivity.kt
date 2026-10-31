@@ -39,6 +39,7 @@ import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.core.RingPreviewPolicy
 import com.cyclealarm.app.service.RingService
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -77,6 +78,13 @@ class RingActivity : ComponentActivity() {
         followServiceState()
         applyIntent(intent)
         if (ringState == null) return
+
+        // 竞态兜底：服务可能在 Activity 订阅前就已停止（例如响铃被通知栏迅速停止）。
+        // 给服务 1.2 秒把 isRinging 置 true 的机会，否则直接退出，避免卡在响铃页。
+        lifecycleScope.launch {
+            delay(1_200)
+            if (!RingService.isRinging.value) finish()
+        }
 
         setContent {
             CycleAlarmTheme {

@@ -15,6 +15,7 @@ import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.NotificationChannels
@@ -40,6 +41,8 @@ class RingService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var timeout: Runnable? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var lastStartId: Int = 0
+    private var previewMode: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -49,6 +52,8 @@ class RingService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        lastStartId = startId
+        previewMode = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)
         val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
         val kind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
             ?: AlarmScheduler.KIND_CYCLE
@@ -83,7 +88,13 @@ class RingService : Service() {
         timeout?.let { handler.removeCallbacks(it) }
         // 「一直响」也必须有硬上限：通知被拒时用户没有任何停止入口，否则只能强杀进程。
         val effectiveSec = if (durationSec > 0) durationSec else RingPrefs.ALWAYS_RING_CAP_SECONDS
-        val task = Runnable { stopRing() }
+        val task = Runnable {
+            // 响满上限仍没人处理：留一条可点通知，而不是静默停止
+            if (!previewMode) {
+                postUnhandledNotification()
+            }
+            stopRing()
+        }
         timeout = task
         handler.postDelayed(task, effectiveSec * 1000L)
         return START_STICKY
@@ -94,7 +105,8 @@ class RingService : Service() {
         timeout = null
         releaseWakeLock()
         _isRinging.value = false
-        stopSelf()
+        // 带 startId 停止：只结束本次启动，避免把新一次响铃也一并结束
+        stopSelf(lastStartId)
     }
 
     @SuppressLint("WakelockTimeout")
@@ -269,11 +281,45 @@ class RingService : Service() {
         }.onFailure { Log.e(TAG, "fallback notification failed", it) }
     }
 
+    /** 响满上限仍未被处理时的提醒（独立渠道 + 权限检查）。 */
+    private fun postUnhandledNotification() {
+        NotificationChannels.createAll(this)
+        if (!NotificationPermissionCheck.canSignal(this, NotificationChannels.RING_FALLBACK)) {
+            Log.w(TAG, "unhandled notification blocked: permission or channel unavailable")
+            return
+        }
+        runCatching {
+            val contentIntent = PendingIntent.getActivity(
+                this,
+                UNHANDLED_NOTIFICATION_ID,
+                Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat
+                .Builder(this, NotificationChannels.RING_FALLBACK)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("闹钟未被处理")
+                .setContentText("刚才的闹钟已响到上限自动停止，点开可确认状态")
+                .setContentIntent(contentIntent)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .build()
+            getSystemService(android.app.NotificationManager::class.java)
+                ?.notify(UNHANDLED_NOTIFICATION_ID, notification)
+        }.onFailure { Log.e(TAG, "unhandled notification failed", it) }
+    }
+
     companion object {
         private const val TAG = "RingService"
 
         /** 前台化失败时降级通知的 id（与响铃前台通知 2 区分）。 */
         private const val FALLBACK_NOTIFICATION_ID = 3
+
+        /** 响满上限未被处理的提醒 id。 */
+        private const val UNHANDLED_NOTIFICATION_ID = 3_000_002
 
         private val _isRinging = MutableStateFlow(false)
 
