@@ -80,6 +80,9 @@ interface ActivityTypeDao {
 
     @Query("SELECT COUNT(*) FROM activity_types")
     suspend fun count(): Int
+
+    @Query("DELETE FROM activity_types")
+    suspend fun deleteAll()
 }
 
 @Dao
@@ -104,6 +107,9 @@ interface DayPlanDao {
 
     @Query("DELETE FROM day_plans WHERE typeId = :typeId")
     suspend fun deleteByType(typeId: Int)
+
+    @Query("DELETE FROM day_plans")
+    suspend fun deleteAll()
 }
 
 @Dao

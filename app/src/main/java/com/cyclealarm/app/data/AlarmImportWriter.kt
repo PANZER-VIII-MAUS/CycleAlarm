@@ -16,10 +16,19 @@ import java.time.LocalDate
  */
 class AlarmImportWriter(private val context: Context) {
 
+    /**
+     * 导入前快照。
+     *
+     * v2 起包含 day_plans 与 activity_types：撤销时能把「安排」也恢复回去，
+     * batchId 用来标识同一批导入，便于诊断与后续按批次撤销。
+     */
     data class Snapshot(
         val alarms: List<AlarmEntity>,
         val dateAlarms: List<DateAlarmEntity>,
-        val settings: AppSettingsEntity?
+        val settings: AppSettingsEntity?,
+        val dayPlans: List<DayPlanEntity> = emptyList(),
+        val activityTypes: List<ActivityTypeEntity> = emptyList(),
+        val batchId: Long = 0L
     )
 
     data class WriteResult(
@@ -56,7 +65,10 @@ class AlarmImportWriter(private val context: Context) {
         val snapshot = Snapshot(
             alarms = db.alarmDao().getAll(),
             dateAlarms = db.dateAlarmDao().getAll(),
-            settings = db.settingsDao().get()
+            settings = db.settingsDao().get(),
+            dayPlans = db.dayPlanDao().getAll(),
+            activityTypes = db.activityTypeDao().getAll(),
+            batchId = now
         )
         val snapshotPayload = ImportSnapshotCodec.encode(snapshot)
         val transaction = db.withTransaction {
@@ -213,6 +225,14 @@ class AlarmImportWriter(private val context: Context) {
             snapshot.alarms.forEach { db.alarmDao().upsert(it) }
             db.dateAlarmDao().upsertAll(snapshot.dateAlarms)
             snapshot.settings?.let { db.settingsDao().upsert(it) }
+
+            // v2 快照：安排与安排类型一并恢复；v1 老快照这两项为空 → 不动用户当前安排
+            if (snapshot.dayPlans.isNotEmpty() || snapshot.activityTypes.isNotEmpty()) {
+                db.dayPlanDao().deleteAll()
+                db.activityTypeDao().deleteAll()
+                snapshot.activityTypes.forEach { db.activityTypeDao().upsert(it) }
+                snapshot.dayPlans.forEach { db.dayPlanDao().upsert(it) }
+            }
 
             val planAlarmsToCancel = DayPlanAlarmSync.syncFromDatabaseOnly(db)
             db.importSnapshotDao().deleteAll()
