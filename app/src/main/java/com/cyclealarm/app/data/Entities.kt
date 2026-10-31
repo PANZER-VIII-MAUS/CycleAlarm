@@ -134,3 +134,27 @@ data class ImportSnapshotEntity(
     val createdAt: Long,
     val expiresAt: Long
 )
+
+/**
+ * 响铃事件（v9 新增）：每条「本该响的闹钟」一条记录。
+ *
+ * - expectedAt：原定触发时间（可按它精确判定漏响，不再依赖启发式时间戳）
+ * - rungAt：真正开始响的时间（null = 没响成 → 漏响）
+ * - ackedAt：用户处理时间（停止 / 稍后 / 关闭）
+ */
+@Entity(
+    tableName = "ring_events",
+    indices = [
+        Index(value = ["expectedAt"]),
+        Index(value = ["alarmKind", "alarmId"])
+    ]
+)
+data class RingEventEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val alarmKind: String,
+    val alarmId: Int,
+    val label: String = "",
+    val expectedAt: Long,
+    val rungAt: Long? = null,
+    val ackedAt: Long? = null
+)

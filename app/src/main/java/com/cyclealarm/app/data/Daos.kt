@@ -180,3 +180,52 @@ interface ImportSnapshotDao {
     @Query("DELETE FROM import_snapshots")
     suspend fun deleteAll()
 }
+
+/**
+ * 响铃事件的读写。
+ *
+ * 漏响判定改为「窗口内应有、但 rungAt 为 null」——比原先「算期望值 + 比对留痕」精确，
+ * 也能覆盖「响铃服务启动失败」这种以前检测不到的情况。
+ */
+@Dao
+interface RingEventDao {
+
+    @Query("SELECT * FROM ring_events WHERE expectedAt > :from AND expectedAt <= :to ORDER BY expectedAt ASC")
+    suspend fun between(from: Long, to: Long): List<RingEventEntity>
+
+    /** 应有却未响的事件（漏响候选）。 */
+    @Query(
+        "SELECT * FROM ring_events WHERE expectedAt > :from AND expectedAt <= :to " +
+            "AND rungAt IS NULL ORDER BY expectedAt ASC"
+    )
+    suspend fun missedBetween(from: Long, to: Long): List<RingEventEntity>
+
+    @Query(
+        "SELECT * FROM ring_events WHERE alarmKind = :kind AND alarmId = :alarmId " +
+            "AND expectedAt = :expectedAt LIMIT 1"
+    )
+    suspend fun find(kind: String, alarmId: Int, expectedAt: Long): RingEventEntity?
+
+    @Query("SELECT * FROM ring_events ORDER BY expectedAt DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<RingEventEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(event: RingEventEntity): Long
+
+    /** 记录「真的响了」。 */
+    @Query("UPDATE ring_events SET rungAt = :rungAt WHERE id = :id")
+    suspend fun markRung(id: Long, rungAt: Long)
+
+    /** 记录「用户处理了」（停止 / 稍后 / 关闭）。 */
+    @Query(
+        "UPDATE ring_events SET ackedAt = :ackedAt WHERE alarmKind = :kind " +
+            "AND alarmId = :alarmId AND expectedAt = :expectedAt"
+    )
+    suspend fun markAcked(kind: String, alarmId: Int, expectedAt: Long, ackedAt: Long)
+
+    @Query("DELETE FROM ring_events WHERE expectedAt < :before")
+    suspend fun deleteBefore(before: Long)
+
+    @Query("DELETE FROM ring_events")
+    suspend fun deleteAll()
+}

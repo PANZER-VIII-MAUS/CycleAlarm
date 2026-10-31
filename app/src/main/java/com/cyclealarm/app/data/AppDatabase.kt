@@ -16,14 +16,17 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         HolidayEntity::class,
         AppSettingsEntity::class,
         SnoozeEntity::class,
-        ImportSnapshotEntity::class
+        ImportSnapshotEntity::class,
+        RingEventEntity::class
     ],
     // v2：同一日期支持多条闹钟；v3：假期改为多段（法定节假日可一键导入）；
     // v4：循环方式选择（每天 / 每周 / 自定义 N 天）；
     // v5：按日期的一次性闹钟（课表/排班表按日期导入）；
     // v6：循环安排（安排类型 + 每天一个安排，自动生成闹钟）。
     // v7：持久化 snooze 与导入快照。必须走 Migration，禁止清空用户数据。
-    version = 8,
+    // v8：假期静音与 plansSeeded 的数据回填（纯数据）。
+    // v9：响铃事件表（精确漏响判定 + 响铃历史）。
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun snoozeDao(): SnoozeDao
     abstract fun importSnapshotDao(): ImportSnapshotDao
+    abstract fun ringEventDao(): RingEventDao
 
     companion object {
         @Volatile
@@ -104,6 +108,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v8 → v9：只新增响铃事件表与两个索引。 */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Migration8To9Sql.statements.forEach(db::execSQL)
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -111,7 +122,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cycle_alarm.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .build()
                     .also { INSTANCE = it }
             }

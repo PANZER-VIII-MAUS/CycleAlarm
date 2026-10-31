@@ -37,6 +37,17 @@ class DatabaseSchemaTest {
         assertTrue(schema.contains("\"tableName\": \"day_plans\""))
     }
 
+
+    @Test
+    fun `v9 schema adds ring events`() {
+        val schema = schemaJson(version = 9)
+
+        assertTrue(schema.contains("\"version\": 9"))
+        assertTrue(schema.contains("\"tableName\": \"ring_events\""))
+        assertTrue(schema.contains("\"name\": \"index_ring_events_expectedAt\""))
+        assertTrue(schema.contains("\"name\": \"index_ring_events_alarmKind_alarmId\""))
+    }
+
     private fun schemaJson(version: Int): String {
         val relative = "schemas/com.cyclealarm.app.data.AppDatabase/$version.json"
         val candidates = listOf(File(relative), File("app/$relative"))
