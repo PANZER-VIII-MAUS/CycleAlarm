@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
 
@@ -16,12 +17,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.cyclealarm.app"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.cyclealarm.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 26
         versionName = "0.4.4"
     }
@@ -68,10 +69,7 @@ android {
         compose = true
     }
 
-    // Kotlin 1.9.x 使用独立的 Compose 编译器插件版本
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
-    }
+    // Kotlin 2.0 起 Compose 编译器随 kotlin("plugin.compose") 走，不再单独配置版本
 }
 
 ksp {
@@ -85,7 +83,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.activity:activity-compose:1.9.2")
 
-    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+    implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")

@@ -29,7 +29,8 @@ val CycleAlarmShapes = Shapes(
 @Composable
 fun CycleAlarmTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current.applicationContext
-    remember { ThemeManager.init(context) }
+    // init 幂等（内部有 initialized 标记），这里直接调用比 remember 更符合新 lint 规则
+    ThemeManager.init(context)
     val mode by ThemeManager.mode.collectAsStateWithLifecycle()
     val darkTheme = ThemeManager.resolveDark(mode, isSystemInDarkTheme())
     CompositionLocalProvider(LocalExtraColors provides extraColorsFor(darkTheme)) {
