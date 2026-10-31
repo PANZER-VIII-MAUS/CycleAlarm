@@ -65,6 +65,8 @@ object AlarmResyncHelper {
 
         reconcileNextAlarm(context, now, cycleAlarms, dateAlarms, settings, holidays)
         ResyncCheckpoint.markChecked(context, now)
+        // 排期变化后同步刷新桌面小组件（没有小组件时内部直接返回）
+        runCatching { com.cyclealarm.app.widget.WidgetUpdater.updateAll(context) }
     }
 
     /**
