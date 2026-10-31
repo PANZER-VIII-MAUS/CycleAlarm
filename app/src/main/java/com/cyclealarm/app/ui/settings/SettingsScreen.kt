@@ -19,7 +19,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Remove
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import com.cyclealarm.app.data.BackupManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +81,43 @@ fun SettingsScreen(
     viewModel: AlarmViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val backupScope = rememberCoroutineScope()
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) {
+            backupScope.launch {
+                runCatching {
+                    val payload = BackupManager.export(context)
+                    context.contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.write(payload.toByteArray(Charsets.UTF_8))
+                    } ?: error("无法写入文件")
+                }.onSuccess {
+                    Toast.makeText(context, "备份已导出", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(context, "导出失败：${it.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            backupScope.launch {
+                runCatching {
+                    val text = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readBytes().toString(Charsets.UTF_8)
+                    } ?: error("无法读取文件")
+                    BackupManager.import(context, text)
+                }.onSuccess {
+                    Toast.makeText(context, "已从备份恢复", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(context, "导入失败：${it.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val cycleLength by viewModel.cycleLength.collectAsStateWithLifecycle()
     val themeMode by ThemeManager.mode.collectAsStateWithLifecycle()
@@ -199,6 +244,20 @@ fun SettingsScreen(
                         title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
+                    )
+                    SettingRow(
+                        title = "导出备份",
+                        value = "生成单文件备份",
+                        onClick = {
+                            val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.CHINA)
+                                .format(Date())
+                            exportLauncher.launch("CycleAlarm-备份-$stamp.txt")
+                        }
+                    )
+                    SettingRow(
+                        title = "导入备份",
+                        value = "从备份文件恢复",
+                        onClick = { importLauncher.launch(arrayOf("text/plain", "*/*")) }
                     )
                     SettingRow(
                         title = "排期诊断",

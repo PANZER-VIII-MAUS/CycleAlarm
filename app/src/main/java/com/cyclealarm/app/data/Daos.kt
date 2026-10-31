@@ -131,6 +131,9 @@ interface HolidayDao {
 
     @Query("UPDATE holidays SET enabled = :enabled")
     suspend fun setAllEnabled(enabled: Boolean)
+
+    @Query("DELETE FROM holidays")
+    suspend fun deleteAll()
 }
 
 @Dao
