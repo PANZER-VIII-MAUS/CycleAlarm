@@ -37,6 +37,11 @@ import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import android.media.RingtoneManager
+import android.net.Uri
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -1188,6 +1193,20 @@ private fun EditAlarmDialog(
     var minute by rememberSaveable(alarm.id) { mutableStateOf(alarm.minute) }
     var enabled by rememberSaveable(alarm.id) { mutableStateOf(alarm.enabled) }
     var muted by rememberSaveable(alarm.id) { mutableStateOf(alarm.mutedDuringHoliday) }
+    // v10：每闹钟响铃设置
+    var ringtone by rememberSaveable(alarm.id) { mutableStateOf(alarm.ringtoneUri) }
+    var vibrate by rememberSaveable(alarm.id) { mutableStateOf(alarm.vibrate) }
+    var ramp by rememberSaveable(alarm.id) { mutableStateOf(alarm.rampVolume) }
+    var preAlert by rememberSaveable(alarm.id) { mutableStateOf(alarm.preAlertMinutes) }
+
+    val ringtonePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val picked: Uri? = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            ringtone = picked?.toString()
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1230,7 +1249,10 @@ private fun EditAlarmDialog(
                                 alarm.minute,
                                 label.trim().ifBlank { "闹钟" } + "（试听）",
                                 snoozed = false,
-                                preview = true
+                                preview = true,
+                                ringtoneUri = ringtone,
+                                vibrate = vibrate,
+                                rampVolume = ramp
                             )
                         )
                     },
@@ -1272,6 +1294,72 @@ private fun EditAlarmDialog(
                         }
                     )
                 }
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(
+                                RingtoneManager.EXTRA_RINGTONE_TYPE,
+                                RingtoneManager.TYPE_ALARM
+                            )
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "选择这条闹钟的铃声")
+                            putExtra(
+                                RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
+                                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                            )
+                            ringtone?.let {
+                                runCatching { Uri.parse(it) }.getOrNull()?.let { uri ->
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, uri)
+                                }
+                            }
+                        }
+                        runCatching { ringtonePicker.launch(intent) }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (ringtone == null) "铃声：跟随系统" else "铃声：自定义"
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("振动", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    CycleSwitch(
+                        checked = vibrate,
+                        onCheckedChange = { vibrate = it },
+                        modifier = Modifier.semantics {
+                            stateDescription = if (vibrate) "振动已开启" else "振动已关闭"
+                        }
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("音量渐强", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "从 30% 音量开始，约 20 秒升到满",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    CycleSwitch(
+                        checked = ramp,
+                        onCheckedChange = { ramp = it }
+                    )
+                }
+                OutlinedButton(
+                    onClick = {
+                        preAlert = when (preAlert) {
+                            0 -> 5
+                            5 -> 10
+                            10 -> 15
+                            15 -> 30
+                            else -> 0
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (preAlert == 0) "提前提醒：关闭" else "提前提醒：$preAlert 分钟"
+                    )
+                }
             }
         },
         confirmButton = {
@@ -1283,7 +1371,11 @@ private fun EditAlarmDialog(
                             hour = hour,
                             minute = minute,
                             enabled = enabled,
-                            mutedDuringHoliday = muted
+                            mutedDuringHoliday = muted,
+                            ringtoneUri = ringtone,
+                            vibrate = vibrate,
+                            rampVolume = ramp,
+                            preAlertMinutes = preAlert
                         )
                     )
                 }
