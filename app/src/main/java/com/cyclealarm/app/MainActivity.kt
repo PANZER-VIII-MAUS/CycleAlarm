@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.cyclealarm.app.core.AlarmResyncHelper
+import com.cyclealarm.app.core.DatabaseSelfCheck
 import com.cyclealarm.app.core.GuardServicePolicy
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.service.AlarmGuardService
@@ -45,6 +46,15 @@ class MainActivity : ComponentActivity() {
             DailyResyncWorker.enqueue(this)
         } catch (e: Exception) {
             Log.w("CycleAlarm", "startup service failed, continuing without it", e)
+        }
+
+        // 每次升级后跑一次库结构自检：迁移是否真的把表/列建对，结果写进「排期诊断」
+        lifecycleScope.launch {
+            runCatching {
+                val versionCode = packageManager
+                    .getPackageInfo(packageName, 0).longVersionCode.toInt()
+                DatabaseSelfCheck.verifyOnce(applicationContext, versionCode)
+            }
         }
 
         // 每次回到前台都重建排期，兜底假期/跨天等状态变化
