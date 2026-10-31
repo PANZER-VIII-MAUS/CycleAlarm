@@ -50,6 +50,10 @@ class RingService : Service() {
     private var timedOut: Boolean = false
     private var currentAlarmId: Int = 0
     private var currentKind: String = AlarmScheduler.KIND_CYCLE
+    // v10：每闹钟响铃设置
+    private var customRingtoneUri: String? = null
+    private var vibrateEnabled: Boolean = true
+    private var rampEnabled: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -61,6 +65,9 @@ class RingService : Service() {
         }
         lastStartId = startId
         previewMode = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)
+        customRingtoneUri = intent.getStringExtra(AlarmScheduler.EXTRA_RINGTONE_URI)
+        vibrateEnabled = intent.getBooleanExtra(AlarmScheduler.EXTRA_VIBRATE, true)
+        rampEnabled = intent.getBooleanExtra(AlarmScheduler.EXTRA_RAMP_VOLUME, false)
         val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
         val kind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
             ?: AlarmScheduler.KIND_CYCLE
@@ -88,10 +95,13 @@ class RingService : Service() {
             kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute, preview
         )
         acquireWakeLock()
-        runCatching { RingtonePlayer.play(this) }
+        // v10：用闹钟自己的铃声与渐强设置（自定义为空则回退全局默认）
+        runCatching { RingtonePlayer.play(this, customRingtoneUri, rampEnabled) }
             .onFailure { Log.e(TAG, "ringtone init failed", it) }
-        runCatching { VibratorUtil.start(this) }
-            .onFailure { Log.e(TAG, "vibration init failed", it) }
+        if (vibrateEnabled) {
+            runCatching { VibratorUtil.start(this) }
+                .onFailure { Log.e(TAG, "vibration init failed", it) }
+        }
 
         val durationSec = RingPrefs.durationSeconds(this)
         timeout?.let { handler.removeCallbacks(it) }
@@ -357,7 +367,10 @@ class RingService : Service() {
             kind: String = AlarmScheduler.KIND_CYCLE,
             originalHour: Int? = null,
             originalMinute: Int? = null,
-            preview: Boolean = false
+            preview: Boolean = false,
+            ringtoneUri: String? = null,
+            vibrate: Boolean = true,
+            rampVolume: Boolean = false
         ): Intent = Intent(context, RingService::class.java)
             .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
             .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
@@ -367,6 +380,11 @@ class RingService : Service() {
             .putExtra(AlarmScheduler.EXTRA_LABEL, label)
             .putExtra(AlarmScheduler.EXTRA_SNOOZED, snoozed)
             .putExtra(AlarmScheduler.EXTRA_PREVIEW, preview)
+            .putExtra(AlarmScheduler.EXTRA_VIBRATE, vibrate)
+            .putExtra(AlarmScheduler.EXTRA_RAMP_VOLUME, rampVolume)
+            .apply {
+                ringtoneUri?.let { putExtra(AlarmScheduler.EXTRA_RINGTONE_URI, it) }
+            }
             .apply {
                 if (originalHour != null && originalMinute != null) {
                     putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)

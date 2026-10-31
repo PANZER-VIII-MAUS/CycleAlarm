@@ -82,6 +82,10 @@ class AlarmReceiver : BroadcastReceiver() {
                         } else {
                             null
                         }
+                        // v10：每闹钟响铃设置随 FIRE 广播传来，转交响铃服务
+                        val ringtoneUri = intent.getStringExtra(AlarmScheduler.EXTRA_RINGTONE_URI)
+                        val vibrate = intent.getBooleanExtra(AlarmScheduler.EXTRA_VIBRATE, true)
+                        val rampVolume = intent.getBooleanExtra(AlarmScheduler.EXTRA_RAMP_VOLUME, false)
 
                         // 幽灵守护：系统里可能残留「已被删除/已停用」的闹钟 PendingIntent。
                         // 这种情况下不能响铃，否则用户会听到一条已不存在的闹钟。
@@ -157,7 +161,10 @@ class AlarmReceiver : BroadcastReceiver() {
                                         snoozed = snoozed,
                                         kind = kind,
                                         originalHour = originalHour,
-                                        originalMinute = originalMinute
+                                        originalMinute = originalMinute,
+                                        ringtoneUri = ringtoneUri,
+                                        vibrate = vibrate,
+                                        rampVolume = rampVolume
                                     )
                                 )
                                 serviceStarted = true

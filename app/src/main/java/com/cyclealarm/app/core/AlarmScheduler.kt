@@ -42,6 +42,11 @@ object AlarmScheduler {
     /** 兜底通知里的「立即重排」action。 */
     const val ACTION_RESYNC = "com.cyclealarm.app.action.RESYNC"
 
+    /** v10：每闹钟响铃设置（随 FIRE 广播一起传给响铃服务）。 */
+    const val EXTRA_RINGTONE_URI = "extra_ringtone_uri"
+    const val EXTRA_VIBRATE = "extra_vibrate"
+    const val EXTRA_RAMP_VOLUME = "extra_ramp_volume"
+
     const val EXTRA_ALARM_ID = "alarmId"
     const val EXTRA_ALARM_KIND = "alarmKind"
     const val EXTRA_DAY_INDEX = "dayIndex"
@@ -189,7 +194,10 @@ object AlarmScheduler {
             hour = alarm.hour,
             minute = alarm.minute,
             label = alarm.label,
-            snoozed = false
+            snoozed = false,
+            ringtoneUri = alarm.ringtoneUri,
+            vibrate = alarm.vibrate,
+            rampVolume = alarm.rampVolume
         )
         setAlarmClock(am, triggerAt, operation, showPendingIntent(context, requestCode))
     }
@@ -494,7 +502,10 @@ object AlarmScheduler {
         snoozed: Boolean,
         snoozeId: Long? = null,
         originalHour: Int? = null,
-        originalMinute: Int? = null
+        originalMinute: Int? = null,
+        ringtoneUri: String? = null,
+        vibrate: Boolean = true,
+        rampVolume: Boolean = false
     ): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java)
             .setAction(ACTION_FIRE)
@@ -510,6 +521,9 @@ object AlarmScheduler {
             intent.putExtra(EXTRA_ORIGINAL_HOUR, originalHour)
             intent.putExtra(EXTRA_ORIGINAL_MINUTE, originalMinute)
         }
+        ringtoneUri?.let { intent.putExtra(EXTRA_RINGTONE_URI, it) }
+        intent.putExtra(EXTRA_VIBRATE, vibrate)
+        intent.putExtra(EXTRA_RAMP_VOLUME, rampVolume)
         return PendingIntent.getBroadcast(
             context,
             requestCode,
