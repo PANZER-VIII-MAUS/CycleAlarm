@@ -15,6 +15,9 @@ import com.cyclealarm.app.core.NextAlarmKind
 import com.cyclealarm.app.core.TemporaryMuteStore
 import com.cyclealarm.app.core.PlanDeletePolicy
 import com.cyclealarm.app.core.PlanSeedPolicy
+import com.cyclealarm.app.core.ShiftTemplate
+import com.cyclealarm.app.core.ShiftTemplates
+import com.cyclealarm.app.data.ScheduleShareText
 import com.cyclealarm.app.data.ActivityTypeEntity
 import com.cyclealarm.app.data.AlarmEntity
 import com.cyclealarm.app.data.AppDatabase
@@ -227,6 +230,24 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         val today = java.time.LocalDate.now().toEpochDay()
         TemporaryMuteStore.clearMutedDay(getApplication(), today)
         AlarmResyncHelper.resyncAll(getApplication(), auditMissed = false)
+    }
+
+    /** 应用轮班模板：设为自定义周期 + 写入一个周期的闹钟。 */
+    fun applyShiftTemplate(template: ShiftTemplate) = viewModelScope.launch {
+        val current = db.settingsDao().get() ?: return@launch
+        db.settingsDao().upsert(
+            current.copy(cycleLength = template.cycleLength, cycleType = CycleTypes.CUSTOM)
+        )
+        ShiftTemplates.toAlarms(template).forEach { db.alarmDao().upsert(it) }
+        syncPlans()
+    }
+
+    /** 生成排班分享文本（供 ACTION_SEND 使用）。 */
+    suspend fun buildShareText(): String {
+        val settings = db.settingsDao().get()
+        val alarms = db.alarmDao().getAll()
+        val dateAlarms = db.dateAlarmDao().getAll()
+        return ScheduleShareText.build(settings, alarms, dateAlarms)
     }
 
     /** 安排 ↔ 闹钟 一致性同步（幂等，可在任何触发点调用）。 */

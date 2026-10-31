@@ -25,6 +25,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.cyclealarm.app.data.BackupManager
+import com.cyclealarm.app.core.ShiftTemplate
+import com.cyclealarm.app.core.ShiftTemplates
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -84,6 +86,18 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val backupScope = rememberCoroutineScope()
+    var showShiftTemplates by remember { mutableStateOf(false) }
+
+    if (showShiftTemplates) {
+        ShiftTemplateDialog(
+            onPick = { template ->
+                viewModel.applyShiftTemplate(template)
+                showShiftTemplates = false
+                Toast.makeText(context, "已应用「${template.name}」", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = { showShiftTemplates = false }
+        )
+    }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain")
     ) { uri ->
@@ -246,6 +260,33 @@ fun SettingsScreen(
                         title = "稍后提醒间隔",
                         value = "$snoozeMinutes 分钟",
                         onClick = { dialog = SettingsDialog.SNOOZE }
+                    )
+                    SettingRow(
+                        title = "轮班模板",
+                        value = "白夜休休 / 做二休二 / 四班三运转",
+                        onClick = { showShiftTemplates = true }
+                    )
+                    SettingRow(
+                        title = "分享排班",
+                        value = "把当前排班发出去",
+                        onClick = {
+                            backupScope.launch {
+                                runCatching {
+                                    val text = viewModel.buildShareText()
+                                    val share = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    }
+                                    context.startActivity(
+                                        Intent.createChooser(share, "分享排班")
+                                    )
+                                }.onFailure {
+                                    Toast.makeText(
+                                        context, "生成分享文本失败", Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
                     )
                     SettingRow(
                         title = "响铃历史",
@@ -491,6 +532,45 @@ fun SettingsScreen(
 // ---------------------------------------------------------------------
 // 行组件
 // ---------------------------------------------------------------------
+
+@Composable
+private fun ShiftTemplateDialog(
+    onPick: (ShiftTemplate) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("轮班模板") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                ShiftTemplates.ALL.forEach { template ->
+                    TextButton(
+                        onClick = { onPick(template) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(template.name, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                template.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                Text(
+                    "应用模板会把循环方式设为自定义、并写入一个周期的闹钟；已有闹钟不会被删除。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("关闭") }
+        }
+    )
+}
 
 @Composable
 private fun SettingRow(title: String, value: String, onClick: () -> Unit) {
