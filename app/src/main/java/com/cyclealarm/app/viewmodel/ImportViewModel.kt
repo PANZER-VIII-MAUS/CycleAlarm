@@ -250,7 +250,11 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { runImport(sheet) }
     }
 
-    fun write() {
+    /**
+     * @param weeklyConfirmed 用户明确点了「仍然导入并切换每周」。
+     *   未经确认时不会切换循环方式，第 8 天以后的条目会被跳过（门禁不再是装饰）。
+     */
+    fun write(weeklyConfirmed: Boolean = false) {
         val preview = _state.value as? ImportUiState.Preview ?: return
         val entries = preview.entries.filterIndexed { index, _ -> index in preview.selected }
         if (entries.isEmpty()) {
@@ -260,8 +264,8 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = ImportUiState.Writing
         viewModelScope.launch {
             try {
-                // UI 上「仍然导入并切换每周」按钮本身就是确认动作
-                val confirmedWeeklySwitch = ImportWeeklyPolicy.requiresWeeklySwitch(entries)
+                val confirmedWeeklySwitch =
+                    weeklyConfirmed && ImportWeeklyPolicy.requiresWeeklySwitch(entries)
                 val result = withContext(Dispatchers.IO) {
                     writer.write(
                         entries = entries,

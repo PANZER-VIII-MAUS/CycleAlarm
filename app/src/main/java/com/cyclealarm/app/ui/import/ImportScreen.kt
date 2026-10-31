@@ -141,7 +141,7 @@ fun ImportScreen(
                     onOptions = { showOptions = true },
                     onManual = { showManual = true },
                     onConfirm = {
-                        if (current.options.overwrite) showOverwrite = true else viewModel.write()
+                        if (current.options.overwrite) showOverwrite = true else viewModel.write(weeklyConfirmed = true)
                     },
                     onCancelWeekly = viewModel::reset
                 )

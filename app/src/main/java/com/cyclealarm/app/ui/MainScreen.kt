@@ -273,13 +273,20 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     fun deletePlanWithUndo(day: Int) {
         uiScope.launch {
-            val removed = viewModel.deleteDayPlan(day)
-            if (removed != null) {
-                showUndoSnackbar("已删除${dayLabel(settings, day)}的安排") {
-                    viewModel.restoreDayPlan(removed)
-                }
-            }
+            viewModel.deleteDayPlanWithUndo(day, dayLabel(settings, day))
         }
+    }
+
+    // 待撤销状态放在 ViewModel：转屏/页面重建后 Snackbar 会重新出现，不会丢撤销机会
+    val pendingUndo by viewModel.pendingUndo.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingUndo) {
+        val pending = pendingUndo ?: return@LaunchedEffect
+        val message = when (pending) {
+            is AlarmViewModel.PendingUndo.Plan -> pending.message
+            is AlarmViewModel.PendingUndo.Type -> pending.message
+        }
+        showUndoSnackbar(message) { viewModel.undoPending() }
+        viewModel.clearPendingUndo()
     }
 
     // 只在前台计时：后台空转的 60 秒循环没有意义，还会阻止进程休眠
@@ -682,14 +689,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 viewModel.updateActivityType(type, applyToExisting)
             },
             onDelete = { id ->
-                uiScope.launch {
-                    val snapshot = viewModel.deleteActivityTypeWithSnapshot(id)
-                    if (snapshot != null) {
-                        showUndoSnackbar("已删除安排类型「${snapshot.type.name}」") {
-                            viewModel.restoreActivityType(snapshot)
-                        }
-                    }
-                }
+                uiScope.launch { viewModel.deleteActivityTypeWithUndo(id) }
             },
             onMove = { id, up -> viewModel.moveActivityType(id, up) },
             onDismiss = { showTypeManager = false }

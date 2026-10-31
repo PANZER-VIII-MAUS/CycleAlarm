@@ -342,6 +342,43 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         syncPlans()
     }
 
+    /** 待撤销的删除操作。放在 ViewModel 里，转屏/页面重建都不会丢。 */
+    sealed interface PendingUndo {
+        data class Plan(val plan: DayPlanEntity, val message: String) : PendingUndo
+        data class Type(
+            val snapshot: ActivityTypeDeleteSnapshot,
+            val message: String
+        ) : PendingUndo
+    }
+
+    private val _pendingUndo = MutableStateFlow<PendingUndo?>(null)
+    val pendingUndo: StateFlow<PendingUndo?> = _pendingUndo
+
+    /** 删除某天的安排并登记待撤销项。 */
+    suspend fun deleteDayPlanWithUndo(dayIndex: Int, label: String) {
+        val removed = deleteDayPlan(dayIndex) ?: return
+        _pendingUndo.value = PendingUndo.Plan(removed, "已删除${label}的安排")
+    }
+
+    /** 删除安排类型并登记待撤销项。 */
+    suspend fun deleteActivityTypeWithUndo(id: Int) {
+        val snapshot = deleteActivityTypeWithSnapshot(id) ?: return
+        _pendingUndo.value = PendingUndo.Type(snapshot, "已删除安排类型「${snapshot.type.name}」")
+    }
+
+    fun undoPending() {
+        when (val pending = _pendingUndo.value) {
+            is PendingUndo.Plan -> restoreDayPlan(pending.plan)
+            is PendingUndo.Type -> restoreActivityType(pending.snapshot)
+            null -> return
+        }
+        _pendingUndo.value = null
+    }
+
+    fun clearPendingUndo() {
+        _pendingUndo.value = null
+    }
+
     /** 删除某天的安排，并返回被删除的行（供撤销恢复）。 */
     suspend fun deleteDayPlan(dayIndex: Int): DayPlanEntity? {
         val existing = db.dayPlanDao().getByDay(dayIndex) ?: return null
