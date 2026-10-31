@@ -13,7 +13,11 @@ object ResyncCheckpoint {
     private const val KEY_LAST_CHECK = "last_check_at"
     private const val KEY_LAST_MISSED_AT = "last_missed_at"
     private const val KEY_LAST_MISSED_COUNT = "last_missed_count"
-    private const val KEY_LAST_FIRE_AT = "last_fire_at"
+    private const val KEY_RECENT_FIRES = "recent_fire_ats"
+
+    /** 响铃时间戳的保留窗口与条数上限。 */
+    private const val FIRE_HISTORY_WINDOW_MS = 24 * 60 * 60_000L
+    private const val MAX_RECENT_FIRES = 24
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
@@ -37,14 +41,33 @@ object ResyncCheckpoint {
         }
     }
 
-    /** 最后一次真实响铃的时间；0 = 从未响过。 */
-    fun lastFireAt(context: Context): Long =
-        runCatching { prefs(context).getLong(KEY_LAST_FIRE_AT, 0L) }.getOrDefault(0L)
-
-    fun markFired(context: Context, now: Long) {
+    /**
+     * 记录一次真实响铃的时间点（通常传「原定触发时间」，便于和漏响判定对齐）。
+     *
+     * 单值时间戳在「用了稍后提醒 / 同一天多条闹钟」时会漏豁免（三轮复审 §3.1），
+     * 这里改为保留最近 24 小时内的多个时间点。
+     */
+    fun markFired(context: Context, at: Long) {
         runCatching {
-            prefs(context).edit().putLong(KEY_LAST_FIRE_AT, now).apply()
+            val keep = recentFires(context, at)
+            val merged = (keep + at).distinct().sorted().takeLast(MAX_RECENT_FIRES)
+            prefs(context).edit()
+                .putString(KEY_RECENT_FIRES, merged.joinToString(","))
+                .apply()
         }
+    }
+
+    /** 最近 24 小时内的响铃时间点（升序）。 */
+    fun recentFires(context: Context, now: Long): List<Long> {
+        val raw = runCatching {
+            prefs(context).getString(KEY_RECENT_FIRES, null)
+        }.getOrNull() ?: return emptyList()
+        val floor = now - FIRE_HISTORY_WINDOW_MS
+        return raw.split(',')
+            .mapNotNull { it.trim().toLongOrNull() }
+            .filter { it in floor..now }
+            .sorted()
+            .takeLast(MAX_RECENT_FIRES)
     }
 
     fun lastMissedAt(context: Context): Long =

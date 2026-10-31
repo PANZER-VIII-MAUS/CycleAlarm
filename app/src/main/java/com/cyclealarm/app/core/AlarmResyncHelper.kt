@@ -23,10 +23,9 @@ object AlarmResyncHelper {
 
     suspend fun resyncAll(context: Context, auditMissed: Boolean = true) {
         val db = AppDatabase.get(context)
-        // 一次性按日期闹钟：顺手清理已经过去的记录，避免越积越多
-        db.dateAlarmDao().deleteBefore(LocalDate.now().toEpochDay())
         val now = System.currentTimeMillis()
 
+        // 先读数据（含已过期的按日期闹钟）再做审计：否则「跨天的日期闹钟」会被提前清掉而漏报
         val cycleAlarms = db.alarmDao().getAll()
         val dateAlarms = db.dateAlarmDao().getAll()
         val settings = db.settingsDao().get()
@@ -35,6 +34,9 @@ object AlarmResyncHelper {
         if (auditMissed) {
             auditMissed(context, now, cycleAlarms, dateAlarms, settings, holidays)
         }
+
+        // 审计完成后再清理已过期的按日期闹钟
+        runCatching { db.dateAlarmDao().deleteBefore(LocalDate.now().toEpochDay()) }
 
         val snoozes = db.withTransaction {
             db.snoozeDao().deleteExpired(now)
@@ -97,7 +99,7 @@ object AlarmResyncHelper {
             dateAlarms = dateAlarms,
             settings = settings,
             holidays = holidays,
-            lastFireAt = ResyncCheckpoint.lastFireAt(context)
+            firedAts = ResyncCheckpoint.recentFires(context, now)
         )
         if (missed.isEmpty()) return
         Log.w(TAG, "detected ${missed.size} missed alarms since $lastCheck")

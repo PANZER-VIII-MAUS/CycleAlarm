@@ -51,7 +51,7 @@ object ResyncAuditPolicy {
         dateAlarms: List<DateAlarmEntity>,
         settings: AppSettingsEntity?,
         holidays: List<HolidayEntity>,
-        lastFireAt: Long = 0L
+        firedAts: List<Long> = emptyList()
     ): List<MissedAlarm> {
         if (settings == null || !shouldAudit(lastCheckAt, now)) return emptyList()
         val missed = mutableListOf<MissedAlarm>()
@@ -73,23 +73,32 @@ object ResyncAuditPolicy {
             }
         }
 
+        // 按日期闹钟直接用自己的 epochDay + 时间算触发点：
+        // nextTriggerForDateAlarm 对过去日期返回 null，会把「跨天的日期闹钟」全部漏报（三轮复审 §3.1）。
+        val zone = java.time.ZoneId.systemDefault()
         dateAlarms.filter { it.enabled }.forEach { alarm ->
-            val next = AlarmScheduler.nextTriggerForDateAlarm(
-                alarm = alarm,
-                settings = settings,
-                holidays = holidays,
-                now = lastCheckAt
-            ) ?: return@forEach
-            if (next <= now) {
-                missed += MissedAlarm(alarm.label, next, AlarmScheduler.KIND_DATE)
+            val expected = runCatching {
+                java.time.LocalDate.ofEpochDay(alarm.epochDay)
+                    .atTime(alarm.hour, alarm.minute)
+                    .atZone(zone)
+                    .toInstant()
+                    .toEpochMilli()
+            }.getOrNull() ?: return@forEach
+            if (expected <= lastCheckAt || expected > now) return@forEach
+            val mutedByHoliday = alarm.mutedDuringHoliday &&
+                settings.holidayModeEnabled &&
+                holidays.any { it.enabled && alarm.epochDay in it.startEpochDay..it.endEpochDay }
+            if (!mutedByHoliday) {
+                missed += MissedAlarm(alarm.label, expected, AlarmScheduler.KIND_DATE)
             }
         }
 
-        // 正常响过的闹钟不能算漏响（lastFireAt 附近视为已响）
-        val notFired = if (lastFireAt > 0L) {
-            missed.filter { kotlin.math.abs(it.expectedAt - lastFireAt) > FIRED_TOLERANCE_MS }
-        } else {
-            missed
+        // 正常响过的闹钟不能算漏响：与任一已响时间点落在容差内即豁免
+        // （用列表而不是单个时间戳，才能同时覆盖「稍后提醒」与「同一天多条闹钟」）
+        val notFired = missed.filter { candidate ->
+            firedAts.none { fired ->
+                kotlin.math.abs(candidate.expectedAt - fired) <= FIRED_TOLERANCE_MS
+            }
         }
         return notFired.sortedBy { it.expectedAt }
     }

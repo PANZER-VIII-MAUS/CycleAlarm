@@ -73,6 +73,13 @@ object AlarmScheduler {
      */
     const val MAX_ALARM_ID = SNOOZE_REQUEST_OFFSET - 1
 
+    /** 把「今天（now 所在日）的 hour:minute」换算成时间戳；用于响铃留痕与漏响对账。 */
+    fun expectedMillisOfToday(hour: Int, minute: Int, now: Long): Long {
+        val zone = java.time.ZoneId.systemDefault()
+        val date = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        return date.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+    }
+
     /** 稍后提醒的 requestCode：kind 决定命名空间，id 决定槽位。 */
     fun snoozeRequestCode(kind: String, alarmId: Int): Int =
         schedulerId(kind, alarmId) + SNOOZE_REQUEST_OFFSET

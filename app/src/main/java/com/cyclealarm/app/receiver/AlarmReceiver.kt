@@ -45,7 +45,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        AlarmResyncHelper.resyncAll(context)
+                        AlarmResyncHelper.resyncAll(context, auditMissed = false)
                     } catch (e: Exception) {
                         Log.e(TAG, "manual resync failed", e)
                     } finally {
@@ -99,8 +99,21 @@ class AlarmReceiver : BroadcastReceiver() {
                             }
                         }
 
-                        // 记录「真实响过」，供漏响审计排除这一次（避免把正常响铃误报成漏响）
-                        ResyncCheckpoint.markFired(context, System.currentTimeMillis())
+                        // 记录「真实响过」：用原定触发时间留痕（snooze 时同时记原时间），
+                        // 这样漏响审计的 ±2 分钟容差能正确豁免
+                        val firedNow = System.currentTimeMillis()
+                        ResyncCheckpoint.markFired(
+                            context,
+                            AlarmScheduler.expectedMillisOfToday(hour, minute, firedNow)
+                        )
+                        if (snoozed && originalHour != null && originalMinute != null) {
+                            ResyncCheckpoint.markFired(
+                                context,
+                                AlarmScheduler.expectedMillisOfToday(
+                                    originalHour!!, originalMinute!!, firedNow
+                                )
+                            )
+                        }
 
                         // snooze 行在「响铃服务成功拉起」之后才消费：
                         // 先删行再起服务的话，一旦起服务失败，这次稍后提醒就永久消失。

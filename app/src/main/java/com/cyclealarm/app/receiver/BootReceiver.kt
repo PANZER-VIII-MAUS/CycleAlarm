@@ -59,7 +59,10 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                runCatching { AlarmResyncHelper.resyncAll(context) }
+                // 开机/应用升级才做漏响审计；改时间/时区会让「检查窗口」失真，只重排不审计
+                val shouldAudit = action == Intent.ACTION_BOOT_COMPLETED ||
+                    action == Intent.ACTION_MY_PACKAGE_REPLACED
+                runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = shouldAudit) }
                     .onFailure {
                         Log.e(TAG, "scheduled resync failed for $action", it)
                     }

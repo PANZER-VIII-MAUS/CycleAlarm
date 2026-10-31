@@ -17,7 +17,7 @@ object DayPlanAlarmSync {
             applyDatabaseOnly(db, ops)
         }
         alarmsToCancel.forEach { AlarmScheduler.cancelAlarm(context, it) }
-        AlarmResyncHelper.resyncAll(context)
+        AlarmResyncHelper.resyncAll(context, auditMissed = false)
     }
 
     /** 只做数据库变更；返回需要在事务提交后取消排期的旧闹钟。 */

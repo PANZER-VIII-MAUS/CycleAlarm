@@ -142,7 +142,7 @@ class AlarmImportWriter(private val context: Context) {
         }
 
         cancelSchedules(transaction.alarmsToCancel, transaction.dateAlarmsToCancel)
-        runCatching { AlarmResyncHelper.resyncAll(context) }
+        runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
             .onFailure { Log.e(TAG, "resync after import failed", it) }
         return transaction.result
     }
@@ -240,7 +240,7 @@ class AlarmImportWriter(private val context: Context) {
         return when (outcome) {
             is UndoOutcome.Success -> {
                 cancelSchedules(outcome.undo.alarmsToCancel, outcome.undo.dateAlarmsToCancel)
-                runCatching { AlarmResyncHelper.resyncAll(context) }
+                runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
                     .onFailure { Log.e(TAG, "resync after undo failed", it) }
                 UndoResult.Success
             }
