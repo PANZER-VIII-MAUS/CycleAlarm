@@ -11,6 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.cyclealarm.app.core.AlarmResyncHelper
+import com.cyclealarm.app.core.GuardServicePolicy
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.service.AlarmGuardService
 import com.cyclealarm.app.ui.MainScreen
@@ -35,7 +36,12 @@ class MainActivity : ComponentActivity() {
         // ColorOS 等 ROM 可能拦截前台服务或后台任务，启动阶段任何异常都不能让应用闪退
         try {
             NotificationChannels.createAll(this)
-            ContextCompat.startForegroundService(this, Intent(this, AlarmGuardService::class.java))
+            if (GuardServicePolicy.isEnabled(this)) {
+                ContextCompat.startForegroundService(
+                    this,
+                    Intent(this, AlarmGuardService::class.java)
+                )
+            }
             DailyResyncWorker.enqueue(this)
         } catch (e: Exception) {
             Log.w("CycleAlarm", "startup service failed, continuing without it", e)

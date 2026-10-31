@@ -9,6 +9,7 @@ import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.BootResyncPolicy
 import com.cyclealarm.app.core.ResyncAuditPolicy
 import com.cyclealarm.app.core.ResyncCheckpoint
+import com.cyclealarm.app.core.GuardServicePolicy
 import com.cyclealarm.app.service.AlarmGuardService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

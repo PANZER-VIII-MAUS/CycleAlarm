@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AppLanguage
+import com.cyclealarm.app.core.GuardServicePolicy
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.core.TemporaryMuteStore
@@ -332,6 +333,30 @@ fun SettingsScreen(
                                     ).show()
                                 }
                             }
+                        }
+                    )
+                    SettingRow(
+                        title = "常驻保活服务",
+                        value = if (GuardServicePolicy.isEnabled(context)) {
+                            "已开启（通知栏常驻）"
+                        } else {
+                            "已关闭（更省电，后台可能被清理）"
+                        },
+                        onClick = {
+                            val enabled = !GuardServicePolicy.isEnabled(context)
+                            GuardServicePolicy.setEnabled(context, enabled)
+                            val intent = Intent(context, com.cyclealarm.app.service.AlarmGuardService::class.java)
+                            if (enabled) {
+                                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+                            } else {
+                                context.stopService(intent)
+                            }
+                            Toast.makeText(
+                                context,
+                                if (enabled) "已开启常驻保活" else "已关闭常驻保活",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            (context as? android.app.Activity)?.recreate()
                         }
                     )
                     SettingRow(
