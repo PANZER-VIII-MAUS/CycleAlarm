@@ -37,18 +37,10 @@ android {
                 enableV1Signing = true
                 enableV2Signing = true
             }
-        } else {
-            // 还没创建正式密钥库时，回退到标准 debug 密钥，同样启用 V1+V2，方便先装真机；
-            // 之后按 README 生成正式 .jks 并写 keystore.properties 即可自动切换正式签名。
-            create("release") {
-                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-                enableV1Signing = true
-                enableV2Signing = true
-            }
         }
+        // 没有 keystore.properties 时**不再**回退 debug 签名：
+        // release 会产出未签名 APK（无法安装），CI 只用它验证编译/R8；
+        // 要发布必须在本地创建 keystore.properties（见 README）。
     }
 
     buildTypes {
@@ -59,7 +51,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
