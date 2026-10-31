@@ -1,5 +1,6 @@
 package com.cyclealarm.app.receiver
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -225,6 +226,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     /** 提前提醒：只发通知（走独立渠道 + 权限检查），不响铃。 */
+    @SuppressLint("MissingPermission") // 权限已由 NotificationPermissionCheck.canSignal 显式判断
     private fun notifyPreAlert(
         context: Context,
         hour: Int,
@@ -303,6 +305,7 @@ class AlarmReceiver : BroadcastReceiver() {
      * 兜底通知：走独立渠道（不会被「响铃」渠道关闭连带影响）、发前检查权限、
      * 点击进主界面、并带一个「立即重排」action。
      */
+    @SuppressLint("MissingPermission") // 权限已由 NotificationPermissionCheck.canSignal 显式判断
     private fun postFallback(
         context: Context,
         notificationId: Int,

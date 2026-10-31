@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">CycleAlarm</string>
+    <string name="widget_description">Shows the next alarm time and countdown</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_system">Follow system</string>
     <string name="settings_language_zh">中文</string>

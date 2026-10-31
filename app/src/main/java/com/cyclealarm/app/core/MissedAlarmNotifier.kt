@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,7 @@ object MissedAlarmNotifier {
     private const val TAG = "MissedAlarmNotifier"
     private const val NOTIFICATION_ID = 4
 
+    @SuppressLint("MissingPermission") // 上面已用 areNotificationsEnabled 显式判断
     fun notifyMissed(context: Context, missed: List<MissedAlarm>) {
         if (missed.isEmpty()) return
         runCatching {
