@@ -19,6 +19,10 @@ import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.NotificationChannels
+import com.cyclealarm.app.data.AppDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.core.RingForegroundGuard
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +47,9 @@ class RingService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var lastStartId: Int = 0
     private var previewMode: Boolean = false
+    private var timedOut: Boolean = false
+    private var currentAlarmId: Int = 0
+    private var currentKind: String = AlarmScheduler.KIND_CYCLE
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -57,6 +64,8 @@ class RingService : Service() {
         val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
         val kind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
             ?: AlarmScheduler.KIND_CYCLE
+        currentAlarmId = alarmId
+        currentKind = kind
         val dayIndex = intent.getIntExtra(AlarmScheduler.EXTRA_DAY_INDEX, 0)
         val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
         val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
@@ -90,6 +99,7 @@ class RingService : Service() {
         val effectiveSec = if (durationSec > 0) durationSec else RingPrefs.ALWAYS_RING_CAP_SECONDS
         val task = Runnable {
             // 响满上限仍没人处理：留一条可点通知，而不是静默停止
+            timedOut = true
             if (!previewMode) {
                 postUnhandledNotification()
             }
@@ -105,6 +115,15 @@ class RingService : Service() {
         timeout = null
         releaseWakeLock()
         _isRinging.value = false
+        // 用户主动停止才算「已处理」；超时自动停止不算（仍应计入漏响）
+        if (!previewMode && !timedOut && currentAlarmId > 0) {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    AppDatabase.get(this@RingService).ringEventDao()
+                        .markLatestAcked(currentKind, currentAlarmId, System.currentTimeMillis())
+                }
+            }
+        }
         // 带 startId 停止：只结束本次启动，避免把新一次响铃也一并结束
         stopSelf(lastStartId)
     }

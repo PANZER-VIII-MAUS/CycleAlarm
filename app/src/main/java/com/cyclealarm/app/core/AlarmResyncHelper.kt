@@ -38,6 +38,9 @@ object AlarmResyncHelper {
         // 审计完成后再清理已过期的按日期闹钟
         runCatching { db.dateAlarmDao().deleteBefore(LocalDate.now().toEpochDay()) }
 
+        // 响铃事件只保留最近 7 天，避免无限增长
+        runCatching { db.ringEventDao().deleteBefore(now - 7L * 24 * 60 * 60_000L) }
+
         val snoozes = db.withTransaction {
             db.snoozeDao().deleteExpired(now)
             db.snoozeDao().getAll()
@@ -83,7 +86,7 @@ object AlarmResyncHelper {
         )
     }
 
-    private fun auditMissed(
+    private suspend fun auditMissed(
         context: Context,
         now: Long,
         cycleAlarms: List<AlarmEntity>,
@@ -92,7 +95,8 @@ object AlarmResyncHelper {
         holidays: List<HolidayEntity>
     ) {
         val lastCheck = ResyncCheckpoint.lastCheckAt(context)
-        val missed = ResyncAuditPolicy.findMissed(
+        // 计算式判定：覆盖「设备关机，事件压根没登记」的情况
+        val computed = ResyncAuditPolicy.findMissed(
             now = now,
             lastCheckAt = lastCheck,
             cycleAlarms = cycleAlarms,
@@ -101,6 +105,17 @@ object AlarmResyncHelper {
             holidays = holidays,
             firedAts = ResyncCheckpoint.recentFires(context, now)
         )
+        // 事件式判定：覆盖「登记了但没真的响」（响铃服务启动失败）
+        val fromEvents = runCatching {
+            AppDatabase.get(context).ringEventDao()
+                .missedBetween(lastCheck.coerceAtLeast(0L), now)
+                .map { MissedAlarm(it.label, it.expectedAt, it.alarmKind) }
+        }.getOrDefault(emptyList())
+
+        val missed = (computed + fromEvents)
+            .filter { it.expectedAt > lastCheck }
+            .distinctBy { it.kind to it.expectedAt }
+            .sortedBy { it.expectedAt }
         if (missed.isEmpty()) return
         Log.w(TAG, "detected ${missed.size} missed alarms since $lastCheck")
         MissedAlarmNotifier.notifyMissed(context, missed)

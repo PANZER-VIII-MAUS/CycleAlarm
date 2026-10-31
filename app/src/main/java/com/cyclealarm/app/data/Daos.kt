@@ -216,6 +216,15 @@ interface RingEventDao {
     @Query("UPDATE ring_events SET rungAt = :rungAt WHERE id = :id")
     suspend fun markRung(id: Long, rungAt: Long)
 
+    /** 标记该闹钟最近一条已响事件的用户处理时间（停止 / 稍后 / 关闭）。 */
+    @Query(
+        "UPDATE ring_events SET ackedAt = :ackedAt WHERE id = (" +
+            "SELECT id FROM ring_events WHERE alarmKind = :kind AND alarmId = :alarmId " +
+            "AND rungAt IS NOT NULL AND ackedAt IS NULL " +
+            "ORDER BY expectedAt DESC LIMIT 1)"
+    )
+    suspend fun markLatestAcked(kind: String, alarmId: Int, ackedAt: Long)
+
     /** 记录「用户处理了」（停止 / 稍后 / 关闭）。 */
     @Query(
         "UPDATE ring_events SET ackedAt = :ackedAt WHERE alarmKind = :kind " +

@@ -18,6 +18,7 @@ import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.data.AppDatabase
+import com.cyclealarm.app.data.RingEventEntity
 import com.cyclealarm.app.service.RingService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,21 +100,29 @@ class AlarmReceiver : BroadcastReceiver() {
                             }
                         }
 
-                        // 记录「真实响过」：用原定触发时间留痕（snooze 时同时记原时间），
-                        // 这样漏响审计的 ±2 分钟容差能正确豁免
+                        // v9：先登记一条「应有事件」，再靠 rungAt 区分「真的响了」与「响铃失败」。
+                        // snooze 触发时登记原定时间，这样漏响判定对的是原闹钟而不是 snooze 时间。
                         val firedNow = System.currentTimeMillis()
-                        ResyncCheckpoint.markFired(
-                            context,
+                        val expectedAt = if (snoozed && originalHour != null && originalMinute != null) {
+                            AlarmScheduler.expectedMillisOfToday(
+                                originalHour!!, originalMinute!!, firedNow
+                            )
+                        } else {
                             AlarmScheduler.expectedMillisOfToday(hour, minute, firedNow)
-                        )
-                        if (snoozed && originalHour != null && originalMinute != null) {
-                            ResyncCheckpoint.markFired(
-                                context,
-                                AlarmScheduler.expectedMillisOfToday(
-                                    originalHour!!, originalMinute!!, firedNow
+                        }
+                        val ringEventId = runCatching {
+                            AppDatabase.get(context).ringEventDao().insert(
+                                RingEventEntity(
+                                    alarmKind = kind,
+                                    alarmId = alarmId,
+                                    label = label,
+                                    expectedAt = expectedAt
                                 )
                             )
-                        }
+                        }.getOrDefault(-1L)
+
+                        // 兼容旧检查点：旧版本升级上来的第一轮仍按时间戳豁免，避免误报
+                        ResyncCheckpoint.markFired(context, expectedAt)
 
                         // snooze 行在「响铃服务成功拉起」之后才消费：
                         // 先删行再起服务的话，一旦起服务失败，这次稍后提醒就永久消失。
@@ -170,6 +179,15 @@ class AlarmReceiver : BroadcastReceiver() {
                                 }
                             }
                         )
+
+                        // 服务真的起来了才算「响过」；起不来时保持 rungAt = null，
+                        // 漏响审计就能精确捕获「响铃服务启动失败」这种以前检测不到的情况
+                        if (serviceStarted && ringEventId > 0L) {
+                            runCatching {
+                                AppDatabase.get(context).ringEventDao()
+                                    .markRung(ringEventId, System.currentTimeMillis())
+                            }
+                        }
 
                         if (snoozed && serviceStarted) {
                             runCatching {
