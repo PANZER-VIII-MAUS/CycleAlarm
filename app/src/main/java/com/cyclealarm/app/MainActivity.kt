@@ -20,6 +20,11 @@ import com.cyclealarm.app.worker.DailyResyncWorker
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
+    }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 启动背景按 App 主题选择（而不是只跟系统 night），避免强制深色时闪白

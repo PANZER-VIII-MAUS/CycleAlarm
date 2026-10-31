@@ -49,12 +49,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cyclealarm.app.R
+import com.cyclealarm.app.core.AppLanguage
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.core.TemporaryMuteStore
@@ -87,6 +90,40 @@ fun SettingsScreen(
     val context = LocalContext.current
     val backupScope = rememberCoroutineScope()
     var showShiftTemplates by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.settings_language)) },
+            text = {
+                Column {
+                    listOf(
+                        AppLanguage.SYSTEM to R.string.settings_language_system,
+                        AppLanguage.ZH to R.string.settings_language_zh,
+                        AppLanguage.EN to R.string.settings_language_en
+                    ).forEach { (code, label) ->
+                        TextButton(
+                            onClick = {
+                                AppLanguage.set(context, code)
+                                showLanguageDialog = false
+                                (context as? android.app.Activity)?.recreate()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text(stringResource(label)) }
+                    }
+                    Text(
+                        stringResource(R.string.settings_language_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) { Text("关闭") }
+            }
+        )
+    }
 
     if (showShiftTemplates) {
         ShiftTemplateDialog(
@@ -234,6 +271,15 @@ fun SettingsScreen(
                 CycleCard {
                     Text("显示", style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
+                    SettingRow(
+                        title = stringResource(R.string.settings_language),
+                        value = when (AppLanguage.get(context)) {
+                            AppLanguage.ZH -> stringResource(R.string.settings_language_zh)
+                            AppLanguage.EN -> stringResource(R.string.settings_language_en)
+                            else -> stringResource(R.string.settings_language_system)
+                        },
+                        onClick = { showLanguageDialog = true }
+                    )
                     SettingRow(
                         title = "主题",
                         value = themeLabel(themeMode),

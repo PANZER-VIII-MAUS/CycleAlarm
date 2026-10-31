@@ -9,6 +9,11 @@ import com.cyclealarm.app.ui.theme.ThemeManager
 
 /** 设置页（独立页面）。 */
 class SettingsActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyStartupTheme(this)
         super.onCreate(savedInstanceState)

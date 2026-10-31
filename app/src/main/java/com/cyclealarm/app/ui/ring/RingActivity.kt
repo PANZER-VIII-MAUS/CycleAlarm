@@ -53,6 +53,10 @@ import kotlinx.coroutines.launch
  * - 试听（preview）模式不显示「稍后」、不写任何数据库。
  */
 class RingActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
+    }
+
 
     private data class RingUiState(
         val alarmId: Int,

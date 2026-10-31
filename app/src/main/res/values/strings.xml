@@ -2,4 +2,9 @@
 <resources>
     <string name="app_name">循环闹钟</string>
     <string name="widget_description">显示下一次响铃时间与倒计时</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_hint">只影响界面文字，通知仍按系统语言</string>
 </resources>

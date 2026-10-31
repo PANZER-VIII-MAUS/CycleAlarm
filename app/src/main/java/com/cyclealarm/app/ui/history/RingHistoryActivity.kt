@@ -37,6 +37,11 @@ import com.cyclealarm.app.ui.theme.ThemeManager
 
 /** 响铃历史：最近 7 天的响铃 / 漏响 / 未处理。 */
 class RingHistoryActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyStartupTheme(this)
         super.onCreate(savedInstanceState)

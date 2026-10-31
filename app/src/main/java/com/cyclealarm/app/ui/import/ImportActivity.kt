@@ -11,6 +11,11 @@ import com.cyclealarm.app.viewmodel.ImportViewModel
 
 /** 课表/排班表导入页。 */
 class ImportActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeManager.applyStartupTheme(this)
         super.onCreate(savedInstanceState)
