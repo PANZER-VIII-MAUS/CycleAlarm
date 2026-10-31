@@ -159,9 +159,9 @@ class AlarmImportWriter(private val context: Context) {
 
         val alarmsToCancel = db.alarmDao().getAll().filter { it.dayIndex >= 7 }
         db.alarmDao().deleteFromIndex(7)
-        // 必须同步清理 day_plans：否则本事务末尾的 DayPlanAlarmSync 会把 dayIndex >= 7
-        // 的计划闹钟重新补回来，产生 UI 看不见、却会参与排期与确认计数的「幽灵闹钟」。
-        db.dayPlanDao().deleteFromIndex(7)
+        // 注意：**不删除** day_plans。
+        // 撤销快照不包含 day_plans，删了就再也恢复不了（三轮复审 §3.2 判定的数据丢失）。
+        // 幽灵闹钟改由排期侧过滤：DayPlanAlarmSync 只处理 dayIndex < cycleLength 的安排。
         db.settingsDao().upsert(
             settings.copy(
                 cycleType = CycleTypes.WEEKLY,

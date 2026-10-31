@@ -308,7 +308,7 @@ private fun PreviewContent(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "该文件按周组织，导入将把循环方式改为每周（周一至周日）",
+                        "该文件按周组织，导入将把循环方式改为每周（周一至周日）；第 8 天以后的安排会保留但不生效",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

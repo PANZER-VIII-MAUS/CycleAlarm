@@ -82,10 +82,18 @@ object DayPlanAlarmSync {
         return applyDatabaseOnly(db, ops)
     }
 
-    private suspend fun databaseSyncOps(db: AppDatabase): List<AlarmOp> =
-        DayPlanSync.diff(
-            plans = db.dayPlanDao().getAll().map { DayPlanSync.toPlanRow(it) },
+    private suspend fun databaseSyncOps(db: AppDatabase): List<AlarmOp> {
+        val cycleLength = db.settingsDao().get()?.cycleLength ?: 0
+        // 只让当前周期内的安排参与排期：切到 7 天后，第 8 天以后的安排保留在库里但不生成闹钟
+        val scopedPlans = DayPlanScope.inCurrentCycle(
+            items = db.dayPlanDao().getAll(),
+            cycleLength = cycleLength,
+            dayIndexOf = { it.dayIndex }
+        )
+        return DayPlanSync.diff(
+            plans = scopedPlans.map { DayPlanSync.toPlanRow(it) },
             types = db.activityTypeDao().getAll().map { DayPlanSync.toPlanType(it) },
             alarms = db.alarmDao().getAll()
         )
+    }
 }

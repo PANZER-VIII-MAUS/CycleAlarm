@@ -116,7 +116,13 @@ object AlarmResyncHelper {
     ) {
         val manager = context.getSystemService(AlarmManager::class.java) ?: return
         val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
-        val actual = manager.nextAlarmClock?.triggerTime ?: return
+        val actual = manager.nextAlarmClock?.triggerTime
+        if (actual == null) {
+            // 系统里一个 alarm clock 都不剩 —— 这正是「系统丢闹钟」的典型表现，必须自愈
+            Log.w(TAG, "no alarm clock in system while expected=$expected, rescheduling")
+            AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
+            return
+        }
         if (actual > expected) {
             // 系统里的下一次比我们算的晚（或压根没有）→ 说明排期没落地，补一次
             Log.w(TAG, "next alarm later than expected ($actual > $expected), rescheduling")
