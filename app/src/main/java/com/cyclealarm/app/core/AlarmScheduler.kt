@@ -167,7 +167,14 @@ object AlarmScheduler {
         holidays: List<HolidayEntity>
     ) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val triggerAt = nextTriggerFor(alarm, settings, holidays)
+        val rawTrigger = nextTriggerFor(alarm, settings, holidays)
+        // 用户跳过 / 今天临时静音的触发点在这里被逐次跳过
+        val triggerAt = SkipPolicy.effectiveTrigger(
+            firstTrigger = rawTrigger,
+            skips = TemporaryMuteStore.skipsFor(context, KIND_CYCLE, alarm.id),
+            mutedDays = TemporaryMuteStore.mutedDays(context),
+            nextAfter = { after -> nextTriggerFor(alarm, settings, holidays, after + 1) }
+        )
         if (triggerAt == null) {
             cancelAlarm(context, alarm)
             return
@@ -240,7 +247,13 @@ object AlarmScheduler {
         holidays: List<HolidayEntity>
     ) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val triggerAt = nextTriggerForDateAlarm(alarm, settings, holidays)
+        val rawTrigger = nextTriggerForDateAlarm(alarm, settings, holidays)
+        val triggerAt = SkipPolicy.effectiveTrigger(
+            firstTrigger = rawTrigger,
+            skips = TemporaryMuteStore.skipsFor(context, KIND_DATE, alarm.id),
+            mutedDays = TemporaryMuteStore.mutedDays(context),
+            nextAfter = { null }
+        )
         if (triggerAt == null) {
             cancelDateAlarm(context, alarm)
             return
