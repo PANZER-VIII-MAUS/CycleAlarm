@@ -79,4 +79,37 @@ class SchemaDeltaTest {
             )
         }
     }
+
+    @Test
+    fun `v10 does not drop any v9 table`() {
+        val v9 = tables(schemaJson(9))
+        val v10 = tables(schemaJson(10))
+
+        assertTrue("v10 缺少 v9 的表：${v9 - v10}", v10.containsAll(v9))
+    }
+
+    @Test
+    fun `v10 changes only the alarms table`() {
+        val v9Json = schemaJson(9)
+        val v10Json = schemaJson(10)
+
+        tables(v9Json).forEach { table ->
+            if (table == "alarms") return@forEach
+            assertEquals(
+                "表 $table 不应该在 v10 变动",
+                entityBlock(v9Json, table),
+                entityBlock(v10Json, table)
+            )
+        }
+        assertTrue("alarms 应当有变化", entityBlock(v9Json, "alarms") != entityBlock(v10Json, "alarms"))
+    }
+
+    @Test
+    fun `v10 alarms gains the four ring option columns`() {
+        val alarms = entityBlock(schemaJson(10), "alarms")
+
+        listOf("ringtoneUri", "vibrate", "rampVolume", "preAlertMinutes").forEach { column ->
+            assertTrue("alarms 缺少列 $column", alarms.contains(column))
+        }
+    }
 }

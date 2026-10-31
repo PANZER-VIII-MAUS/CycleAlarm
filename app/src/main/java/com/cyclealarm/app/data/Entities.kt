@@ -29,7 +29,15 @@ data class AlarmEntity(
     val mutedDuringHoliday: Boolean = true,
     val label: String = "",
     /** true = 这条闹钟由「循环安排」生成；false = 手动添加或课表导入。 */
-    val planGenerated: Boolean = false
+    val planGenerated: Boolean = false,
+    /** 该闹钟专属铃声 URI；null = 使用全局铃声。 */
+    val ringtoneUri: String? = null,
+    /** 是否振动（默认开启，与旧行为一致）。 */
+    val vibrate: Boolean = true,
+    /** 是否音量渐强（默认关闭，与旧行为一致）。 */
+    val rampVolume: Boolean = false,
+    /** 提前提醒分钟数；0 = 关闭。 */
+    val preAlertMinutes: Int = 0
 )
 
 /**

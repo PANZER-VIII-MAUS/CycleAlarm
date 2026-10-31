@@ -26,7 +26,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     // v7：持久化 snooze 与导入快照。必须走 Migration，禁止清空用户数据。
     // v8：假期静音与 plansSeeded 的数据回填（纯数据）。
     // v9：响铃事件表（精确漏响判定 + 响铃历史）。
-    version = 9,
+    // v10：alarms 增加每闹钟响铃设置（铃声/振动/渐强/提前提醒）。
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -115,6 +116,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v9 → v10：alarms 增加四列（铃声/振动/渐强/提前提醒）。 */
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Migration9To10Sql.statements.forEach(db::execSQL)
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -122,7 +130,10 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cycle_alarm.db"
                 )
-                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                    .addMigrations(
+                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+                        MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                    )
                     .build()
                     .also { INSTANCE = it }
             }
