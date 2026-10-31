@@ -191,6 +191,20 @@ class AlarmImportWriter(private val context: Context) {
         data object Corrupted : UndoResult
     }
 
+    /**
+     * 撤销预览：导入之后新增、且不在快照里的条目。
+     * 撤销是「恢复快照」，这些条目会被一并回滚，需要用户确认。
+     */
+    data class UndoPreview(
+        val extraAlarms: Int = 0,
+        val extraDateAlarms: Int = 0,
+        val extraTypes: Int = 0,
+        val extraPlans: Int = 0
+    ) {
+        val total: Int get() = extraAlarms + extraDateAlarms + extraTypes + extraPlans
+        val hasExtras: Boolean get() = total > 0
+    }
+
     private sealed interface UndoOutcome {
         data class Success(val undo: TransactionUndo) : UndoOutcome
         data object Corrupted : UndoOutcome
@@ -201,6 +215,32 @@ class AlarmImportWriter(private val context: Context) {
      * - 快照损坏时清掉它并返回 [UndoResult.Corrupted]，避免永久卡死撤销；
      * - 只取消「导入后新增」的闹钟排期，旧闹钟与它们的 snooze 不动（由 resync 重建）。
      */
+    /** 撤销前预览：返回「导入后新增、撤销会一并丢失」的条目数；无可撤销快照时返回 null。 */
+    suspend fun previewUndo(): UndoPreview? {
+        val db = AppDatabase.get(context)
+        val now = System.currentTimeMillis()
+        val stored = db.importSnapshotDao().get() ?: return null
+        if (stored.expiresAt <= now) return null
+        val snapshot = runCatching { ImportSnapshotCodec.decode(stored.payload) }.getOrNull()
+            ?: return null
+        val currentAlarms = db.alarmDao().getAll().map { it.id }.toSet()
+        val currentDate = db.dateAlarmDao().getAll().map { it.id }.toSet()
+        val currentTypes = db.activityTypeDao().getAll().map { it.id }.toSet()
+        val currentPlans = db.dayPlanDao().getAll().map { it.dayIndex }.toSet()
+
+        val snapshotAlarms = snapshot.alarms.map { it.id }.toSet()
+        val snapshotDate = snapshot.dateAlarms.map { it.id }.toSet()
+        val snapshotTypes = snapshot.activityTypes.map { it.id }.toSet()
+        val snapshotPlans = snapshot.dayPlans.map { it.dayIndex }.toSet()
+
+        return UndoPreview(
+            extraAlarms = (currentAlarms - snapshotAlarms).size,
+            extraDateAlarms = (currentDate - snapshotDate).size,
+            extraTypes = if (snapshotTypes.isEmpty()) 0 else (currentTypes - snapshotTypes).size,
+            extraPlans = if (snapshotPlans.isEmpty()) 0 else (currentPlans - snapshotPlans).size
+        )
+    }
+
     suspend fun undo(): UndoResult {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()

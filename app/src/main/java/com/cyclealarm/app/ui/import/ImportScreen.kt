@@ -85,6 +85,30 @@ fun ImportScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val alarmCount by viewModel.alarmCount.collectAsStateWithLifecycle()
     val undoAvailable by viewModel.undoAvailable.collectAsStateWithLifecycle()
+    val undoConfirm by viewModel.undoConfirm.collectAsStateWithLifecycle()
+
+    undoConfirm?.let { preview ->
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelUndo() },
+            title = { Text("撤销会丢弃导入后的改动") },
+            text = {
+                Text(
+                    "导入之后新增了 ${preview.extraAlarms} 条闹钟" +
+                        (if (preview.extraDateAlarms > 0) "、${preview.extraDateAlarms} 条日期闹钟" else "") +
+                        (if (preview.extraTypes > 0) "、${preview.extraTypes} 个安排类型" else "") +
+                        (if (preview.extraPlans > 0) "、${preview.extraPlans} 天安排" else "") +
+                        "。继续撤销会把这些改动一并回滚。"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmUndo() }) { Text("继续撤销") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelUndo() }) { Text("取消") }
+            }
+        )
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFileSelected(it) }
     }

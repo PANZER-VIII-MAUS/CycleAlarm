@@ -285,21 +285,50 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** 待确认的撤销（导入后新增条目会被一并回滚）。 */
+    private val _undoConfirm = MutableStateFlow<AlarmImportWriter.UndoPreview?>(null)
+    val undoConfirm: StateFlow<AlarmImportWriter.UndoPreview?> = _undoConfirm
+
     fun undo() {
         viewModelScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) { writer.undo() }
-                _undoAvailable.value = false
-                _state.value = when (result) {
-                    AlarmImportWriter.UndoResult.Success -> lastPreview ?: ImportUiState.Idle
-                    AlarmImportWriter.UndoResult.Corrupted ->
-                        ImportUiState.Error("上次导入记录已损坏，已清除，无法撤销")
-                    AlarmImportWriter.UndoResult.NoSnapshot ->
-                        ImportUiState.Error("没有可撤销的导入")
+                val preview = withContext(Dispatchers.IO) { writer.previewUndo() }
+                if (preview != null && preview.hasExtras) {
+                    _undoConfirm.value = preview
+                    return@launch
                 }
+                performUndo()
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.message ?: "撤销失败")
             }
+        }
+    }
+
+    fun confirmUndo() {
+        _undoConfirm.value = null
+        viewModelScope.launch {
+            try {
+                performUndo()
+            } catch (e: Exception) {
+                _state.value = ImportUiState.Error(e.message ?: "撤销失败")
+            }
+        }
+    }
+
+    fun cancelUndo() {
+        _undoConfirm.value = null
+    }
+
+    private suspend fun performUndo() {
+
+        val result = withContext(Dispatchers.IO) { writer.undo() }
+        _undoAvailable.value = false
+        _state.value = when (result) {
+            AlarmImportWriter.UndoResult.Success -> lastPreview ?: ImportUiState.Idle
+            AlarmImportWriter.UndoResult.Corrupted ->
+                ImportUiState.Error("上次导入记录已损坏，已清除，无法撤销")
+            AlarmImportWriter.UndoResult.NoSnapshot ->
+                ImportUiState.Error("没有可撤销的导入")
         }
     }
 
