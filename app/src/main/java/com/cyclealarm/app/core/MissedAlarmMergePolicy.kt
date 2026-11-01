@@ -17,6 +17,7 @@ object MissedAlarmMergePolicy {
         lastCheckAt: Long
     ): List<MissedAlarm> = (computed + fromEvents)
         .filter { it.expectedAt > lastCheckAt }
-        .distinctBy { it.kind to it.expectedAt }
+        // 同一时刻两条不同闹钟是两条独立的漏响
+        .distinctBy { Triple(it.kind, it.alarmId, it.expectedAt) }
         .sortedBy { it.expectedAt }
 }

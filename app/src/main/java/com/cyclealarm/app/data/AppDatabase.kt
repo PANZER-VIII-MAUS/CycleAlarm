@@ -27,7 +27,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     // v8：假期静音与 plansSeeded 的数据回填（纯数据）。
     // v9：响铃事件表（精确漏响判定 + 响铃历史）。
     // v10：alarms 增加每闹钟响铃设置（铃声/振动/渐强/提前提醒）。
-    version = 10,
+    // v11：ring_events 增加 (alarmKind, alarmId, expectedAt) 唯一索引，去重历史重复行。
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -124,10 +125,18 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /** 供迁移测试使用的完整迁移链。 */
+        /** v10 → v11：ring_events 去重 + 唯一索引（见 [Migration10To11Sql]）。 */
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                Migration10To11Sql.statements.forEach { db.execSQL(it) }
+            }
+        }
+
         val ALL_MIGRATIONS: Array<Migration>
             get() = arrayOf(
                 MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+                MIGRATION_10_11
             )
 
         fun get(context: Context): AppDatabase =

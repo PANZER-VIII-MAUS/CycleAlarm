@@ -154,7 +154,9 @@ data class ImportSnapshotEntity(
     tableName = "ring_events",
     indices = [
         Index(value = ["expectedAt"]),
-        Index(value = ["alarmKind", "alarmId"])
+        Index(value = ["alarmKind", "alarmId"]),
+        // v11：同一条闹钟的同一个期望时间只能有一条事件（snooze 重复触发不再插重复行）
+        Index(value = ["alarmKind", "alarmId", "expectedAt"], unique = true)
     ]
 )
 data class RingEventEntity(

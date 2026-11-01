@@ -64,7 +64,11 @@ object AlarmResyncHelper {
         }
 
         reconcileNextAlarm(context, now, cycleAlarms, dateAlarms, settings, holidays)
-        ResyncCheckpoint.markChecked(context, now)
+        if (auditMissed) {
+            // 只有真的审计了这一段时间才能推进 checkpoint。
+            // auditMissed=false（改时间/时区、手动重排等）推进的话，待上报的「未响事件」会被吞掉
+            ResyncCheckpoint.markChecked(context, now)
+        }
         // 排期变化后同步刷新桌面小组件（没有小组件时内部直接返回）
         runCatching { com.cyclealarm.app.widget.WidgetUpdater.updateAll(context) }
     }
@@ -119,7 +123,7 @@ object AlarmResyncHelper {
         val fromEvents = runCatching {
             AppDatabase.get(context).ringEventDao()
                 .missedBetween(lastCheck.coerceAtLeast(0L), now)
-                .map { MissedAlarm(it.label, it.expectedAt, it.alarmKind) }
+                .map { MissedAlarm(it.label, it.expectedAt, it.alarmKind, it.alarmId) }
         }.getOrDefault(emptyList())
 
         val missed = MissedAlarmMergePolicy.merge(computed, fromEvents, lastCheck)

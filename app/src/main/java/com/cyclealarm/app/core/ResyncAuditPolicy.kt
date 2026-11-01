@@ -9,7 +9,9 @@ import com.cyclealarm.app.data.HolidayEntity
 data class MissedAlarm(
     val label: String,
     val expectedAt: Long,
-    val kind: String
+    val kind: String,
+    /** 闹钟 id：同一时刻两条不同闹钟都漏响时不再被合并成一条（四轮复审 N5）。 */
+    val alarmId: Int = 0
 )
 
 /**
@@ -71,7 +73,7 @@ object ResyncAuditPolicy {
                     now = cursor
                 ) ?: break
                 if (next > now) break
-                missed += MissedAlarm(alarm.label, next, AlarmScheduler.KIND_CYCLE)
+                missed += MissedAlarm(alarm.label, next, AlarmScheduler.KIND_CYCLE, alarm.id)
                 cursor = next + 1
                 hits++
             }
@@ -95,7 +97,7 @@ object ResyncAuditPolicy {
                 settings.holidayModeEnabled &&
                 holidays.any { it.enabled && alarm.epochDay in it.startEpochDay..it.endEpochDay }
             if (!mutedByHoliday) {
-                missed += MissedAlarm(alarm.label, expected, AlarmScheduler.KIND_DATE)
+                missed += MissedAlarm(alarm.label, expected, AlarmScheduler.KIND_DATE, alarm.id)
             }
         }
 
