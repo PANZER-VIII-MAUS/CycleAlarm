@@ -96,6 +96,7 @@ fun DateAlarmSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val state = DateAlarmStatus.resolve(
+                            datePassed = alarm.epochDay < java.time.LocalDate.now().toEpochDay(),
                             enabled = alarm.enabled,
                             mutedDuringHoliday = alarm.mutedDuringHoliday,
                             holidayModeEnabled = settings?.holidayModeEnabled == true,

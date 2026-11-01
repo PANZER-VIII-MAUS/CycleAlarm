@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色桌面上的小组件：不再是一块白底 -->
+    <color name="widget_background">#1C1F24</color>
+    <color name="widget_time">#ECEDEF</color>
+    <color name="widget_subtitle">#4ED0C6</color>
+</resources>

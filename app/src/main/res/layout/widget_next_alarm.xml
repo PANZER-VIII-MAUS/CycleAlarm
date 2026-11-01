@@ -5,15 +5,14 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:background="#FFFFFF"
+    android:background="@color/widget_background"
     android:padding="10dp">
 
     <TextView
         android:id="@+id/widget_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="07:30"
-        android:textColor="#1B2A33"
+        android:textColor="@color/widget_time"
         android:textSize="20sp"
         android:textStyle="bold"
         android:maxLines="1" />
@@ -24,8 +23,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="8dp"
-        android:text="还有 1 天 8 小时"
-        android:textColor="#038C85"
+        android:textColor="@color/widget_subtitle"
         android:textSize="10sp"
         android:maxLines="1"
         android:ellipsize="end" />

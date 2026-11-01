@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1B5E9E</color>
+    <!-- 桌面小组件（深色版在 values-night/colors.xml） -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_time">#1B2A33</color>
+    <color name="widget_subtitle">#038C85</color>
 </resources>

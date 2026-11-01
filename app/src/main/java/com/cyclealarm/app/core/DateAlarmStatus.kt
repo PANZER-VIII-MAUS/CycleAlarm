@@ -22,9 +22,13 @@ object DateAlarmStatus {
         mutedDuringHoliday: Boolean,
         holidayModeEnabled: Boolean,
         inHoliday: Boolean,
-        hasNextTrigger: Boolean
+        hasNextTrigger: Boolean,
+        /** 这条按日期闹钟的日期已经过去（含被假期静音后过期的情况）。 */
+        datePassed: Boolean = false
     ): DateAlarmState = when {
         !enabled -> DateAlarmState.DISABLED
+        // 日期已过就应该显示「已过期」：否则历史假期里被静音的闹钟会永远显示「假期静音」
+        datePassed -> DateAlarmState.EXPIRED
         hasNextTrigger -> DateAlarmState.PENDING
         mutedDuringHoliday && holidayModeEnabled && inHoliday -> DateAlarmState.HOLIDAY_MUTED
         else -> DateAlarmState.EXPIRED

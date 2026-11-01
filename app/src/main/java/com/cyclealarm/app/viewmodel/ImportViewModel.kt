@@ -99,7 +99,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 when (kind) {
                     FileKind.HTML_TABLE -> {
                         _state.value = ImportUiState.Error(
-            getApplication<Application>().getString(com.cyclealarm.app.R.string.err_web_table)
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.err_web_table)
         )
                         return@launch
                     }
@@ -160,7 +160,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
     private fun handleParsedSheets(parsed: List<Sheet>) {
         if (parsed.isEmpty()) {
             _state.value = ImportUiState.Error(
-            getApplication<Application>().getString(com.cyclealarm.app.R.string.err_no_sheets)
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.err_no_sheets)
         )
             return
         }
@@ -340,11 +340,11 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             AlarmImportWriter.UndoResult.Success -> lastPreview ?: ImportUiState.Idle
             AlarmImportWriter.UndoResult.Corrupted ->
                 ImportUiState.Error(
-                    getApplication<Application>().getString(com.cyclealarm.app.R.string.err_undo_snapshot_corrupt)
+                    com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.err_undo_snapshot_corrupt)
                 )
             AlarmImportWriter.UndoResult.NoSnapshot ->
                 ImportUiState.Error(
-                getApplication<Application>().getString(com.cyclealarm.app.R.string.err_nothing_to_undo)
+                com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.err_nothing_to_undo)
             )
         }
     }

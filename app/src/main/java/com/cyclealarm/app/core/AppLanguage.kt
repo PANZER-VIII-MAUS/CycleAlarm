@@ -44,6 +44,19 @@ object AppLanguage {
     fun wrap(base: Context): Context {
         val locale = localeFor(get(base)) ?: return base
         Locale.setDefault(locale)
+        return createLocalizedContext(base, locale)
+    }
+
+    /**
+     * 给 ViewModel / 后台组件取字符串用：套应用内语言但**不改全局 Locale**。
+     * 否则「应用内英文 + 系统中文」时，撤销提示、导入错误仍会是中文。
+     */
+    fun localizedContext(base: Context): Context {
+        val locale = localeFor(get(base)) ?: return base
+        return createLocalizedContext(base, locale)
+    }
+
+    private fun createLocalizedContext(base: Context, locale: Locale): Context {
         val config = Configuration(base.resources.configuration)
         config.setLocale(locale)
         return base.createConfigurationContext(config)

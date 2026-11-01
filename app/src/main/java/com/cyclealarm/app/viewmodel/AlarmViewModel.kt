@@ -105,9 +105,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             throwable is IllegalStateException &&
             throwable.message?.contains("migration", ignoreCase = true) == true
         ) {
-            getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_db_too_old)
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_db_too_old)
         } else {
-            getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_db_init_failed)
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_db_init_failed)
         }
     }
 
@@ -151,7 +151,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             if (freshInstall && PlanSeedPolicy.shouldCreateDefaultPlans(alarmCount, dayPlanCount)) {
                 // 只有全新安装 / 两张表都为空时才建默认计划：第 1..N-1 天上课，第 N 天休息
                 val types = db.activityTypeDao().getAll()
-                val classType = types.firstOrNull { it.name == getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_class) }
+                val classType = types.firstOrNull { it.name == com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_default_class) }
                     ?: types.firstOrNull { it.rings }
                 val restType = types.firstOrNull { !it.rings }
                 // 注入上限 6 天：30 天周期不该一次塞 29 条默认闹钟
@@ -203,15 +203,15 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun insertDefaultTypes() {
         listOf(
             ActivityTypeEntity(
-                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_class),
+                name = com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_default_class),
                 hour = 7, minute = 30, rings = true, sortOrder = 0
             ),
             ActivityTypeEntity(
-                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_study),
+                name = com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_default_study),
                 hour = 8, minute = 30, rings = true, sortOrder = 1
             ),
             ActivityTypeEntity(
-                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_break),
+                name = com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_default_break),
                 hour = 0, minute = 0, rings = false, sortOrder = 2
             )
         ).forEach { db.activityTypeDao().upsert(it) }
@@ -417,7 +417,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         val removed = deleteDayPlan(dayIndex) ?: return
         _pendingUndo.value = PendingUndo.Plan(
                 removed,
-                getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_undo_plan, label)
+                com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(com.cyclealarm.app.R.string.vm_undo_plan, label)
             )
     }
 
@@ -426,7 +426,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         val snapshot = deleteActivityTypeWithSnapshot(id) ?: return
         _pendingUndo.value = PendingUndo.Type(
                 snapshot,
-                getApplication<Application>().getString(
+                com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()).getString(
                     com.cyclealarm.app.R.string.vm_undo_type,
                     snapshot.type.name
                 )
@@ -514,9 +514,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun importChinaHolidaysInternal() {
-        val existing = db.holidayDao().getAll().associateBy { it.label }
+        val all = db.holidayDao().getAll()
+        // 按「日期区间」去重：label 会随界面语言变化，用它当 key 会在切语言后生成重复假期
+        val existingByRange = all.associateBy { it.startEpochDay to it.endEpochDay }
         ChinaHolidaysProvider.upcomingOrActive(getApplication()).forEach { official ->
-            val old = existing[official.label]
+            val old = existingByRange[official.startEpochDay to official.endEpochDay]
             db.holidayDao().upsert(
                 if (old == null) {
                     official
