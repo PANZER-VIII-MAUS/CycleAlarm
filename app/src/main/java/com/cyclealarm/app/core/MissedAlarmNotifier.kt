@@ -25,11 +25,13 @@ object MissedAlarmNotifier {
                 return
             }
             NotificationChannels.createAll(context)
-            val names = missed.take(3).joinToString("、") { it.label.ifBlank { "闹钟" } }
+            val separator = context.getString(R.string.list_separator)
+            val fallback = context.getString(R.string.missed_label_fallback)
+            val names = missed.take(3).joinToString(separator) { it.label.ifBlank { fallback } }
             val text = if (missed.size == 1) {
-                "错过一次闹钟：$names"
+                context.getString(R.string.missed_single, names)
             } else {
-                "错过 ${missed.size} 次闹钟：$names"
+                context.getString(R.string.missed_multi, missed.size, names)
             }
             val contentIntent = PendingIntent.getActivity(
                 context,
@@ -41,7 +43,7 @@ object MissedAlarmNotifier {
             )
             val notification = NotificationCompat.Builder(context, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("错过闹钟")
+                .setContentTitle(context.getString(R.string.missed_title))
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(contentIntent)

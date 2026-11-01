@@ -251,8 +251,17 @@ class AlarmReceiver : BroadcastReceiver() {
             val notification = androidx.core.app.NotificationCompat
                 .Builder(context, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(com.cyclealarm.app.R.drawable.ic_notification)
-                .setContentTitle("闹钟快到了")
-                .setContentText(com.cyclealarm.app.core.PreAlertPolicy.text(hour, minute, label, minutes))
+                .setContentTitle(context.getString(com.cyclealarm.app.R.string.pre_alert_title))
+                                .setContentText(
+                    context.getString(
+                        com.cyclealarm.app.R.string.pre_alert_text,
+                        minutes,
+                        DisplayPrefs.formatTime(context, hour, minute),
+                        label.ifBlank {
+                            context.getString(com.cyclealarm.app.R.string.missed_label_fallback)
+                        }
+                    )
+                )
                 .setContentIntent(contentIntent)
                 .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
@@ -273,12 +282,16 @@ class AlarmReceiver : BroadcastReceiver() {
         label: String
     ) {
         val detail = label.ifBlank {
-            if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "第 ${dayIndex + 1} 天"
+            if (kind == AlarmScheduler.KIND_DATE) {
+                context.getString(com.cyclealarm.app.R.string.ring_kind_date)
+            } else {
+                context.getString(com.cyclealarm.app.R.string.ring_day_format, dayIndex + 1)
+            }
         }
         postFallback(
             context = context,
             notificationId = FALLBACK_NOTIFICATION_BASE + AlarmScheduler.schedulerId(kind, alarmId),
-            title = "闹钟响铃服务启动失败",
+            title = context.getString(com.cyclealarm.app.R.string.alert_start_failed_title),
             text = "${DisplayPrefs.formatTime(context, hour, minute)} · $detail"
         )
     }
@@ -291,13 +304,21 @@ class AlarmReceiver : BroadcastReceiver() {
         label: String
     ) {
         val detail = label.ifBlank {
-            if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "闹钟"
+            if (kind == AlarmScheduler.KIND_DATE) {
+                context.getString(com.cyclealarm.app.R.string.ring_kind_date)
+            } else {
+                context.getString(com.cyclealarm.app.R.string.missed_label_fallback)
+            }
         }
         postFallback(
             context = context,
             notificationId = RESCHEDULE_NOTIFICATION_ID,
-            title = "下一次闹钟排期失败",
-            text = "${DisplayPrefs.formatTime(context, hour, minute)} · $detail，请打开 App 检查"
+            title = context.getString(com.cyclealarm.app.R.string.alert_reschedule_failed_title),
+            text = context.getString(
+                com.cyclealarm.app.R.string.alert_reschedule_failed_text,
+                DisplayPrefs.formatTime(context, hour, minute),
+                detail
+            )
         )
     }
 
@@ -342,7 +363,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(contentIntent)
-                .addAction(0, "立即重排", resyncIntent)
+                .addAction(0, context.getString(com.cyclealarm.app.R.string.action_resync_now), resyncIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)

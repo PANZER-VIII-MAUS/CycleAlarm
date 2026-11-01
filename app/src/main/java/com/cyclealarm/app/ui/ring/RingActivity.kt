@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.RingLaunchValidator
@@ -247,13 +249,17 @@ private fun RingScreen(
     val context = LocalContext.current
     val detail = if (originalHour != null && originalMinute != null) {
         val source = if (kind == AlarmScheduler.KIND_DATE) {
-            label.ifBlank { "按日期闹钟" }
+            label.ifBlank { stringResource(R.string.ring_kind_date) }
         } else {
-            "第 ${dayIndex + 1} 天"
+            stringResource(R.string.ring_day_format, dayIndex + 1)
         }
-        "原定 ${DisplayPrefs.formatTime(context, originalHour, originalMinute)} · $source"
+        stringResource(
+            R.string.ring_original_time,
+            DisplayPrefs.formatTime(context, originalHour, originalMinute),
+            source
+        )
     } else {
-        label.ifBlank { "第 ${dayIndex + 1} 天" }
+        label.ifBlank { stringResource(R.string.ring_day_format, dayIndex + 1) }
     }
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Column(
@@ -261,7 +267,7 @@ private fun RingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("闹钟", color = Color.White, style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.ring_title), color = Color.White, style = MaterialTheme.typography.titleLarge)
             Text(
                 DisplayPrefs.formatTime(context, hour, minute),
                 color = Color.White,
@@ -284,7 +290,7 @@ private fun RingScreen(
                         ),
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                     ) {
-                        Text("稍后 $snoozeMinutes 分钟")
+                        Text(stringResource(R.string.ring_snooze_minutes, snoozeMinutes))
                     }
                 }
                 Button(
@@ -296,7 +302,7 @@ private fun RingScreen(
                     ),
                     contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                 ) {
-                    Text("停止")
+                    Text(stringResource(R.string.ring_stop))
                 }
             }
         }

@@ -245,15 +245,19 @@ class RingService : Service() {
         )
         val notification: Notification = NotificationCompat.Builder(this, NotificationChannels.RING)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("闹钟 $timeText")
+            .setContentTitle(getString(R.string.ring_notification_title, timeText))
             .setContentText(
                 label.ifBlank {
-                    if (kind == AlarmScheduler.KIND_DATE) "按日期闹钟" else "第 ${dayIndex + 1} 天"
+                    if (kind == AlarmScheduler.KIND_DATE) {
+                        getString(R.string.ring_kind_date)
+                    } else {
+                        getString(R.string.ring_day_format, dayIndex + 1)
+                    }
                 }
             )
             .setContentIntent(fullScreenIntent)
             .setFullScreenIntent(fullScreenIntent, true)
-            .addAction(0, "停止", stopIntent)
+            .addAction(0, getString(R.string.ring_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
@@ -297,8 +301,8 @@ class RingService : Service() {
         runCatching {
             val fallback = NotificationCompat.Builder(this, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("闹钟正在响")
-                .setContentText("前台服务不可用，点开可停止")
+                .setContentTitle(getString(R.string.svc_fallback_title))
+                .setContentText(getString(R.string.svc_fallback_text))
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -329,8 +333,8 @@ class RingService : Service() {
             val notification = NotificationCompat
                 .Builder(this, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("闹钟未被处理")
-                .setContentText("刚才的闹钟已响到上限自动停止，点开可确认状态")
+                .setContentTitle(getString(R.string.svc_unhandled_title))
+                .setContentText(getString(R.string.svc_unhandled_text))
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

@@ -54,9 +54,8 @@ class AlarmReceiverRobolectricTest {
         val notifications = shadowOf(app.getSystemService(NotificationManager::class.java))
             .allNotifications
         assertEquals(1, notifications.size)
-        assertNotNull(notifications.first().extras.getCharSequence("android.title"))
-        assertTrue(
-            notifications.first().extras.getCharSequence("android.title").toString().contains("闹钟")
-        )
+        val title = notifications.first().extras.getCharSequence("android.title")?.toString()
+        // 断言与资源一致，而不是硬编码中文（Robolectric 默认 locale 是英文）
+        assertEquals(app.getString(com.cyclealarm.app.R.string.pre_alert_title), title)
     }
 }
