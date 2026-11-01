@@ -19,15 +19,19 @@
 > 目前的真机验证环境是 OPPO Find X7（ColorOS / Android 14），其它机型尚未逐一实测——遇到问题欢迎提 Issue。
 
 <p align="center">
-  <img src="docs/screenshots/main-light.jpg" width="230" alt="主界面（浅色）">
-  <img src="docs/screenshots/main-dark.jpg" width="230" alt="主界面（深色）">
-  <img src="docs/screenshots/holiday-light.jpg" width="230" alt="假期模式">
+  <img src="docs/screenshots/main-light.jpg" width="200" alt="主界面（中文 · 浅色）">
+  <img src="docs/screenshots/main-en.jpg" width="200" alt="主界面（English）">
+  <img src="docs/screenshots/main-dark.jpg" width="200" alt="主界面（深色）">
+  <img src="docs/screenshots/holiday-light.jpg" width="200" alt="假期模式">
 </p>
 
 <details>
-<summary>更多截图：设置页</summary>
+<summary>设置页截图（中文 / English）</summary>
 
-<img src="docs/screenshots/settings-light.jpg" width="250" alt="设置页">
+<p align="center">
+  <img src="docs/screenshots/settings-light.jpg" width="230" alt="设置页（中文）">
+  <img src="docs/screenshots/settings-en.jpg" width="230" alt="设置页（English）">
+</p>
 
 </details>
 
