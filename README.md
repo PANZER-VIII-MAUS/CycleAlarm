@@ -404,6 +404,11 @@ CycleAlarm/
 └── gradle/wrapper/                     # Gradle Wrapper 8.11.1
 ```
 
+## 相关文档
+
+- [docs/](docs/)：设计令牌、版本里程碑与截图索引
+- [tools/README-signing.md](tools/README-signing.md)：签名密钥保管与换密码流程
+
 ## 构建要求
 
 - **JDK 17**
