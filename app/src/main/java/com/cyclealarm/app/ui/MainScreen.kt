@@ -80,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -98,6 +99,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NextAlarm
@@ -133,13 +135,25 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-private val weekLabels = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
+private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
+    1 -> R.string.week_mon
+    2 -> R.string.week_tue
+    3 -> R.string.week_wed
+    4 -> R.string.week_thu
+    5 -> R.string.week_fri
+    6 -> R.string.week_sat
+    else -> R.string.week_sun
+}
 
 /** 按循环方式生成某天的显示名：每天 / 周一..周日 / 第 X 天。 */
-private fun dayLabel(settings: AppSettingsEntity?, dayIndex: Int): String = when (settings?.cycleType) {
-    CycleTypes.DAILY -> "每天"
-    CycleTypes.WEEKLY -> weekLabels[dayIndex % weekLabels.size]
-    else -> "第 ${dayIndex + 1} 天"
+private fun dayLabel(
+    context: android.content.Context,
+    settings: AppSettingsEntity?,
+    dayIndex: Int
+): String = when (settings?.cycleType) {
+    CycleTypes.DAILY -> context.getString(R.string.cycle_daily)
+    CycleTypes.WEEKLY -> context.getString(weekdayRes((dayIndex % 7) + 1))
+    else -> context.getString(R.string.ring_day_format, dayIndex + 1)
 }
 
 @Composable
@@ -154,12 +168,12 @@ private fun NextAlarmCard(
     CycleCard(modifier = modifier) {
         if (nextAlarm == null || settings == null) {
             Text(
-                text = "暂无开启的闹钟",
+                text = stringResource(R.string.main_no_alarm),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "去下面打开任意一天；若按日期闹钟已过期，需要重新添加",
+                text = stringResource(R.string.main_no_alarm_hint),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -203,12 +217,13 @@ private fun NextAlarmCard(
                 TextButton(
                     onClick = onSkipNext,
                     modifier = Modifier.padding(top = 4.dp)
-                ) { Text("跳过下一次") }
+                ) { Text(stringResource(R.string.main_skip_next)) }
             }
         }
     }
 }
 
+@Composable
 private fun nextAlarmSourceLabel(
     alarm: NextAlarm,
     settings: AppSettingsEntity
@@ -218,26 +233,22 @@ private fun nextAlarmSourceLabel(
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
         when (settings.cycleType) {
-            CycleTypes.WEEKLY -> weekdayShort(triggerDate.dayOfWeek.value)
-            CycleTypes.DAILY -> "每天"
-            else -> "第 ${cycleDayOf(settings, triggerDate.toEpochDay())} 天"
+            CycleTypes.WEEKLY -> stringResource(weekdayRes(triggerDate.dayOfWeek.value))
+            CycleTypes.DAILY -> stringResource(R.string.cycle_daily)
+            else -> stringResource(
+                R.string.ring_day_format,
+                cycleDayOf(settings, triggerDate.toEpochDay())
+            )
         }
     }
 
-    NextAlarmKind.DATE -> "按日期"
-    NextAlarmKind.SNOOZE -> "稍后提醒"
+    NextAlarmKind.DATE -> stringResource(R.string.main_date_kind)
+    NextAlarmKind.SNOOZE -> stringResource(R.string.main_snooze_kind)
 }
 
 /** 周一..周日（ISO dayOfWeek：1=周一）。 */
-private fun weekdayShort(dayOfWeek: Int): String = when (dayOfWeek) {
-    1 -> "周一"
-    2 -> "周二"
-    3 -> "周三"
-    4 -> "周四"
-    5 -> "周五"
-    6 -> "周六"
-    else -> "周日"
-}
+@Composable
+private fun weekdayShort(dayOfWeek: Int): String = stringResource(weekdayRes(dayOfWeek))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,7 +282,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             val result = withTimeoutOrNull(5_000L) {
                 snackbarHostState.showSnackbar(
                     message = message,
-                    actionLabel = "撤销",
+                    actionLabel = context.getString(R.string.action_undo),
                     withDismissAction = false,
                     duration = SnackbarDuration.Indefinite
                 )
@@ -285,7 +296,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     fun deletePlanWithUndo(day: Int) {
         uiScope.launch {
-            viewModel.deleteDayPlanWithUndo(day, dayLabel(settings, day))
+            viewModel.deleteDayPlanWithUndo(day, dayLabel(context, settings, day))
         }
     }
 
@@ -360,12 +371,15 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     val currentSettings = settings
     val todayDay = currentSettings?.let { cycleDayOf(it, todayEpochDay) } ?: 1
     val todayText = if (currentSettings == null) {
-        "今天是第 1 天"
+        stringResource(R.string.main_today_first_day)
     } else {
         if (currentSettings.cycleType == CycleTypes.WEEKLY) {
-            "今天是 ${weekLabels[(todayDay - 1) % weekLabels.size]}"
+            stringResource(
+                R.string.main_today_weekday,
+                stringResource(weekdayRes(((todayDay - 1) % 7) + 1))
+            )
         } else {
-            "今天是第 $todayDay 天"
+            stringResource(R.string.main_today_day, todayDay)
         }
     }
     val todayIndex = todayDay - 1
@@ -383,7 +397,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text("循环闹钟", style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.main_title), style = MaterialTheme.typography.titleLarge)
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -393,18 +407,18 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 ),
                 actions = {
                     IconButton(onClick = { showTypeManager = true }) {
-                        Icon(Icons.Outlined.Schedule, contentDescription = "安排类型")
+                        Icon(Icons.Outlined.Schedule, contentDescription = stringResource(R.string.cd_alarm_types))
                     }
                     IconButton(onClick = { context.startActivity(Intent(context, ImportActivity::class.java)) }) {
-                        Icon(Icons.Outlined.FileUpload, contentDescription = "从课表导入")
+                        Icon(Icons.Outlined.FileUpload, contentDescription = stringResource(R.string.cd_import_timetable))
                     }
                     IconButton(onClick = {
                         context.startActivity(Intent(context, SettingsActivity::class.java))
                     }) {
-                        Icon(Icons.Outlined.Settings, contentDescription = "周期设置")
+                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.cd_cycle_settings))
                     }
                     IconButton(onClick = { showPermissionGuide = true }) {
-                        Icon(Icons.Outlined.Info, contentDescription = "权限设置")
+                        Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.cd_permissions))
                     }
                 }
             )
@@ -419,7 +433,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 PillButton(
-                    text = "添加闹钟",
+                    text = stringResource(R.string.main_add_alarm),
                     onClick = { showDayPicker = true }
                 )
             }
@@ -468,7 +482,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onSave = { viewModel.saveDateAlarm(it) },
                         onDelete = { alarm ->
                             viewModel.deleteDateAlarm(alarm.id)
-                            showUndoSnackbar("已删除按日期闹钟") {
+                            showUndoSnackbar(context.getString(R.string.snack_deleted_date_alarm)) {
                                 viewModel.restoreDateAlarm(alarm)
                             }
                         }
@@ -486,7 +500,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         .filter { !it.planGenerated && it.dayIndex == dayIndex }
                         .sortedBy { it.hour * 60 + it.minute }
                     DayPlanCard(
-                        dayText = dayLabel(settings, dayIndex),
+                        dayText = dayLabel(context, settings, dayIndex),
                         isToday = dayIndex == todayIndex,
                         plan = plan,
                         planType = type,
@@ -501,7 +515,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onToggleManual = { alarm, enabled -> viewModel.setEnabled(alarm, enabled) },
                         onDeleteManual = { alarm ->
                             viewModel.deleteAlarm(alarm.id)
-                            showUndoSnackbar("已删除闹钟") {
+                            showUndoSnackbar(context.getString(R.string.snack_deleted_alarm)) {
                                 viewModel.restoreAlarm(alarm)
                             }
                         }
@@ -529,7 +543,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
                         onDeleteHoliday = { holiday ->
                             viewModel.deleteHoliday(holiday.id)
-                            showUndoSnackbar("已删除假期") {
+                            showUndoSnackbar(context.getString(R.string.snack_deleted_holiday)) {
                                 viewModel.restoreHoliday(holiday)
                             }
                         }
@@ -538,8 +552,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
                 item(key = "tip") {
                     Text(
-                        text = "提示：循环天数固定后，只能在对应的第 X 天里添加闹钟；" +
-                            "同一天可加多个闹钟；右上角设置可修改循环方式。",
+                        text = stringResource(R.string.main_tip),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -556,10 +569,10 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     databaseError?.let { message ->
         AlertDialog(
             onDismissRequest = {},
-            title = { Text("无法打开数据库") },
+            title = { Text(stringResource(R.string.db_error_title)) },
             text = { Text(message) },
             confirmButton = {
-                TextButton(onClick = viewModel::clearDatabaseError) { Text("知道了") }
+                TextButton(onClick = viewModel::clearDatabaseError) { Text(stringResource(R.string.db_error_ok)) }
             }
         )
     }
@@ -567,7 +580,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     editingAlarm?.let { alarm ->
         EditAlarmDialog(
             alarm = alarm,
-            dayLabel = dayLabel(settings, alarm.dayIndex),
+            dayLabel = dayLabel(context, settings, alarm.dayIndex),
             onDismiss = { editingAlarm = null },
             onSave = { saved ->
                 viewModel.saveAlarm(saved)
@@ -575,7 +588,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             },
             onDelete = {
                 viewModel.deleteAlarm(alarm.id)
-                showUndoSnackbar("已删除闹钟") {
+                showUndoSnackbar(context.getString(R.string.snack_deleted_alarm)) {
                     viewModel.restoreAlarm(alarm)
                 }
                 editingAlarm = null
@@ -602,7 +615,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     planPickerDay?.let { day ->
         PlanPickerDialog(
-            dayText = dayLabel(settings, day),
+            dayText = dayLabel(context, settings, day),
             types = activityTypes,
             currentPlan = plansByDay[day],
             onSelect = { type ->
@@ -629,7 +642,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         val plan = plansByDay[day]
         if (plan != null) {
             PlanTimeDialog(
-                title = "${dayLabel(settings, day)} 的安排时间",
+                title = stringResource(R.string.plan_time_title, dayLabel(context, settings, day)),
                 hour = plan.hour,
                 minute = plan.minute,
                 onSave = { hour, minute ->
@@ -648,7 +661,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     if (showDayPicker) {
         AlertDialog(
             onDismissRequest = { showDayPicker = false },
-            title = { Text("添加闹钟") },
+            title = { Text(stringResource(R.string.main_add_alarm)) },
             text = {
                 Column(
                     modifier = Modifier
@@ -670,13 +683,13 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                dayLabel(settings, index),
+                                dayLabel(context, settings, index),
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
                             if (index == todayIndex) {
                                 Text(
-                                    "今天",
+                                    stringResource(R.string.day_picker_today),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -686,7 +699,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDayPicker = false }) { Text("取消") }
+                TextButton(onClick = { showDayPicker = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -722,11 +735,12 @@ private fun HolidayCard(
     onSetAllMuted: (Boolean) -> Unit,
     onDeleteHoliday: (HolidayEntity) -> Unit
 ) {
+    val context = LocalContext.current
     var expanded by rememberSaveable { mutableStateOf(false) }
     val summary = if (holidayModeEnabled) {
-        "假期模式 · ${holidays.size} 段假期"
+        stringResource(R.string.holiday_header_on, holidays.size)
     } else {
-        "假期模式 · 已关闭"
+        stringResource(R.string.holiday_header_off)
     }
 
     CycleCard {
@@ -739,7 +753,7 @@ private fun HolidayCard(
                     .clickable { expanded = !expanded }
                     .semantics {
                         role = Role.Button
-                        stateDescription = if (expanded) "已展开" else "已折叠"
+                        stateDescription = if (expanded) context.getString(R.string.state_expanded) else context.getString(R.string.state_collapsed)
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -762,7 +776,11 @@ private fun HolidayCard(
                     } else {
                         Icons.AutoMirrored.Filled.KeyboardArrowRight
                     },
-                    contentDescription = if (expanded) "收起假期设置" else "展开假期设置",
+                    contentDescription = if (expanded) {
+                            stringResource(R.string.cd_collapse_holiday)
+                        } else {
+                            stringResource(R.string.cd_expand_holiday)
+                        },
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -770,9 +788,9 @@ private fun HolidayCard(
             if (expanded) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("启用假期模式", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.holiday_enable), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "关闭后所有假期暂时不生效，但保留每条闹钟的假期静音设置",
+                            stringResource(R.string.holiday_enable_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -781,14 +799,14 @@ private fun HolidayCard(
                         checked = holidayModeEnabled,
                         onCheckedChange = onToggleMode,
                         modifier = Modifier.semantics {
-                            stateDescription = if (holidayModeEnabled) "已开启" else "已关闭"
+                            stateDescription = if (holidayModeEnabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
                         }
                     )
                 }
 
                 if (holidays.isEmpty()) {
                     Text(
-                        "还没有假期段。可一键导入法定节假日，或手动添加自定义区间。",
+                        stringResource(R.string.holiday_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -805,14 +823,14 @@ private fun HolidayCard(
                                     .semantics { role = Role.Button }
                             ) {
                                 Text(
-                                    h.label.ifBlank { "自定义假期" },
+                                    h.label.ifBlank { stringResource(R.string.holiday_custom_label) },
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
                                     "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}" +
                                         when {
-                                            !holidayModeEnabled -> " · 总开关已关闭"
-                                            !h.enabled -> " · 已停用"
+                                            !holidayModeEnabled -> stringResource(R.string.holiday_suffix_master_off)
+                                            !h.enabled -> stringResource(R.string.holiday_suffix_disabled)
                                             else -> ""
                                         },
                                     style = MaterialTheme.typography.bodySmall,
@@ -820,19 +838,19 @@ private fun HolidayCard(
                                 )
                             }
                             IconButton(onClick = { onEdit(h) }) {
-                                Icon(Icons.Outlined.Edit, contentDescription = "编辑这段假期")
+                                Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.cd_edit_holiday))
                             }
                             IconButton(onClick = { onDeleteHoliday(h) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "删除这段假期")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete_holiday))
                             }
                             CycleSwitch(
                                 checked = h.enabled,
                                 onCheckedChange = { onToggleHoliday(h, it) },
                                 modifier = Modifier.semantics {
                                     stateDescription = when {
-                                        !holidayModeEnabled -> "总开关已关闭"
-                                        h.enabled -> "已开启"
-                                        else -> "已停用"
+                                        !holidayModeEnabled -> context.getString(R.string.holiday_master_off)
+                                        h.enabled -> context.getString(R.string.holiday_state_on)
+                                        else -> context.getString(R.string.holiday_state_disabled)
                                     }
                                 }
                             )
@@ -845,13 +863,13 @@ private fun HolidayCard(
                         onClick = onImportChina,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("导入法定节假日")
+                        Text(stringResource(R.string.holiday_import))
                     }
                     OutlinedButton(
                         onClick = onAddCustom,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("＋自定义假期")
+                        Text(stringResource(R.string.holiday_add_custom))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -859,23 +877,22 @@ private fun HolidayCard(
                         onClick = { onSetAllMuted(true) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("全部开启假期静音")
+                        Text(stringResource(R.string.holiday_mute_all_on))
                     }
                     OutlinedButton(
                         onClick = { onSetAllMuted(false) },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("全部关闭假期静音")
+                        Text(stringResource(R.string.holiday_mute_all_off))
                     }
                 }
                 Text(
-                    "对下方所有闹钟生效",
+                    stringResource(R.string.holiday_mute_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "内置 2025~2026 官方数据，导入时自动跳过已过去的日期；总开关关闭时整段假期都不生效。" +
-                        "2026 年已无后续法定假期，2027 年数据发布后需更新 App。",
+                    stringResource(R.string.holiday_data_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -890,6 +907,7 @@ private fun HolidayEditDialog(
     onDismiss: () -> Unit,
     onSave: (label: String, startEpochDay: Long, endEpochDay: Long) -> Unit
 ) {
+    val context = LocalContext.current
     var label by rememberSaveable(holiday.id) { mutableStateOf(holiday.label) }
     var start by rememberSaveable(holiday.id) { mutableStateOf(holiday.startEpochDay) }
     var end by rememberSaveable(holiday.id) { mutableStateOf(holiday.endEpochDay) }
@@ -898,13 +916,15 @@ private fun HolidayEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (holiday.id == 0) "添加假期" else "编辑假期") },
+        title = {
+                    Text(if (holiday.id == 0) stringResource(R.string.holiday_add) else stringResource(R.string.holiday_edit))
+                },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("名称（如：国庆 2026）") },
+                    label = { Text(stringResource(R.string.holiday_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -912,31 +932,31 @@ private fun HolidayEditDialog(
                     onClick = { pickStart = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("开始 ${formatEpochDay(start)}")
+                    Text(stringResource(R.string.holiday_start, formatEpochDay(start)))
                 }
                 OutlinedButton(
                     onClick = { pickEnd = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("结束 ${formatEpochDay(end)}")
+                    Text(stringResource(R.string.holiday_end, formatEpochDay(end)))
                 }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onSave(label.trim().ifBlank { "自定义假期" }, start, end)
+                    onSave(label.trim().ifBlank { context.getString(R.string.holiday_custom_label) }, start, end)
                 }
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 
     if (pickStart) {
         HolidayDateDialog(
-            title = "选择开始日期",
+            title = stringResource(R.string.pick_start_date),
             initialEpochDay = start,
             onConfirm = { start = it },
             onDismiss = { pickStart = false }
@@ -944,7 +964,7 @@ private fun HolidayEditDialog(
     }
     if (pickEnd) {
         HolidayDateDialog(
-            title = "选择结束日期",
+            title = stringResource(R.string.pick_end_date),
             initialEpochDay = end,
             onConfirm = { end = it },
             onDismiss = { pickEnd = false }
@@ -960,23 +980,23 @@ private fun CycleInfoCard(
     onSettingsClick: () -> Unit
 ) {
     val subtitle = when (settings?.cycleType) {
-        CycleTypes.DAILY -> "每天重复 · 点击调整循环设置"
-        CycleTypes.WEEKLY -> "每周重复 · 今天是${weekLabels[((todayDay - 1) % weekLabels.size).toInt()]} · 点击调整"
-        else -> "$cycleLength 天一轮 · 今天是第 $todayDay 天 · 点击调整"
+        CycleTypes.DAILY -> stringResource(R.string.cycle_sub_daily)
+        CycleTypes.WEEKLY -> stringResource(R.string.cycle_sub_weekly, stringResource(weekdayRes(((todayDay - 1) % 7) + 1)))
+        else -> stringResource(R.string.cycle_sub_custom, cycleLength, todayDay)
     }
     CycleCard(onClick = onSettingsClick) {
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("循环周期", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.cycle_title), style = MaterialTheme.typography.titleMedium)
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            TextButton(onClick = onSettingsClick) { Text("设置") }
+            TextButton(onClick = onSettingsClick) { Text(stringResource(R.string.settings_title)) }
         }
     }
 }
@@ -1002,7 +1022,7 @@ private fun DayPlanCard(
     val timeText = if (plan != null && showTime) {
         DisplayPrefs.formatClock(context, plan.hour, plan.minute)
     } else {
-        "未安排"
+        stringResource(R.string.plan_unset)
     }
     val timeStyle = if (showTime) {
         MaterialTheme.typography.headlineMedium
@@ -1019,9 +1039,9 @@ private fun DayPlanCard(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
     val baseSubtitle = when {
-        plan == null || planType == null -> "点此设置"
-        !planType.rings -> "休息"
-        !plan.enabled -> "已暂停"
+        plan == null || planType == null -> stringResource(R.string.plan_tap_to_set)
+        !planType.rings -> stringResource(R.string.plan_rest)
+        !plan.enabled -> stringResource(R.string.plan_paused)
         else -> planType.name
     }
     // 12 小时制时，把「上午/下午」挪到副标题前缀，避免大行被撑宽
@@ -1031,9 +1051,9 @@ private fun DayPlanCard(
     val switchOn = ringsToday && plan?.enabled == true
     val switchEnabled = ringsToday
     val planStateDescription = when {
-        !ringsToday -> "不响铃"
-        switchOn -> "已开启"
-        else -> "已关闭"
+        !ringsToday -> stringResource(R.string.day_not_ringing)
+        switchOn -> stringResource(R.string.state_on)
+        else -> stringResource(R.string.state_off)
     }
     val switchColors = SwitchDefaults.colors(
         checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -1055,7 +1075,7 @@ private fun DayPlanCard(
     CycleCard(
         modifier = cardModifier,
         onClick = onOpenPlan,
-        onClickLabel = "查看或修改这一天的安排"
+        onClickLabel = stringResource(R.string.cd_open_plan)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
@@ -1105,7 +1125,7 @@ private fun DayPlanCard(
             IconButton(onClick = onAddAlarm) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "添加闹钟",
+                    contentDescription = stringResource(R.string.cd_add_alarm),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1151,12 +1171,12 @@ private fun ManualAlarmRow(
                 .clickable(onClick = onEdit)
                 .semantics {
                     role = Role.Button
-                    stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+                    stateDescription = if (alarm.enabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
                 }
         ) {
             Text(
                 "${DisplayPrefs.formatTime(context, alarm.hour, alarm.minute)} · " +
-                    alarm.label.ifBlank { "闹钟" },
+                    alarm.label.ifBlank { stringResource(R.string.alarm_fallback) },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1164,7 +1184,7 @@ private fun ManualAlarmRow(
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Default.Delete,
-                contentDescription = "删除这条闹钟",
+                contentDescription = stringResource(R.string.cd_delete_alarm),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -1173,7 +1193,7 @@ private fun ManualAlarmRow(
             onCheckedChange = onToggle,
             colors = switchColors,
             modifier = Modifier.semantics {
-                stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+                stateDescription = if (alarm.enabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
             }
         )
     }
@@ -1210,13 +1230,13 @@ private fun EditAlarmDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("$dayLabel 的闹钟") },
+        title = { Text(stringResource(R.string.edit_alarm_title, dayLabel)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("备注（可选）") },
+                    label = { Text(stringResource(R.string.edit_note_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1235,7 +1255,7 @@ private fun EditAlarmDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("时间：${DisplayPrefs.formatTime(context, hour, minute)}")
+                    Text(stringResource(R.string.edit_time, DisplayPrefs.formatTime(context, hour, minute)))
                 }
                 OutlinedButton(
                     onClick = {
@@ -1247,7 +1267,7 @@ private fun EditAlarmDialog(
                                 alarm.dayIndex,
                                 alarm.hour,
                                 alarm.minute,
-                                label.trim().ifBlank { "闹钟" } + "（试听）",
+                                label.trim().ifBlank { context.getString(R.string.alarm_fallback) } + context.getString(R.string.preview_suffix),
                                 snoozed = false,
                                 preview = true,
                                 ringtoneUri = ringtone,
@@ -1258,13 +1278,13 @@ private fun EditAlarmDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("试听闹钟（立即响铃）")
+                    Text(stringResource(R.string.preview_button))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("启用", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.toggle_enable), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "这条闹钟是否生效",
+                            stringResource(R.string.toggle_enable_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1273,15 +1293,15 @@ private fun EditAlarmDialog(
                         checked = enabled,
                         onCheckedChange = { enabled = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (enabled) "已开启" else "已关闭"
+                            stateDescription = if (enabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
                         }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("假期静音", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.holiday_mute_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "假期模式开启时这条不响（取消勾选则假期照常响）",
+                            stringResource(R.string.holiday_mute_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1290,7 +1310,7 @@ private fun EditAlarmDialog(
                         checked = muted,
                         onCheckedChange = { muted = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (muted) "假期静音已开启" else "假期静音已关闭"
+                            stateDescription = if (muted) context.getString(R.string.state_holiday_mute_on) else context.getString(R.string.state_holiday_mute_off)
                         }
                     )
                 }
@@ -1301,7 +1321,10 @@ private fun EditAlarmDialog(
                                 RingtoneManager.EXTRA_RINGTONE_TYPE,
                                 RingtoneManager.TYPE_ALARM
                             )
-                            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "选择这条闹钟的铃声")
+                            putExtra(
+                                RingtoneManager.EXTRA_RINGTONE_TITLE,
+                                context.getString(R.string.ringtone_picker_title)
+                            )
                             putExtra(
                                 RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI,
                                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -1317,24 +1340,24 @@ private fun EditAlarmDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (ringtone == null) "铃声：跟随系统" else "铃声：自定义"
+                        if (ringtone == null) stringResource(R.string.ringtone_follow_system) else stringResource(R.string.ringtone_custom)
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("振动", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.vibrate_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     CycleSwitch(
                         checked = vibrate,
                         onCheckedChange = { vibrate = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (vibrate) "振动已开启" else "振动已关闭"
+                            stateDescription = if (vibrate) context.getString(R.string.state_vibrate_on) else context.getString(R.string.state_vibrate_off)
                         }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("音量渐强", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.ramp_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "从 30% 音量开始，约 20 秒升到满",
+                            stringResource(R.string.ramp_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1357,7 +1380,7 @@ private fun EditAlarmDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        if (preAlert == 0) "提前提醒：关闭" else "提前提醒：$preAlert 分钟"
+                        if (preAlert == 0) stringResource(R.string.pre_alert_off) else stringResource(R.string.pre_alert_on, preAlert)
                     )
                 }
             }
@@ -1379,7 +1402,7 @@ private fun EditAlarmDialog(
                         )
                     )
                 }
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {
             Row {
@@ -1390,9 +1413,9 @@ private fun EditAlarmDialog(
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         )
-                    ) { Text("删除") }
+                    ) { Text(stringResource(R.string.action_delete)) }
                 }
-                TextButton(onClick = onDismiss) { Text("取消") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
             }
         }
     )
@@ -1418,10 +1441,10 @@ private fun HolidayDateDialog(
                     if (day != null) onConfirm(day)
                     onDismiss()
                 }
-            ) { Text("确定") }
+            ) { Text(stringResource(R.string.action_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     ) {
         DatePicker(state = state, title = { Text(title) })
