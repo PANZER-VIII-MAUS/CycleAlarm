@@ -169,8 +169,11 @@ class AlarmImportWriter(private val context: Context) {
             settings.cycleStartEpochDay == monday
         if (alreadyWeekly) return false to emptyList()
 
-        val alarmsToCancel = db.alarmDao().getAll().filter { it.dayIndex >= 7 }
-        db.alarmDao().deleteFromIndex(7)
+        // 只回收「安排生成」的越界闹钟；手动/导入的闹钟保留（排期侧自然不会命中），
+        // 旧实现 deleteFromIndex(7) 会把用户手动加的闹钟永久删掉（四轮复审 H2）
+        val alarmsToCancel = db.alarmDao().getAll()
+            .filter { it.dayIndex >= 7 && it.planGenerated }
+        db.alarmDao().deletePlanGeneratedFromIndex(7)
         // 注意：**不删除** day_plans。
         // 撤销快照不包含 day_plans，删了就再也恢复不了（三轮复审 §3.2 判定的数据丢失）。
         // 幽灵闹钟改由排期侧过滤：DayPlanAlarmSync 只处理 dayIndex < cycleLength 的安排。

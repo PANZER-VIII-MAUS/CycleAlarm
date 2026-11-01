@@ -31,6 +31,14 @@ interface AlarmDao {
 
     @Query("DELETE FROM alarms WHERE dayIndex >= :fromIndex")
     suspend fun deleteFromIndex(fromIndex: Int)
+
+    /**
+     * 只删「由循环安排生成」的越界闹钟。
+     * 切到每周时手动/导入的闹钟必须保留：它们不会被排期命中（dayIndex 取模后永远对不上），
+     * 但用户切回大周期后还能重新生效（四轮复审 H2）。
+     */
+    @Query("DELETE FROM alarms WHERE dayIndex >= :fromIndex AND planGenerated = 1")
+    suspend fun deletePlanGeneratedFromIndex(fromIndex: Int)
 }
 
 @Dao

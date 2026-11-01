@@ -170,9 +170,13 @@ object AlarmResyncHelper {
         }
 
         val action = ReconcilePolicy.decide(expected, actual, missing)
-        ReconcilePolicy.diagnosticCode(action)?.let { code ->
+        val code = ReconcilePolicy.diagnosticCode(action)
+        if (code != null) {
             Log.w(TAG, "reconcile action=$action missing=$missing expected=$expected actual=$actual")
             ResyncCheckpoint.recordDiagnostic(context, now, code)
+        } else {
+            // 对得上也要写回「正常」：否则排期诊断永远显示上一次异常（可能是一周前的）
+            ResyncCheckpoint.recordDiagnostic(context, now, ResyncCheckpoint.DiagnosticCode.OK)
         }
         when (action) {
             ReconcilePolicy.Action.RESCHEDULE_MISSING,

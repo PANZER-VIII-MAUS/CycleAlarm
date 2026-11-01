@@ -19,6 +19,7 @@ import com.cyclealarm.app.ui.MainScreen
 import com.cyclealarm.app.ui.theme.ThemeManager
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
 import com.cyclealarm.app.worker.DailyResyncWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -48,8 +49,9 @@ class MainActivity : ComponentActivity() {
             Log.w("CycleAlarm", "startup service failed, continuing without it", e)
         }
 
-        // 每次升级后跑一次库结构自检：迁移是否真的把表/列建对，结果写进「排期诊断」
-        lifecycleScope.launch {
+        // 每次升级后跑一次库结构自检：迁移是否真的把表/列建对，结果写进「排期诊断」。
+        // 开库 + 跑迁移是重活，必须离开主线程，否则升级后首次启动有 ANR 风险（四轮复审 §3.3）
+        lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
                 @Suppress("DEPRECATION") // versionCode 自 API 1 就有；longVersionCode 要 API 28
                 val versionCode = packageManager
