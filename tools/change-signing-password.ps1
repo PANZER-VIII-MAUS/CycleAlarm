@@ -10,15 +10,22 @@
     5. 重新构建 release 并打印签名指纹供核对
 
 .EXAMPLE
-    powershell -ExecutionPolicy Bypass -File .\tools\change-signing-password.ps1
+    powershell -ExecutionPolicy Bypass -File D:\repos\CycleAlarm\tools\change-signing-password.ps1
 #>
 [CmdletBinding()]
 param(
-    [string]$PropertiesPath = (Join-Path $PSScriptRoot '..\keystore.properties'),
+    [string]$PropertiesPath,
     [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
+
+# 用 $MyInvocation 定位仓库根（Windows PowerShell 5.1 在 -File 调用下 $PSScriptRoot 可能为空）
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent $scriptDir
+if (-not $PropertiesPath) {
+    $PropertiesPath = Join-Path $repoRoot 'keystore.properties'
+}
 
 function Read-PlainProperty([string]$path, [string]$key) {
     $line = Get-Content -Path $path -Encoding UTF8 | Where-Object { $_ -match "^\s*$([regex]::Escape($key))\s*=" } | Select-Object -First 1
@@ -47,10 +54,10 @@ Write-Host '=== CycleAlarm 签名密码修改 ===' -ForegroundColor Cyan
 $propertiesPath = (Resolve-Path $PropertiesPath).Path
 $storeFile = Read-PlainProperty $propertiesPath 'storeFile'
 $oldStorePass = Read-PlainProperty $propertiesPath 'storePassword'
-$oldKeyPass = Read-PlainProperty $propertiesPath 'keyPassword'
 $keyAlias = Read-PlainProperty $propertiesPath 'keyAlias'
 
 if (-not (Test-Path $storeFile)) { throw "找不到密钥文件：$storeFile" }
+Write-Host "配置文件：$propertiesPath"
 Write-Host "密钥文件：$storeFile"
 Write-Host "别名：$keyAlias"
 
@@ -114,7 +121,7 @@ Write-Host '新密码校验通过' -ForegroundColor Green
 # 7) 重新构建并打印签名指纹
 if (-not $SkipBuild) {
     Write-Host '正在重新构建 release...' -ForegroundColor Yellow
-    Push-Location (Join-Path $PSScriptRoot '..')
+    Push-Location $repoRoot
     try {
         & .\gradlew.bat -q assembleRelease
         if ($LASTEXITCODE -ne 0) { throw "构建失败（退出码 $LASTEXITCODE）" }
@@ -122,7 +129,7 @@ if (-not $SkipBuild) {
         Pop-Location
     }
 
-    $apk = Join-Path $PSScriptRoot '..\app\build\outputs\apk\release\app-release.apk'
+    $apk = Join-Path $repoRoot 'app\build\outputs\apk\release\app-release.apk'
     $apksigner = 'C:\Users\86159\AppData\Local\Android\Sdk\build-tools\34.0.0\apksigner.bat'
     if (Test-Path $apksigner) {
         Write-Host '=== 签名指纹（应与换密码前一致）===' -ForegroundColor Cyan
@@ -134,4 +141,4 @@ if (-not $SkipBuild) {
 
 Write-Host ''
 Write-Host '完成。请把新密码记到密码管理器里；旧密码已失效。' -ForegroundColor Green
-Write-Host "密钥备份：$backupPath（确认新密码可用后可删，但建议保留一份）" -ForegroundColor Green
+Write-Host "密钥备份：$backupPath" -ForegroundColor Green
