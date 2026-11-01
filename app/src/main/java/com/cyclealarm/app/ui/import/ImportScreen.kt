@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -53,6 +54,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.importer.DetectedLayout
@@ -90,21 +92,21 @@ fun ImportScreen(
     undoConfirm?.let { preview ->
         AlertDialog(
             onDismissRequest = { viewModel.cancelUndo() },
-            title = { Text("撤销会丢弃导入后的改动") },
+            title = { Text(stringResource(R.string.import_undo_confirm_title)) },
             text = {
                 Text(
-                    "导入之后新增了 ${preview.extraAlarms} 条闹钟" +
-                        (if (preview.extraDateAlarms > 0) "、${preview.extraDateAlarms} 条日期闹钟" else "") +
-                        (if (preview.extraTypes > 0) "、${preview.extraTypes} 个安排类型" else "") +
-                        (if (preview.extraPlans > 0) "、${preview.extraPlans} 天安排" else "") +
-                        "。继续撤销会把这些改动一并回滚。"
+                    stringResource(R.string.import_undo_new_alarms, preview.extraAlarms) +
+                        (if (preview.extraDateAlarms > 0) stringResource(R.string.import_undo_new_date_alarms, preview.extraDateAlarms) else "") +
+                        (if (preview.extraTypes > 0) stringResource(R.string.import_undo_new_types, preview.extraTypes) else "") +
+                        (if (preview.extraPlans > 0) stringResource(R.string.import_undo_new_plans, preview.extraPlans) else "") +
+                        stringResource(R.string.import_undo_continue)
                 )
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmUndo() }) { Text("继续撤销") }
+                TextButton(onClick = { viewModel.confirmUndo() }) { Text(stringResource(R.string.import_undo_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelUndo() }) { Text("取消") }
+                TextButton(onClick = { viewModel.cancelUndo() }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -125,10 +127,10 @@ fun ImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("从课表导入") },
+                title = { Text(stringResource(R.string.import_title)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.closeImport(onClose) }) {
-                        Icon(Icons.Default.Close, contentDescription = "关闭")
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -147,9 +149,9 @@ fun ImportScreen(
                     onUndo = viewModel::undo
                 )
 
-                ImportUiState.Reading -> LoadingContent("正在读取文件…")
-                ImportUiState.Parsing -> LoadingContent("正在解析表格…")
-                ImportUiState.Writing -> LoadingContent("正在写入闹钟…")
+                ImportUiState.Reading -> LoadingContent(stringResource(R.string.import_reading))
+                ImportUiState.Parsing -> LoadingContent(stringResource(R.string.import_parsing))
+                ImportUiState.Writing -> LoadingContent(stringResource(R.string.import_writing))
 
                 is ImportUiState.SheetPick -> SheetPickContent(
                     names = current.sheetNames,
@@ -212,16 +214,16 @@ fun ImportScreen(
     if (showOverwrite) {
         AlertDialog(
             onDismissRequest = { showOverwrite = false },
-            title = { Text("覆盖导入") },
-            text = { Text("将删除现有 $alarmCount 条闹钟，确定覆盖导入？") },
+            title = { Text(stringResource(R.string.import_overwrite_title)) },
+            text = { Text(stringResource(R.string.import_overwrite_text, alarmCount)) },
             confirmButton = {
                 TextButton(onClick = {
                     showOverwrite = false
                     viewModel.write()
-                }) { Text("确定覆盖") }
+                }) { Text(stringResource(R.string.import_overwrite_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showOverwrite = false }) { Text("取消") }
+                TextButton(onClick = { showOverwrite = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -241,25 +243,25 @@ private fun IdleContent(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("选择课表 / 排班表", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.import_pick_title), style = MaterialTheme.typography.titleMedium)
         Text(
-            "支持 Excel(.xlsx) 与 CSV。周课表会切换为「每周」循环；带具体日期的排班表会生成为一次性闹钟。",
+            stringResource(R.string.import_pick_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Button(onClick = onPick, modifier = Modifier.fillMaxWidth()) {
-            Text("选择 Excel / CSV 文件")
+            Text(stringResource(R.string.import_pick_button))
         }
         OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-            Text("图片识别暂不支持")
+            Text(stringResource(R.string.import_no_ocr))
         }
         if (undoAvailable) {
             OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
-                Text("撤销上次导入（24 小时内）")
+                Text(stringResource(R.string.import_undo_last))
             }
         }
         Text(
-            "先用 Excel / CSV 导入，或用底部「添加闹钟」手动加",
+            stringResource(R.string.import_empty_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -285,7 +287,7 @@ private fun SheetPickContent(names: List<String>, onPick: (String) -> Unit) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        item { Text("请选择要导入的工作表", style = MaterialTheme.typography.titleMedium) }
+        item { Text(stringResource(R.string.import_pick_sheet), style = MaterialTheme.typography.titleMedium) }
         items(names) { name ->
             Card(
                 modifier = Modifier
@@ -316,12 +318,12 @@ private fun PreviewContent(
     val requiresWeeklySwitch = ImportWeeklyPolicy.requiresWeeklySwitch(selectedEntries)
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
-            "识别到 ${state.entries.size} 条，${state.selected.size} 条已选中" +
-                if (needsConfirm > 0) "，${needsConfirm} 条需确认" else "",
+            stringResource(R.string.import_recognized, state.entries.size, state.selected.size) +
+                if (needsConfirm > 0) stringResource(R.string.import_needs_confirm, needsConfirm) else "",
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            "工作表：${state.sheetName}",
+            stringResource(R.string.import_sheet, state.sheetName),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -332,12 +334,12 @@ private fun PreviewContent(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "该文件按周组织，导入将把循环方式改为每周（周一至周日）；第 8 天以后的安排会保留但不生效",
+                        stringResource(R.string.import_weekly_desc),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = onCancelWeekly) { Text("取消") }
-                        TextButton(onClick = onConfirm) { Text("仍然导入") }
+                        TextButton(onClick = onCancelWeekly) { Text(stringResource(R.string.action_cancel)) }
+                        TextButton(onClick = onConfirm) { Text(stringResource(R.string.import_weekly_confirm)) }
                     }
                 }
             }
@@ -346,24 +348,24 @@ private fun PreviewContent(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TextButton(onClick = { onToggleAll(true) }) { Text("全选") }
-            TextButton(onClick = { onToggleAll(false) }) { Text("全不选") }
+            TextButton(onClick = { onToggleAll(true) }) { Text(stringResource(R.string.import_select_all)) }
+            TextButton(onClick = { onToggleAll(false) }) { Text(stringResource(R.string.import_select_none)) }
             if (state.needsManualMapping) {
-                TextButton(onClick = onManual) { Text("手动指定结构") }
+                TextButton(onClick = onManual) { Text(stringResource(R.string.import_manual_structure)) }
             }
         }
 
         if (state.entries.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("没有识别到可导入的闹钟", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.import_nothing), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "可以手动指定表头行、星期列与时间列后重试。",
+                        stringResource(R.string.import_nothing_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedButton(onClick = onManual, modifier = Modifier.fillMaxWidth()) {
-                        Text("手动指定表格结构")
+                        Text(stringResource(R.string.import_manual_title))
                     }
                 }
             }
@@ -386,7 +388,7 @@ private fun PreviewContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             OutlinedButton(onClick = onOptions, modifier = Modifier.weight(1f)) {
-                Text("选项")
+                Text(stringResource(R.string.import_options))
             }
             Button(
                 onClick = onConfirm,
@@ -395,9 +397,9 @@ private fun PreviewContent(
             ) {
                 Text(
                     if (requiresWeeklySwitch) {
-                        "仍然导入并切换每周（${state.selected.size}）"
+                        stringResource(R.string.import_confirm_weekly, state.selected.size)
                     } else {
-                        "确认导入（${state.selected.size}）"
+                        stringResource(R.string.import_confirm, state.selected.size)
                     }
                 )
             }
@@ -413,7 +415,7 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text("需确认 ${warnings.size} 条", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.import_warnings, warnings.size), style = MaterialTheme.typography.titleSmall)
             warnings.take(6).forEach { warning ->
                 Text(
                     "· ${warning.message}" + if (warning.sourceRef.isNotBlank()) "（${warning.sourceRef}）" else "",
@@ -423,7 +425,7 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
             }
             if (warnings.size > 6) {
                 Text(
-                    "…… 还有 ${warnings.size - 6} 条",
+                    stringResource(R.string.import_warnings_more, warnings.size - 6),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -444,26 +446,26 @@ private fun DoneContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("已导入 ${state.cycleCount + state.dateCount} 条闹钟", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.import_done_total, state.cycleCount + state.dateCount), style = MaterialTheme.typography.titleMedium)
         Text(
-            "周期闹钟 ${state.cycleCount} 条，按日期闹钟 ${state.dateCount} 条",
+            stringResource(R.string.import_done_detail, state.cycleCount, state.dateCount),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (state.switchedToWeekly) {
             Text(
-                "循环方式已切换为每周（周一至周日）",
+                stringResource(R.string.import_done_weekly),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
         }
         if (undoAvailable) {
             OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
-                Text("撤销本次导入（24 小时内）")
+                Text(stringResource(R.string.import_undo_this))
             }
         }
         Button(onClick = onClose, modifier = Modifier.fillMaxWidth()) {
-            Text("完成")
+            Text(stringResource(R.string.action_done))
         }
     }
 }
@@ -474,10 +476,10 @@ private fun ErrorContent(message: String, onRetry: () -> Unit, onClose: () -> Un
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("导入失败", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+        Text(stringResource(R.string.import_failed), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
         Text(message, style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text("重新选择文件") }
-        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("返回主界面") }
+        Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_retry)) }
+        OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_back)) }
     }
 }
 
@@ -504,19 +506,19 @@ private fun OptionsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("导入选项") },
+        title = { Text(stringResource(R.string.import_options_title)) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("提前量：$lead 分钟", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.import_lead, lead), style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { lead = (lead - 5).coerceAtLeast(0) }) { Text("-5") }
                     OutlinedButton(onClick = { lead = (lead + 5).coerceAtMost(60) }) { Text("+5") }
                 }
                 Text(
-                    "表格里没有时间时使用的默认上课时间",
+                    stringResource(R.string.import_lead_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -536,16 +538,21 @@ private fun OptionsDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        "默认时间：${DisplayPrefs.formatTime(context, fallback.hour, fallback.minute)}"
+                        stringResource(R.string.import_default_time, DisplayPrefs.formatTime(context, fallback.hour, fallback.minute))
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val stateText = if (overwrite) {
+                        stringResource(R.string.state_on)
+                    } else {
+                        stringResource(R.string.state_off)
+                    }
                     Text(
-                        "覆盖现有闹钟",
+                        stringResource(R.string.import_overwrite_toggle),
                         modifier = Modifier
                             .weight(1f)
                             .semantics {
-                                stateDescription = if (overwrite) "已开启" else "已关闭"
+                                stateDescription = stateText
                             }
                     )
                     CycleSwitch(
@@ -557,11 +564,11 @@ private fun OptionsDialog(
                     )
                 }
                 HorizontalDivider()
-                Text("节次时间表", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.import_sections), style = MaterialTheme.typography.titleSmall)
                 (1..8).forEach { section ->
                     val time = sections[section] ?: SectionTimeTable.default()[section] ?: LocalTime.of(8, 0)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("第 $section 节", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.import_section_n, section), modifier = Modifier.weight(1f))
                         OutlinedButton(
                             onClick = {
                                 TimePickerDialog(
@@ -584,9 +591,9 @@ private fun OptionsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onApply(lead, fallback, overwrite, sections) }) { Text("应用") }
+            TextButton(onClick = { onApply(lead, fallback, overwrite, sections) }) { Text(stringResource(R.string.action_apply)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -610,29 +617,29 @@ private fun ManualMappingDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("手动指定表格结构") },
+        title = { Text(stringResource(R.string.import_manual_title)) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { dated = false }) { Text("按星期") }
-                    OutlinedButton(onClick = { dated = true }) { Text("按日期") }
+                    OutlinedButton(onClick = { dated = false }) { Text(stringResource(R.string.import_by_weekday)) }
+                    OutlinedButton(onClick = { dated = true }) { Text(stringResource(R.string.import_by_date)) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("表头行：第 ${headerRow + 1} 行", modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.import_header_row, headerRow + 1), modifier = Modifier.weight(1f))
                     TextButton(onClick = { headerRow = (headerRow - 1).coerceAtLeast(0) }) { Text("-") }
                     TextButton(onClick = { headerRow += 1 }) { Text("+") }
                 }
                 if (dated) {
                     ColumnPicker(
-                        label = "日期列",
+                        label = stringResource(R.string.import_date_col),
                         selected = dateColumn,
                         onSelect = { dateColumn = it }
                     )
                     ColumnPicker(
-                        label = "时间列（可无）",
+                        label = stringResource(R.string.import_time_col),
                         selected = timeColumn,
                         allowNone = true,
                         onSelect = { timeColumn = it.takeIf { index -> index >= 0 } }
@@ -648,7 +655,7 @@ private fun ManualMappingDialog(
                         )
                     }
                     ColumnPicker(
-                        label = "时间/节次列（可无）",
+                        label = stringResource(R.string.import_time_section_col),
                         selected = timeColumn,
                         allowNone = true,
                         onSelect = { timeColumn = it.takeIf { index -> index >= 0 } }
@@ -680,7 +687,7 @@ private fun ManualMappingDialog(
                 onApply(layout)
             }) { Text("应用") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -695,20 +702,20 @@ private fun ColumnPicker(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, modifier = Modifier.weight(1f))
         OutlinedButton(onClick = { expanded = true }) {
-            Text(selected?.let { columnName(it) } ?: "无")
+            Text(selected?.let { columnName(it) } ?: stringResource(R.string.import_none))
         }
     }
     if (expanded) {
         AlertDialog(
             onDismissRequest = { expanded = false },
-            title = { Text("选择 $label") },
+            title = { Text(stringResource(R.string.import_pick_column, label)) },
             text = {
                 Column(
                     modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())
                 ) {
                     if (allowNone) {
                         Text(
-                            "无",
+                            stringResource(R.string.import_none),
                             modifier = Modifier.fillMaxWidth().clickable {
                                 onSelect(-1)
                                 expanded = false
@@ -727,7 +734,7 @@ private fun ColumnPicker(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { expanded = false }) { Text("关闭") }
+                TextButton(onClick = { expanded = false }) { Text(stringResource(R.string.action_close)) }
             }
         )
     }
@@ -735,8 +742,9 @@ private fun ColumnPicker(
 
 private fun columnName(index: Int): String = ('A' + index.coerceIn(0, 25)).toString()
 
+@Composable
 private fun weekdayName(weekday: Int): String =
-    listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")[weekday - 1]
+    stringResource(weekdayRes(weekday))
 
 private val DEFAULT_WEEK_COLUMNS = mapOf(1 to 1, 2 to 2, 3 to 3, 4 to 4, 5 to 5, 6 to 6, 7 to 7)
 
@@ -749,3 +757,13 @@ private fun decodeWeekColumns(raw: String): Map<Int, Int> =
         val column = part.substringAfter('=', "").toIntOrNull()
         if (weekday != null && column != null) weekday to column else null
     }.toMap().ifEmpty { DEFAULT_WEEK_COLUMNS }
+
+private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
+    1 -> R.string.week_mon
+    2 -> R.string.week_tue
+    3 -> R.string.week_wed
+    4 -> R.string.week_thu
+    5 -> R.string.week_fri
+    6 -> R.string.week_sat
+    else -> R.string.week_sun
+}
