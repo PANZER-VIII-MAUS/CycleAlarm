@@ -80,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
@@ -158,8 +159,14 @@ internal fun DayPlanCard(
     } else {
         stringResource(R.string.plan_unset)
     }
+    val fontScale = LocalDensity.current.fontScale
+    val largeFont = fontScale > 1.25f
     val timeStyle = if (showTime) {
-        MaterialTheme.typography.headlineMedium
+        if (largeFont) {
+            MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+        } else {
+            MaterialTheme.typography.headlineMedium
+        }
     } else {
         // 占位文案：字号缩到 20sp / Medium，但保留 headlineMedium 的 lineHeight(36sp)，卡片高度不变
         MaterialTheme.typography.headlineMedium.copy(
@@ -221,39 +228,75 @@ internal fun DayPlanCard(
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        dayText,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (isToday) {
-                        Box(
-                            Modifier
-                                .padding(start = 6.dp)
-                                .size(6.dp)
-                                .background(highlightColor, CircleShape)
+                if (largeFont) {
+                    // 大字号：时间独占第二行，避免「07:30」被挤压截断
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                dayText,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (isToday) {
+                                Box(
+                                    Modifier
+                                        .padding(start = 6.dp)
+                                        .size(6.dp)
+                                        .background(highlightColor, CircleShape)
+                                )
+                            }
+                        }
+                        Text(
+                            timeText,
+                            style = timeStyle,
+                            color = timeColor,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2
                         )
                     }
-                }
-                Spacer(Modifier.width(16.dp))
-                // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
-                Column(
-                    modifier = Modifier.widthIn(min = 80.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        timeText,
-                        style = timeStyle,
-                        color = timeColor,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            dayText,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (isToday) {
+                            Box(
+                                Modifier
+                                    .padding(start = 6.dp)
+                                    .size(6.dp)
+                                    .background(highlightColor, CircleShape)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
+                    Column(
+                        modifier = Modifier.widthIn(min = 80.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            timeText,
+                            style = timeStyle,
+                            color = timeColor,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
             IconButton(onClick = onAddAlarm) {

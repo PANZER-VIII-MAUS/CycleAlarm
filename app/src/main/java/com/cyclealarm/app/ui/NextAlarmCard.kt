@@ -80,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.Role
@@ -165,7 +166,13 @@ internal fun NextAlarmCard(
                             text = DisplayPrefs.formatClock(
                                 context, nextAlarm.hour, nextAlarm.minute
                             ),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = if (LocalDensity.current.fontScale > 1.25f) {
+                                MaterialTheme.typography.titleLarge
+                            } else {
+                                MaterialTheme.typography.headlineMedium
+                            },
+                            maxLines = 1,
+                            softWrap = false,
                             color = LocalExtraColors.current.navy
                         )
                         if (!DisplayPrefs.is24Hour(context)) {

@@ -79,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -162,6 +163,15 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    // 横屏/平板：内容不必拉满整屏，收窄到 640dp 居中更好读
+    val configuration = LocalConfiguration.current
+    // 横屏/矮屏：固定头部会把列表挤没，改成全部内容一起滚动
+    val shortScreen = configuration.screenHeightDp < 480
+    val contentPadding = if (configuration.screenWidthDp > 700) {
+        (((configuration.screenWidthDp - 640) / 2).coerceAtLeast(20)).dp
+    } else {
+        20.dp
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val uiScope = rememberCoroutineScope()
     var refreshTick by rememberSaveable { mutableStateOf(0) }
@@ -327,7 +337,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(horizontal = contentPadding, vertical = if (shortScreen) 6.dp else 12.dp)
             ) {
                 PillButton(
                     text = stringResource(R.string.main_add_alarm),
@@ -337,28 +347,50 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            NextAlarmCard(
-                nextAlarm = nextAlarm,
-                now = now,
-                settings = settings,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp),
-                onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
-            )
-            // 固定标题区：滚动列表时保持不动
-            Text(
-                text = todayText,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
-            )
+            if (!shortScreen) {
+                NextAlarmCard(
+                    nextAlarm = nextAlarm,
+                    now = now,
+                    settings = settings,
+                    modifier = Modifier.padding(start = contentPadding, end = contentPadding, top = 12.dp),
+                    onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
+                )
+                // 固定标题区：滚动列表时保持不动
+                Text(
+                    text = todayText,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = contentPadding, end = contentPadding, top = 8.dp, bottom = 4.dp)
+                )
+            }
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = contentPadding, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (shortScreen) {
+                    item(key = "next-alarm") {
+                        NextAlarmCard(
+                            nextAlarm = nextAlarm,
+                            now = now,
+                            settings = settings,
+                            modifier = Modifier.padding(horizontal = 0.dp),
+                            onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
+                        )
+                    }
+                    item(key = "today") {
+                        Text(
+                            text = todayText,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp)
+                        )
+                    }
+                }
                 item(key = "cycle") {
                     CycleInfoCard(
                         settings = settings,
