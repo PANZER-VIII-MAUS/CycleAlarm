@@ -5,6 +5,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -39,16 +40,45 @@ class AppDatabaseMigrationChainTest {
         context.deleteDatabase(dbName)
     }
 
+    @Before
+    fun resetSingleton() {
+        // 其它测试也会调用 AppDatabase.get()，不清单例的话这里会复用旧实例、根本没打开 v10 文件
+        AppDatabase.resetInstanceForTest()
+    }
+
     @Test
     fun `all migrations from v4 to current version are registered`() {
         val versions = AppDatabase.ALL_MIGRATIONS.map { it.startVersion to it.endVersion }.toSet()
-        val current = 11
+        // 从导出的 schema 文件推导当前版本（@Database 是 CLASS retention，运行期反射取不到）：
+        // DB 升级时忘改这里也不会漏检
+        val schemaDir = java.io.File("schemas/com.cyclealarm.app.data.AppDatabase")
+            .takeIf { it.isDirectory }
+            ?: java.io.File("app/schemas/com.cyclealarm.app.data.AppDatabase")
+        val current = (schemaDir.listFiles() ?: emptyArray())
+            .mapNotNull { it.name.removeSuffix(".json").toIntOrNull() }
+            .maxOrNull()
+            ?: error("找不到导出的 schema 目录：${schemaDir.absolutePath}")
         (4 until current).forEach { from ->
             assertTrue(
                 "缺少 $from → ${from + 1} 的迁移",
                 (from to from + 1) in versions
             )
         }
+    }
+
+    @Test
+    fun `production builder uses the shared migration list`() {
+        // 0.6.3 事故根因：builder 里手写枚举漏掉了新迁移。这里直接检查源码结构，
+        // 防止有人又把 addMigrations(*ALL_MIGRATIONS) 改回手写列表。
+        val source = java.io.File("src/main/java/com/cyclealarm/app/data/AppDatabase.kt")
+            .takeIf { it.isFile }
+            ?: java.io.File("app/src/main/java/com/cyclealarm/app/data/AppDatabase.kt")
+        assertTrue("找不到 AppDatabase.kt", source.isFile)
+        val text = source.readText()
+        assertTrue(
+            "Room.databaseBuilder 必须使用 addMigrations(*ALL_MIGRATIONS)",
+            text.contains("addMigrations(*ALL_MIGRATIONS)")
+        )
     }
 
     @Test

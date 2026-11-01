@@ -290,7 +290,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 _state.value = ImportUiState.Done(
                     result.cycleCount,
                     result.dateCount,
-                    result.switchedToWeekly
+                    result.switchedToWeekly,
+                    // 之前这里漏传：完成页「被跳过的周课表条目」分支永远是死代码
+                    result.skippedWeeklyCount
                 )
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(e.uiMessage(getApplication()))

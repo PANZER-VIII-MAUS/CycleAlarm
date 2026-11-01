@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # flavor 拆分后：direct = 个人自用（含常驻守护服务），play = 上架包（manifest 删除该服务）
+  DIRECT_TEST: testDirectDebugUnitTest
+  DIRECT_LINT: lintDirectDebug
+
 jobs:
   build-debug:
     runs-on: ubuntu-latest
@@ -39,14 +44,32 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Test, lint and build (debug + unsigned release)
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+      - name: Test, lint and build (both flavors)
+        run: |
+          ./gradlew "$DIRECT_TEST" "$DIRECT_LINT" testPlayDebugUnitTest \
+            assembleDirectDebug assembleDirectRelease assemblePlayRelease
 
-      - name: Upload debug APK
+      # 上架包必须在 manifest 层面真的没有常驻守护服务（不只是 BuildConfig 默认值）
+      - name: Assert play flavor drops the guard service
+        run: |
+          MANIFEST=$(find app/build/intermediates -path '*play*' -name AndroidManifest.xml | head -1)
+          echo "play manifest: $MANIFEST"
+          test -n "$MANIFEST"
+          # 注意：manifest 里有注释也提到 AlarmGuardService，这里匹配「服务声明」本身（带引号）
+          if grep -q 'AlarmGuardService"' "$MANIFEST"; then
+            echo '::error::play flavor manifest 仍包含 AlarmGuardService 声明'
+            exit 1
+          fi
+          if ! grep -q 'RingService"' "$MANIFEST"; then
+            echo '::error::play flavor manifest 缺少 RingService（不应删）'
+            exit 1
+          fi
+
+      - name: Upload direct debug APK
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/direct/debug/app-direct-debug.apk
           if-no-files-found: error
 
       # R8 验证用产物：统一改名，避免被误当成可安装的发布包
@@ -54,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-release-UNSIGNED-not-for-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/direct/release/app-direct-release-unsigned.apk
           if-no-files-found: error
 
       # 崩溃栈还原必需：正式包崩溃后要用这份 mapping 才能定位行号
@@ -62,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-r8-mapping
-          path: app/build/outputs/mapping/release/mapping.txt
+          path: app/build/outputs/mapping/directRelease/mapping.txt
           if-no-files-found: error
 
       - name: Upload unit test + lint reports
@@ -71,8 +94,8 @@ jobs:
         with:
           name: cyclealarm-reports
           path: |
-            app/build/reports/tests/testDebugUnitTest
-            app/build/reports/lint-results-debug.html
+            app/build/reports/tests
+            app/build/reports/lint-results-directDebug.html
           if-no-files-found: warn
           retention-days: 7
 
@@ -95,6 +118,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Install Android platform 36
+        run: |
+          SDKMANAGER=sdkmanager
+          command -v sdkmanager >/dev/null 2>&1 || SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"; fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
@@ -111,6 +142,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # 必须用 flavor 明确的任务名（flavor 拆分后 connectedDebugAndroidTest 是模糊任务）
       - name: Run instrumentation tests on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -120,13 +152,13 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: ./gradlew connectedDebugAndroidTest
+          script: ./gradlew connectedDirectDebugAndroidTest
 
       - name: Upload instrumentation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-instrumentation-api${{ matrix.api-level }}
-          path: app/build/reports/androidTests/connected/debug
-          if-no-files-found: warn
+          path: app/build/reports/androidTests/connected/direct/debug
+          if-no-files-found: error
           retention-days: 7

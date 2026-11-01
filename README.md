@@ -460,11 +460,17 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
-.\gradlew.bat testDebugUnitTest        # 278 个 JVM/Robolectric 单测
-.\gradlew.bat lintDebug                # 应为 0 error
-.\gradlew.bat connectedDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
+.\gradlew.bat testDirectDebugUnitTest   # 278 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat lintDirectDebug          # 应为 0 error
+.\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
+
+# 两个发布变体：
+#   direct = 个人自用（含常驻保活服务）
+#   play   = 上架包（manifest 里删除 AlarmGuardService）
+.\gradlew.bat assembleDirectRelease
+.\gradlew.bat assemblePlayRelease
 .\gradlew.bat assembleDebug
-.\gradlew.bat assembleRelease          # 需要 keystore.properties，见下节
+.\gradlew.bat assembleDirectRelease    # 需要 keystore.properties，见下节
 ```
 
 Release 签名与正式 APK 的生成方式见下方「打包发布（正式签名 APK）」章节；
@@ -609,10 +615,12 @@ $env:CYCLEALARM_KEY_PASSWORD   = "..."
 .\gradlew.bat assembleRelease
 ```
 
-- **Play 上架包默认关闭常驻 `specialUse` 前台服务**（降低上架审核风险）：
+- **上架包（play flavor）在 manifest 层面删除常驻 `AlarmGuardService`**，不只是默认值：
 
 ```powershell
-.\gradlew.bat assembleRelease -PplayBuild=true
+.\gradlew.bat assemblePlayRelease   # 产物 apk/play/release/app-play-release.apk
+# 可用合并 manifest 自查：
+#   find app/build/intermediates -path '*play*' -name AndroidManifest.xml
 ```
 
 - `debug` 构建使用独立包名 `com.cyclealarm.app.debug`，可与正式签名包在同一台设备共存，

@@ -54,11 +54,16 @@ class StorePreferencesRobolectricTest {
     }
 
     @Test
-    fun `guard service polls default enabled`() {
-        assertTrue(GuardServicePolicy.isEnabled(context))
+    fun `guard service polls the flavor default`() {
+        // 直装包默认开、Play 包默认关：断言跟随 BuildConfig，而不是写死 true
+        assertEquals(
+            com.cyclealarm.app.BuildConfig.GUARD_SERVICE_DEFAULT_ON,
+            GuardServicePolicy.isEnabled(context)
+        )
         GuardServicePolicy.setEnabled(context, false)
         assertFalse(GuardServicePolicy.isEnabled(context))
         GuardServicePolicy.setEnabled(context, true)
+        assertTrue(GuardServicePolicy.isEnabled(context))
     }
 
     @Test

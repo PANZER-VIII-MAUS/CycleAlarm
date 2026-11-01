@@ -21,8 +21,10 @@ fun signingSecret(envName: String, propertyName: String): String? =
     System.getenv(envName)?.takeIf { it.isNotBlank() }
         ?: keystoreProperties.getProperty(propertyName)
 
-// 上架包（Play）默认关闭常驻 specialUse 前台服务：./gradlew assembleRelease -PplayBuild=true
-val guardServiceDefaultOn = !project.hasProperty("playBuild")
+// 直装包与上架包拆成两个 flavor：
+// - direct：默认开启常驻保活服务（个人自用）
+// - play：manifest 里删除 AlarmGuardService（审核面不含 specialUse 常驻服务），默认也不启动
+
 
 android {
     namespace = "com.cyclealarm.app"
@@ -34,8 +36,6 @@ android {
         targetSdk = 36
         versionCode = 33
         versionName = "0.6.5"
-        // 常驻保活服务的默认开关（Play 包默认关，见上方 -PplayBuild）
-        buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", guardServiceDefaultOn.toString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -54,6 +54,19 @@ android {
         // 没有 keystore.properties 时**不再**回退 debug 签名：
         // release 会产出未签名 APK（无法安装），CI 只用它验证编译/R8；
         // 要发布必须在本地创建 keystore.properties（见 README）。
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("direct") {
+            dimension = "distribution"
+            buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", "true")
+        }
+        create("play") {
+            dimension = "distribution"
+            // 上架包不含常驻保活服务，默认也不启动
+            buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", "false")
+        }
     }
 
     buildTypes {
