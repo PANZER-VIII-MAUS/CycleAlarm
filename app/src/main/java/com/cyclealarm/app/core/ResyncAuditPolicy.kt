@@ -51,7 +51,11 @@ object ResyncAuditPolicy {
         dateAlarms: List<DateAlarmEntity>,
         settings: AppSettingsEntity?,
         holidays: List<HolidayEntity>,
-        firedAts: List<Long> = emptyList()
+        firedAts: List<Long> = emptyList(),
+        /** 生效触发点解析器；不传则按原始触发点算（纯逻辑测试用）。 */
+        cycleNext: ((AlarmEntity, Long) -> Long?)? = null,
+        /** 被「今天临时静音」的日期集合（由调用方从 SharedPreferences 读一次）。 */
+        mutedDays: Set<Long> = emptySet()
     ): List<MissedAlarm> {
         if (settings == null || !shouldAudit(lastCheckAt, now)) return emptyList()
         val missed = mutableListOf<MissedAlarm>()
@@ -60,7 +64,7 @@ object ResyncAuditPolicy {
             var cursor = lastCheckAt
             var hits = 0
             while (hits < MAX_HITS_PER_ALARM) {
-                val next = AlarmScheduler.nextTriggerFor(
+                val next = cycleNext?.invoke(alarm, cursor) ?: AlarmScheduler.nextTriggerFor(
                     alarm = alarm,
                     settings = settings,
                     holidays = holidays,
@@ -85,6 +89,8 @@ object ResyncAuditPolicy {
                     .toEpochMilli()
             }.getOrNull() ?: return@forEach
             if (expected <= lastCheckAt || expected > now) return@forEach
+            // 被「今天临时静音」覆盖的日期不算漏响
+            if (mutedDays.isNotEmpty() && SkipPolicy.epochDayOf(expected) in mutedDays) return@forEach
             val mutedByHoliday = alarm.mutedDuringHoliday &&
                 settings.holidayModeEnabled &&
                 holidays.any { it.enabled && alarm.epochDay in it.startEpochDay..it.endEpochDay }

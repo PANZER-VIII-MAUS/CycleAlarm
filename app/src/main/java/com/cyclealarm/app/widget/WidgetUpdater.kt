@@ -10,6 +10,7 @@ import android.widget.RemoteViews
 import com.cyclealarm.app.MainActivity
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
+import com.cyclealarm.app.core.EffectiveTriggerPolicy
 import com.cyclealarm.app.core.NextAlarmFinder
 import com.cyclealarm.app.core.WidgetTextPolicy
 import com.cyclealarm.app.data.AppDatabase
@@ -47,13 +48,21 @@ object WidgetUpdater {
         val next = if (settings == null) {
             null
         } else {
+            val holidays = db.holidayDao().getAll()
             NextAlarmFinder.find(
                 now = now,
                 cycleAlarms = db.alarmDao().getAll(),
                 dateAlarms = db.dateAlarmDao().getAll(),
                 snoozes = db.snoozeDao().getAll(),
                 settings = settings,
-                holidays = db.holidayDao().getAll()
+                holidays = holidays,
+                // 小组件与首页同源，跳过/静音后立刻显示下一条真正会响的闹钟
+                cycleTrigger = { alarm, from ->
+                    EffectiveTriggerPolicy.nextCycleTrigger(context, alarm, settings, holidays, from)
+                },
+                dateTrigger = { alarm, from ->
+                    EffectiveTriggerPolicy.nextDateTrigger(context, alarm, settings, holidays, from)
+                }
             )
         }
         val is24Hour = DisplayPrefs.is24Hour(context)

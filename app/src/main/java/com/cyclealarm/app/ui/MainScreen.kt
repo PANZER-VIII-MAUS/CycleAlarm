@@ -105,6 +105,7 @@ import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NextAlarm
 import com.cyclealarm.app.core.NextAlarmDisplay
+import com.cyclealarm.app.core.EffectiveTriggerPolicy
 import com.cyclealarm.app.core.NextAlarmFinder
 import com.cyclealarm.app.core.NextAlarmKind
 import com.cyclealarm.app.core.cycleDayOf
@@ -265,7 +266,14 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 dateAlarms = dateAlarms,
                 snoozes = snoozes,
                 settings = currentSettings,
-                holidays = holidays
+                holidays = holidays,
+                // 首页必须认「跳过下一次 / 今天临时静音」，否则会显示一条不会响的闹钟
+                cycleTrigger = { alarm, from ->
+                    EffectiveTriggerPolicy.nextCycleTrigger(context, alarm, currentSettings, holidays, from)
+                },
+                dateTrigger = { alarm, from ->
+                    EffectiveTriggerPolicy.nextDateTrigger(context, alarm, currentSettings, holidays, from)
+                }
             )
         }
     }

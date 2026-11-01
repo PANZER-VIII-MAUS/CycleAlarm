@@ -22,17 +22,23 @@ data class NextAlarm(
 enum class NextAlarmKind { CYCLE, DATE, SNOOZE }
 
 object NextAlarmFinder {
+    /**
+     * @param cycleTrigger 周期闹钟「生效触发点」解析器；默认按原始触发点算（纯逻辑/测试用）。
+     *                     界面与小组件必须传 [EffectiveTriggerPolicy]，否则跳过/静音不生效。
+     */
     fun find(
         now: Long,
         cycleAlarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>,
         snoozes: List<SnoozeEntity>,
         settings: AppSettingsEntity,
-        holidays: List<HolidayEntity>
+        holidays: List<HolidayEntity>,
+        cycleTrigger: ((AlarmEntity, Long) -> Long?)? = null,
+        dateTrigger: ((DateAlarmEntity, Long) -> Long?)? = null
     ): NextAlarm? {
         val candidates = buildList {
             cycleAlarms.filter { it.enabled }.forEach { alarm ->
-                val triggerAt = AlarmScheduler.nextTriggerFor(
+                val triggerAt = cycleTrigger?.invoke(alarm, now) ?: AlarmScheduler.nextTriggerFor(
                     alarm = alarm,
                     settings = settings,
                     holidays = holidays,
@@ -52,7 +58,7 @@ object NextAlarmFinder {
                 }
             }
             dateAlarms.filter { it.enabled }.forEach { alarm ->
-                val triggerAt = AlarmScheduler.nextTriggerForDateAlarm(
+                val triggerAt = dateTrigger?.invoke(alarm, now) ?: AlarmScheduler.nextTriggerForDateAlarm(
                     alarm = alarm,
                     settings = settings,
                     holidays = holidays,

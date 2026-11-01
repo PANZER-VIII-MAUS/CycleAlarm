@@ -111,7 +111,9 @@ object AlarmResyncHelper {
             dateAlarms = dateAlarms,
             settings = settings,
             holidays = holidays,
-            firedAts = ResyncCheckpoint.recentFires(context, now)
+            firedAts = ResyncCheckpoint.recentFires(context, now),
+            cycleNext = EffectiveTriggerPolicy.cycleTriggerResolver(context, settings, holidays),
+            mutedDays = TemporaryMuteStore.mutedDays(context)
         )
         // 事件式判定：覆盖「登记了但没真的响」（响铃服务启动失败）
         val fromEvents = runCatching {
@@ -145,20 +147,23 @@ object AlarmResyncHelper {
             Log.w(TAG, "skip reconciliation: exact alarm permission not granted")
             return
         }
-        val expected = expectedNextTrigger(now, cycleAlarms, dateAlarms, settings, holidays) ?: return
+        val expected = expectedNextTrigger(context, now, cycleAlarms, dateAlarms, settings, holidays) ?: return
         val actual = manager.nextAlarmClock?.triggerTime
 
         // 逐条检查：凡是我们算出「还有下一次」的闹钟，它的 PendingIntent 是否真的还在系统里。
         // 只看最早的 nextAlarmClock 会漏掉第 2 条以后丢掉的闹钟（三轮复审 §4.1）。
         var missing = 0
+        // 用「生效触发点」判断：被跳过/静音的闹钟本来就没有 PendingIntent，不能算缺失
         cycleAlarms.filter { it.enabled }.forEach { alarm ->
-            val next = AlarmScheduler.nextTriggerFor(alarm, settings, holidays, now) ?: return@forEach
+            val next = EffectiveTriggerPolicy.nextCycleTrigger(context, alarm, settings, holidays, now)
+                ?: return@forEach
             if (next > now && !AlarmScheduler.isScheduled(context, AlarmScheduler.KIND_CYCLE, alarm.id)) {
                 missing++
             }
         }
         dateAlarms.filter { it.enabled }.forEach { alarm ->
-            val next = AlarmScheduler.nextTriggerForDateAlarm(alarm, settings, holidays, now) ?: return@forEach
+            val next = EffectiveTriggerPolicy.nextDateTrigger(context, alarm, settings, holidays, now)
+                ?: return@forEach
             if (next > now && !AlarmScheduler.isScheduled(context, AlarmScheduler.KIND_DATE, alarm.id)) {
                 missing++
             }
@@ -181,6 +186,7 @@ object AlarmResyncHelper {
 
     /** 所有启用闹钟里最近的一次触发；没有则 null。 */
     private fun expectedNextTrigger(
+        context: Context,
         now: Long,
         cycleAlarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>,
@@ -190,11 +196,11 @@ object AlarmResyncHelper {
         if (settings == null) return null
         var best: Long? = null
         cycleAlarms.filter { it.enabled }.forEach { alarm ->
-            val next = AlarmScheduler.nextTriggerFor(alarm, settings, holidays, now)
+            val next = EffectiveTriggerPolicy.nextCycleTrigger(context, alarm, settings, holidays, now)
             if (next != null && (best == null || next < best!!)) best = next
         }
         dateAlarms.filter { it.enabled }.forEach { alarm ->
-            val next = AlarmScheduler.nextTriggerForDateAlarm(alarm, settings, holidays, now)
+            val next = EffectiveTriggerPolicy.nextDateTrigger(context, alarm, settings, holidays, now)
             if (next != null && (best == null || next < best!!)) best = next
         }
         return best
