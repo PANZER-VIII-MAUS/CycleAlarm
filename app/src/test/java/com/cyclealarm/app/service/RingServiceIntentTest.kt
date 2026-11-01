@@ -52,4 +52,23 @@ class RingServiceIntentTest {
         assertEquals(true, intent.getBooleanExtra(AlarmScheduler.EXTRA_VIBRATE, false))
         assertEquals(false, intent.getBooleanExtra(AlarmScheduler.EXTRA_RAMP_VOLUME, true))
     }
+    @Test
+    fun `ring event id and snooze id are forwarded to the service`() {
+        val intent = RingService.ringIntent(
+            context = app,
+            alarmId = 3,
+            dayIndex = 1,
+            hour = 7,
+            minute = 0,
+            label = "",
+            snoozed = true,
+            ringEventId = 77L,
+            snoozeId = 88L
+        )
+
+        // 服务要在 startForeground 成功后才用这两个 id 写 rungAt / 消费 snooze（四轮复审 N3）
+        assertEquals(77L, intent.getLongExtra(AlarmScheduler.EXTRA_RING_EVENT_ID, 0L))
+        assertEquals(88L, intent.getLongExtra(AlarmScheduler.EXTRA_SNOOZE_ID, 0L))
+        assertTrue(intent.getBooleanExtra(AlarmScheduler.EXTRA_SNOOZED, false))
+    }
 }

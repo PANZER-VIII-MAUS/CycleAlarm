@@ -40,6 +40,9 @@ object AlarmScheduler {
     const val ACTION_FIRE = "com.cyclealarm.app.action.FIRE"
     const val ACTION_STOP_RING = "com.cyclealarm.app.action.STOP_RING"
 
+    /** 响铃事件的数据库 id：服务在前台化成功后据此写 rungAt / 消费 snooze。 */
+    const val EXTRA_RING_EVENT_ID = "ring_event_id"
+
     /** 兜底通知里的「立即重排」action。 */
     const val ACTION_RESYNC = "com.cyclealarm.app.action.RESYNC"
 
@@ -391,9 +394,10 @@ object AlarmScheduler {
         dateAlarms.forEach { alarm ->
             runCatching { scheduleDateAlarm(context, alarm, settings, holidays) }
                 .onFailure { Log.e(TAG, "resync date alarm failed id=${alarm.id}", it) }
-            // 标记「这次是 App 自己改的排期」，避免后续广播触发无意义的对账
+        }
+        // 标记「这次是 App 自己改的排期」，避免后续广播触发无意义的对账。
+        // 必须放在两个循环之外：没有按日期闹钟的用户原来这个守卫永远不会生效（四轮复审 N2）
         ResyncCheckpoint.markSelfWrite(context, System.currentTimeMillis())
-    }
     }
 
     /** 兼容旧调用：只重建周期闹钟。 */

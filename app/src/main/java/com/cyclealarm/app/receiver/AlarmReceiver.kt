@@ -137,10 +137,6 @@ class AlarmReceiver : BroadcastReceiver() {
                         // 兼容旧检查点：旧版本升级上来的第一轮仍按时间戳豁免，避免误报
                         ResyncCheckpoint.markFired(context, expectedAt)
 
-                        // snooze 行在「响铃服务成功拉起」之后才消费：
-                        // 先删行再起服务的话，一旦起服务失败，这次稍后提醒就永久消失。
-                        var serviceStarted = false
-
                         AlarmFireCoordinator.run(
                             shouldReschedule = !snoozed && kind == AlarmScheduler.KIND_CYCLE,
                             reschedule = {
@@ -173,10 +169,13 @@ class AlarmReceiver : BroadcastReceiver() {
                                         originalMinute = originalMinute,
                                         ringtoneUri = ringtoneUri,
                                         vibrate = vibrate,
-                                        rampVolume = rampVolume
+                                        rampVolume = rampVolume,
+                                        // 「响过」与「消费 snooze」都交给服务在前台化成功后写，
+                                        // startForegroundService 返回 ≠ 真的响起来了（四轮复审 N3）
+                                        ringEventId = ringEventId,
+                                        snoozeId = snoozeId
                                     )
                                 )
-                                serviceStarted = true
                             },
                             onFailure = { stage, throwable ->
                                 when (stage) {
@@ -196,27 +195,8 @@ class AlarmReceiver : BroadcastReceiver() {
                             }
                         )
 
-                        // 服务真的起来了才算「响过」；起不来时保持 rungAt = null，
-                        // 漏响审计就能精确捕获「响铃服务启动失败」这种以前检测不到的情况
-                        if (serviceStarted && ringEventId > 0L) {
-                            runCatching {
-                                AppDatabase.get(context).ringEventDao()
-                                    .markRung(ringEventId, System.currentTimeMillis())
-                            }
-                        }
-
-                        if (snoozed && serviceStarted) {
-                            runCatching {
-                                val db = AppDatabase.get(context)
-                                if (snoozeId > 0) {
-                                    db.snoozeDao().deleteById(snoozeId)
-                                } else {
-                                    db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
-                                }
-                            }.onFailure {
-                                Log.e(TAG, "delete consumed snooze failed", it)
-                            }
-                        }
+                        // 这里不再写 rungAt / 删 snooze：真正的成功点在 RingService.startForeground 之后。
+                        // 起不来时保持 rungAt = null，漏响审计能精确捕获「响铃服务启动失败」。
                     } finally {
                         pendingResult.finish()
                     }

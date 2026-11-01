@@ -54,6 +54,10 @@ class RingService : Service() {
     private var customRingtoneUri: String? = null
     private var vibrateEnabled: Boolean = true
     private var rampEnabled: Boolean = false
+    // 本次响铃对应的 ring_events 行与 snooze 行（前台化成功后处理）
+    private var ringEventId: Long = 0L
+    private var snoozeId: Long = 0L
+    private var snoozedStart: Boolean = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -89,8 +93,18 @@ class RingService : Service() {
         }
 
         val preview = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)
+        ringEventId = intent.getLongExtra(AlarmScheduler.EXTRA_RING_EVENT_ID, 0L)
+        snoozeId = intent.getLongExtra(AlarmScheduler.EXTRA_SNOOZE_ID, 0L)
+        snoozedStart = intent.getBooleanExtra(AlarmScheduler.EXTRA_SNOOZED, false)
         _isRinging.value = true
-        startAsForeground(kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute)
+        val foregrounded = startAsForeground(
+            kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute
+        )
+        if (foregrounded && !preview) {
+            // 真正前台化成功才算「响过」（四轮复审 N3）：起不来时 rungAt 保持 null，
+            // 漏响审计与「未被处理」提醒才能覆盖这种情况。
+            persistRingOutcome(kind, alarmId)
+        }
         launchRingActivity(
             kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute, preview
         )
@@ -125,15 +139,7 @@ class RingService : Service() {
         timeout = null
         releaseWakeLock()
         _isRinging.value = false
-        // 用户主动停止才算「已处理」；超时自动停止不算（仍应计入漏响）
-        if (!previewMode && !timedOut && currentAlarmId > 0) {
-            CoroutineScope(Dispatchers.IO).launch {
-                runCatching {
-                    AppDatabase.get(this@RingService).ringEventDao()
-                        .markLatestAcked(currentKind, currentAlarmId, System.currentTimeMillis())
-                }
-            }
-        }
+        // 「已处理」在 onDestroy 里写：真正的停止路径（响铃页按钮 / 通知栏停止）都会走到那里
         // 带 startId 停止：只结束本次启动，避免把新一次响铃也一并结束
         stopSelf(lastStartId)
     }
@@ -200,6 +206,15 @@ class RingService : Service() {
         releaseWakeLock()
         RingtonePlayer.stop()
         VibratorUtil.stop(this)
+        // 用户主动停止 = 「已处理」；超时自动停止不算（仍应计入漏响），预览试听也不算
+        if (!previewMode && !timedOut && currentAlarmId > 0) {
+            CoroutineScope(Dispatchers.IO).launch {
+                runCatching {
+                    AppDatabase.get(this@RingService).ringEventDao()
+                        .markLatestAcked(currentKind, currentAlarmId, System.currentTimeMillis())
+                }
+            }
+        }
         super.onDestroy()
     }
 
@@ -212,7 +227,7 @@ class RingService : Service() {
         label: String,
         originalHour: Int?,
         originalMinute: Int?
-    ) {
+    ): Boolean {
         val timeText = DisplayPrefs.formatTime(this, hour, minute)
         // 周期与按日期闹钟的数据库 id 可能相同，PendingIntent requestCode 必须用调度 id 区分
         val schedulerId = AlarmScheduler.schedulerId(kind, alarmId)
@@ -282,6 +297,27 @@ class RingService : Service() {
             Log.e(TAG, "startForeground failed", outcome.error)
             outcome.error?.let { RingForegroundGuard.recordFailure(this, it) }
             postFallbackNotification(fullScreenIntent)
+        }
+        return outcome.foregrounded
+    }
+
+    /** 前台化成功之后：标记「真的响过」并消费这次 snooze 行。 */
+    private fun persistRingOutcome(kind: String, alarmId: Int) {
+        if (ringEventId <= 0L && !snoozedStart) return
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                val db = AppDatabase.get(this@RingService)
+                if (ringEventId > 0L) {
+                    db.ringEventDao().markRung(ringEventId, System.currentTimeMillis())
+                }
+                if (snoozedStart) {
+                    if (snoozeId > 0L) {
+                        db.snoozeDao().deleteById(snoozeId)
+                    } else {
+                        db.snoozeDao().deleteByAlarm(kind, alarmId.toLong())
+                    }
+                }
+            }.onFailure { Log.e(TAG, "persist ring outcome failed", it) }
         }
     }
 
@@ -374,7 +410,9 @@ class RingService : Service() {
             preview: Boolean = false,
             ringtoneUri: String? = null,
             vibrate: Boolean = true,
-            rampVolume: Boolean = false
+            rampVolume: Boolean = false,
+            ringEventId: Long = 0L,
+            snoozeId: Long = 0L
         ): Intent = Intent(context, RingService::class.java)
             .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
             .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
@@ -386,6 +424,8 @@ class RingService : Service() {
             .putExtra(AlarmScheduler.EXTRA_PREVIEW, preview)
             .putExtra(AlarmScheduler.EXTRA_VIBRATE, vibrate)
             .putExtra(AlarmScheduler.EXTRA_RAMP_VOLUME, rampVolume)
+            .putExtra(AlarmScheduler.EXTRA_RING_EVENT_ID, ringEventId)
+            .putExtra(AlarmScheduler.EXTRA_SNOOZE_ID, snoozeId)
             .apply {
                 ringtoneUri?.let { putExtra(AlarmScheduler.EXTRA_RINGTONE_URI, it) }
             }
