@@ -31,7 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -62,7 +61,6 @@ import com.cyclealarm.app.importer.DetectedLayout
 import com.cyclealarm.app.importer.ImportOptions
 import com.cyclealarm.app.importer.ImportWarning
 import com.cyclealarm.app.importer.ImportedEntry
-import com.cyclealarm.app.importer.ScheduleKind
 import com.cyclealarm.app.importer.SectionTimeTable
 import com.cyclealarm.app.data.ImportWeeklyPolicy
 import com.cyclealarm.app.ui.import.components.PreviewTable
