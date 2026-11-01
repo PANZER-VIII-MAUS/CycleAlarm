@@ -6,6 +6,11 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -261,9 +266,15 @@ private fun RingScreen(
     } else {
         label.ifBlank { stringResource(R.string.ring_day_format, dayIndex + 1) }
     }
+    // targetSdk 36 强制边到边：不加安全区的话底部「停止/稍后」会被导航栏挡住
+    val largeFont = LocalDensity.current.fontScale > 1.25f
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(32.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -271,7 +282,12 @@ private fun RingScreen(
             Text(
                 DisplayPrefs.formatTime(context, hour, minute),
                 color = Color.White,
-                style = MaterialTheme.typography.displayMedium
+                // 大字号时降一级，200% 字号下不会把时间撑出屏幕
+                style = if (largeFont) {
+                    MaterialTheme.typography.headlineLarge
+                } else {
+                    MaterialTheme.typography.displayMedium
+                }
             )
             Text(
                 detail,
@@ -279,6 +295,40 @@ private fun RingScreen(
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(48.dp))
+            // 大字号下按钮横排会溢出屏幕：改成竖排 + 撑满宽度
+            if (largeFont) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (showSnooze) {
+                        Button(
+                            onClick = onSnooze,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(28.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2A2F36),
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp)
+                        ) {
+                            Text(stringResource(R.string.ring_snooze_minutes, snoozeMinutes))
+                        }
+                    }
+                    Button(
+                        onClick = onStop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFC84239),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp)
+                    ) {
+                        Text(stringResource(R.string.ring_stop))
+                    }
+                }
+            } else {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 if (showSnooze) {
                     Button(
@@ -304,6 +354,7 @@ private fun RingScreen(
                 ) {
                     Text(stringResource(R.string.ring_stop))
                 }
+            }
             }
         }
     }

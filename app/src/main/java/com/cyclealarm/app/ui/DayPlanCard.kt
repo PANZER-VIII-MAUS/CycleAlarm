@@ -231,7 +231,8 @@ internal fun DayPlanCard(
                 modifier = Modifier
                     .weight(1f)
                     .semantics(mergeDescendants = true) {
-                        contentDescription = "$dayText $baseSubtitle $timeText"
+                        // 用 subtitle（12 小时制时带「上午/下午」）而不是 baseSubtitle，读屏不再丢上下午
+                        contentDescription = "$dayText $subtitle $timeText"
                         stateDescription = planStateDescription
                     },
                 verticalAlignment = Alignment.CenterVertically

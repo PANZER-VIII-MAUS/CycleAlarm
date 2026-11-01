@@ -189,7 +189,8 @@ internal fun NextAlarmCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         // 倒计时变化时让 TalkBack 播报，但不要打断用户当前的朗读
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        // 这里原来挂了 liveRegion：倒计时每分钟都变，TalkBack 会每小时播报 60 次
+                        modifier = Modifier
                     )
                 }
                 Text(
