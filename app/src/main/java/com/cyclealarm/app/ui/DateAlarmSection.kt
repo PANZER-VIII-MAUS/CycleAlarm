@@ -27,11 +27,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmScheduler
 import com.cyclealarm.app.core.DateAlarmState
 import com.cyclealarm.app.core.DateAlarmStatus
@@ -68,9 +70,9 @@ fun DateAlarmSection(
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text("按日期闹钟", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.date_alarms_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "按日期导入的一次性闹钟；响过或日期已过就不再响",
+                stringResource(R.string.date_alarms_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -89,7 +91,7 @@ fun DateAlarmSection(
                         )
                         Text(
                             "${DisplayPrefs.formatTime(context, alarm.hour, alarm.minute)} · " +
-                                alarm.label.ifBlank { "按日期闹钟" },
+                                alarm.label.ifBlank { stringResource(R.string.date_alarm_fallback) },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -113,13 +115,13 @@ fun DateAlarmSection(
                         )
                     }
                     IconButton(onClick = { onDelete(alarm) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "删除这条按日期闹钟")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete_date_alarm))
                     }
                     CycleSwitch(
                         checked = alarm.enabled,
                         onCheckedChange = { onToggle(alarm, it) },
                         modifier = Modifier.semantics {
-                            stateDescription = if (alarm.enabled) "已开启" else "已关闭"
+                            stateDescription = if (alarm.enabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
                         }
                     )
                 }
@@ -154,13 +156,13 @@ private fun DateAlarmEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("${formatEpochDay(alarm.epochDay)} 的闹钟") },
+        title = { Text(stringResource(R.string.date_alarm_title, formatEpochDay(alarm.epochDay))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("备注（可选）") },
+                    label = { Text(stringResource(R.string.edit_note_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -179,13 +181,13 @@ private fun DateAlarmEditDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("时间：${DisplayPrefs.formatTime(context, hour, minute)}")
+                    Text(stringResource(R.string.edit_time, DisplayPrefs.formatTime(context, hour, minute)))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("启用", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.toggle_enable), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "这条按日期闹钟是否生效",
+                            stringResource(R.string.date_alarm_enable_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -194,15 +196,15 @@ private fun DateAlarmEditDialog(
                         checked = enabled,
                         onCheckedChange = { enabled = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (enabled) "已开启" else "已关闭"
+                            stateDescription = if (enabled) context.getString(R.string.state_on) else context.getString(R.string.state_off)
                         }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("假期静音", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.holiday_mute_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "开启后落在假期里的这一天不响",
+                            stringResource(R.string.date_alarm_mute_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -211,7 +213,7 @@ private fun DateAlarmEditDialog(
                         checked = muted,
                         onCheckedChange = { muted = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (muted) "假期静音已开启" else "假期静音已关闭"
+                            stateDescription = if (muted) context.getString(R.string.state_holiday_mute_on) else context.getString(R.string.state_holiday_mute_off)
                         }
                     )
                 }
@@ -230,8 +232,8 @@ private fun DateAlarmEditDialog(
                         )
                     )
                 }
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

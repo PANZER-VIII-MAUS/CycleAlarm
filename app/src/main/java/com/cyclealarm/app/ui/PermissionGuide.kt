@@ -30,7 +30,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.PermissionHelper
 import com.cyclealarm.app.core.RomHelper
 
@@ -64,7 +66,7 @@ fun PermissionGuideDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("关键权限设置") },
+        title = { Text(stringResource(R.string.permission_title)) },
         text = {
             Column(
                 modifier = Modifier
@@ -73,8 +75,8 @@ fun PermissionGuideDialog(onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 GuideRow(
-                    title = "通知权限",
-                    desc = "Android 13+ 必须手动授权，否则闹钟不响",
+                    title = stringResource(R.string.perm_notifications),
+                    desc = stringResource(R.string.perm_notifications_desc),
                     granted = PermissionHelper.notificationsGranted(context),
                     onClick = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -85,59 +87,59 @@ fun PermissionGuideDialog(onDismiss: () -> Unit) {
                     }
                 )
                 GuideRow(
-                    title = "精确闹钟权限",
-                    desc = "Android 12+ 系统限制，授予后闹钟可准时触发",
+                    title = stringResource(R.string.perm_exact_alarm),
+                    desc = stringResource(R.string.perm_exact_alarm_desc),
                     granted = PermissionHelper.canScheduleExactAlarms(context),
                     onClick = { PermissionHelper.openExactAlarmSettings(context) }
                 )
                 GuideRow(
-                    title = "电池优化白名单",
-                    desc = "选择“不优化”，防止闹钟被杀",
+                    title = stringResource(R.string.perm_battery),
+                    desc = stringResource(R.string.perm_battery_desc),
                     granted = states.ignoringBatteryOptimizations,
                     onClick = { PermissionHelper.openBatteryOptimizationSettings(context) }
                 )
                 GuideRow(
-                    title = "自启动",
+                    title = stringResource(R.string.perm_autostart),
                     desc = if (autoStartFallback) {
-                        "未找到厂商设置页，已打开应用详情；请手动允许自启动"
+                        stringResource(R.string.perm_autostart_fallback)
                     } else {
-                        "ColorOS 等国产 ROM 必设，保证开机后闹钟重建"
+                        stringResource(R.string.perm_autostart_desc)
                     },
                     granted = null,
                     onClick = { autoStartFallback = !PermissionHelper.openAutoStartSettings(context) }
                 )
                 GuideRow(
-                    title = "悬浮窗",
-                    desc = "部分 ROM 用于锁屏/全屏场景提醒",
+                    title = stringResource(R.string.perm_overlay),
+                    desc = stringResource(R.string.perm_overlay_desc),
                     granted = PermissionHelper.canDrawOverlays(context),
                     onClick = { PermissionHelper.openOverlaySettings(context) }
                 )
                 GuideRow(
-                    title = "响铃通知渠道",
-                    desc = "关掉「闹钟响铃」渠道会导致响铃无界面",
+                    title = stringResource(R.string.perm_ring_channel),
+                    desc = stringResource(R.string.perm_ring_channel_desc),
                     granted = states.ringChannelEnabled,
                     onClick = { PermissionHelper.openAppNotificationSettings(context) }
                 )
                 GuideRow(
-                    title = "全屏提醒",
-                    desc = "Android 14+ 需在通知设置中单独开启",
+                    title = stringResource(R.string.perm_fullscreen),
+                    desc = stringResource(R.string.perm_fullscreen_desc),
                     granted = states.fullScreenIntent,
                     onClick = { PermissionHelper.openAppNotificationSettings(context) }
                 )
                 Text(
-                    text = "当前设备：${RomHelper.vendor.displayName}",
+                    text = stringResource(R.string.perm_device, RomHelper.vendor.displayName),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = RomHelper.extraTips().joinToString("\n") { "· $it" } +
-                        "\n· 多任务界面下拉本应用卡片，点锁锁定后台",
+                        "\n" + stringResource(R.string.perm_multitask_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("知道了") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.db_error_ok)) }
         }
     )
 }
@@ -164,11 +166,11 @@ private fun GuideRow(
         if (granted == true) {
             Icon(
                 Icons.Default.Check,
-                contentDescription = "已授权",
+                contentDescription = stringResource(R.string.perm_granted),
                 tint = MaterialTheme.colorScheme.primary
             )
         } else {
-            TextButton(onClick = onClick) { Text("去设置") }
+            TextButton(onClick = onClick) { Text(stringResource(R.string.perm_go_settings)) }
         }
     }
 }
