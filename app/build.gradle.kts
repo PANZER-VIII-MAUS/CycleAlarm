@@ -69,6 +69,13 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    // 把导出的 schema JSON 放进 assets，供 Robolectric 上的 MigrationTestHelper 读取
+    sourceSets["main"].assets.srcDir("$projectDir/schemas")
+
     // Kotlin 2.0 起 Compose 编译器随 kotlin("plugin.compose") 走，不再单独配置版本
 }
 
@@ -101,4 +108,8 @@ dependencies {
 
     // 仅测试用：解析层是纯 JVM，可在电脑上跑单测
     testImplementation("junit:junit:4.13.2")
+    // Robolectric 上跑 Room 的真实迁移测试（不需要真机）
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.room:room-testing:2.6.1")
 }
