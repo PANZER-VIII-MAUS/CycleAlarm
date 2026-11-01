@@ -65,4 +65,19 @@ class I18nResourcesTest {
             en.getString(com.cyclealarm.app.R.string.format_days, 3)
         )
     }
+
+    @Test
+    fun `main screen strings are translated`() {
+        val zh = contextWith("zh")
+        val en = contextWith("en")
+
+        assertEquals("循环闹钟", zh.getString(com.cyclealarm.app.R.string.main_title))
+        assertEquals("CycleAlarm", en.getString(com.cyclealarm.app.R.string.main_title))
+        assertEquals("未安排", zh.getString(com.cyclealarm.app.R.string.plan_unset))
+        assertEquals("Not planned", en.getString(com.cyclealarm.app.R.string.plan_unset))
+        assertEquals(
+            "4-day cycle · today is day 2 · tap to change",
+            en.getString(com.cyclealarm.app.R.string.cycle_sub_custom, 4, 2)
+        )
+    }
 }
