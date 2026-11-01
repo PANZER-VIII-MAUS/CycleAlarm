@@ -22,12 +22,16 @@ class CsvSheetReader : SheetReader {
             val text = decode(bytes)
             val delimiter = detectDelimiter(text)
             val rows = parseRows(text, delimiter)
-            if (rows.isEmpty()) throw SheetReadException("CSV 里没有可读取的内容")
+            if (rows.isEmpty()) throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_csv_no_data)
             return listOf(Sheet(sheetName?.takeIf { it.isNotBlank() } ?: "CSV", rows))
         } catch (e: SheetReadException) {
             throw e
         } catch (e: Exception) {
-            throw SheetReadException("解析 CSV 失败：${e.message ?: e.javaClass.simpleName}", e)
+            throw SheetReadException(
+                messageRes = com.cyclealarm.app.R.string.err_csv_parse_failed,
+                messageArg = e.message ?: e.javaClass.simpleName,
+                cause = e
+            )
         }
     }
 

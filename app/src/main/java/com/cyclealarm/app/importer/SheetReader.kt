@@ -8,4 +8,9 @@ interface SheetReader {
 }
 
 /** 解析失败时抛出的异常，message 必须是给用户看的中文原因。 */
-class SheetReadException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class SheetReadException(
+    message: String = "",
+    val messageRes: Int? = null,
+    val messageArg: String? = null,
+    cause: Throwable? = null
+) : Exception(message, cause)

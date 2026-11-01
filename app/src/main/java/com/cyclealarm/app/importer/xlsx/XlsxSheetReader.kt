@@ -30,7 +30,9 @@ class XlsxSheetReader : SheetReader {
         try {
             val entries = readZipEntries(input)
             val workbookBytes = entries["xl/workbook.xml"]
-                ?: throw SheetReadException("文件缺少 workbook.xml，可能不是有效的 xlsx")
+                ?: throw SheetReadException(
+                    messageRes = com.cyclealarm.app.R.string.err_xlsx_no_workbook
+                )
             val sharedStrings = entries["xl/sharedStrings.xml"]
                 ?.let { parseSharedStrings(it) }
                 ?: emptyList()
@@ -50,9 +52,16 @@ class XlsxSheetReader : SheetReader {
             }
             val selected = if (sheetName.isNullOrBlank()) targets else targets.filter { it.first == sheetName }
             if (selected.isEmpty()) {
-                throw SheetReadException(
-                    if (sheetName.isNullOrBlank()) "未在文件中找到工作表" else "未找到工作表「$sheetName」"
-                )
+                if (sheetName.isNullOrBlank()) {
+                    throw SheetReadException(
+                        messageRes = com.cyclealarm.app.R.string.err_xlsx_no_sheets
+                    )
+                } else {
+                    throw SheetReadException(
+                        messageRes = com.cyclealarm.app.R.string.err_xlsx_sheet_missing,
+                        messageArg = sheetName
+                    )
+                }
             }
             return selected.take(20).map { (name, path) ->
                 parseSheet(name, entries.getValue(path), sharedStrings, timeStyles)
@@ -60,7 +69,11 @@ class XlsxSheetReader : SheetReader {
         } catch (e: SheetReadException) {
             throw e
         } catch (e: Exception) {
-            throw SheetReadException("解析 xlsx 失败：${e.message ?: e.javaClass.simpleName}", e)
+            throw SheetReadException(
+                messageRes = com.cyclealarm.app.R.string.err_xlsx_parse_failed,
+                messageArg = e.message ?: e.javaClass.simpleName,
+                cause = e
+            )
         }
     }
 
@@ -86,7 +99,11 @@ class XlsxSheetReader : SheetReader {
                 entry = zip.nextEntry
             }
         }
-        if (result.isEmpty()) throw SheetReadException("文件里没有可读取的表格数据，可能已损坏")
+        if (result.isEmpty()) {
+            throw SheetReadException(
+                messageRes = com.cyclealarm.app.R.string.err_xlsx_no_data
+            )
+        }
         return result
     }
 
@@ -98,7 +115,11 @@ class XlsxSheetReader : SheetReader {
             val read = read(buffer)
             if (read <= 0) break
             total += read
-            if (total > limit) throw SheetReadException("表格内容过大，请精简后再导入")
+            if (total > limit) {
+                throw SheetReadException(
+                    messageRes = com.cyclealarm.app.R.string.err_xlsx_too_large
+                )
+            }
             out.write(buffer, 0, read)
         }
         return out.toByteArray()

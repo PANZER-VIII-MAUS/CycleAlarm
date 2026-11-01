@@ -1,5 +1,7 @@
 package com.cyclealarm.app.data
 
+import com.cyclealarm.app.core.LocalizedFailure
+import com.cyclealarm.app.R
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -78,7 +80,9 @@ object ImportSnapshotCodec {
     fun decode(payload: String): AlarmImportWriter.Snapshot {
         val lines = payload.lineSequence().filter { it.isNotBlank() }.toList()
         val header = lines.firstOrNull()
-        require(header == HEADER_V1 || header == HEADER_V2) { "不支持的导入快照" }
+        if (header != HEADER_V1 && header != HEADER_V2) {
+            throw LocalizedFailure(R.string.err_snapshot_unsupported)
+        }
         var settings: AppSettingsEntity? = null
         var batchId = 0L
         val alarms = mutableListOf<AlarmEntity>()
@@ -90,12 +94,12 @@ object ImportSnapshotCodec {
             val parts = line.split('\t')
             when (parts.firstOrNull()) {
                 "B" -> {
-                    require(parts.size == 2) { "导入快照批次格式错误" }
+                    if (parts.size != 2) throw LocalizedFailure(R.string.err_snapshot_batch)
                     batchId = parts[1].toLong()
                 }
 
                 "S" -> {
-                    require(parts.size == 7) { "导入快照设置格式错误" }
+                    if (parts.size != 7) throw LocalizedFailure(R.string.err_snapshot_settings)
                     settings = AppSettingsEntity(
                         id = parts[1].toInt(),
                         cycleLength = parts[2].toInt(),
@@ -107,7 +111,7 @@ object ImportSnapshotCodec {
                 }
 
                 "A" -> {
-                    require(parts.size == 9) { "导入快照周期闹钟格式错误" }
+                    if (parts.size != 9) throw LocalizedFailure(R.string.err_snapshot_cycle_alarms)
                     alarms += AlarmEntity(
                         id = parts[1].toInt(),
                         dayIndex = parts[2].toInt(),
@@ -121,7 +125,7 @@ object ImportSnapshotCodec {
                 }
 
                 "D" -> {
-                    require(parts.size == 8) { "导入快照日期闹钟格式错误" }
+                    if (parts.size != 8) throw LocalizedFailure(R.string.err_snapshot_date_alarms)
                     dateAlarms += DateAlarmEntity(
                         id = parts[1].toInt(),
                         epochDay = parts[2].toLong(),
@@ -134,7 +138,7 @@ object ImportSnapshotCodec {
                 }
 
                 "T" -> {
-                    require(parts.size == 7) { "导入快照安排类型格式错误" }
+                    if (parts.size != 7) throw LocalizedFailure(R.string.err_snapshot_types)
                     activityTypes += ActivityTypeEntity(
                         id = parts[1].toInt(),
                         name = decodeString(parts[2]),
@@ -146,7 +150,7 @@ object ImportSnapshotCodec {
                 }
 
                 "P" -> {
-                    require(parts.size == 6) { "导入快照安排格式错误" }
+                    if (parts.size != 6) throw LocalizedFailure(R.string.err_snapshot_plans)
                     dayPlans += DayPlanEntity(
                         dayIndex = parts[1].toInt(),
                         typeId = parts[2].toInt(),

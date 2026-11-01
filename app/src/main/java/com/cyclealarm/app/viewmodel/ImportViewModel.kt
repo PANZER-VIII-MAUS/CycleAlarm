@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.cyclealarm.app.core.uiMessage
 import com.cyclealarm.app.core.ImportPrefs
 import com.cyclealarm.app.data.AlarmImportWriter
 import com.cyclealarm.app.data.ImportWeeklyPolicy
@@ -114,7 +115,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(
-                    e.message?.takeIf { it.isNotBlank() } ?: "读取文件失败，请确认文件没有损坏"
+                    e.uiMessage(getApplication())
                 )
             }
         }
@@ -127,7 +128,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
         }.orEmpty()
         val stream = resolver.openInputStream(uri)
-            ?: throw IllegalStateException("无法打开所选文件")
+            ?: throw com.cyclealarm.app.core.LocalizedFailure(
+                com.cyclealarm.app.R.string.err_open_file
+            )
         val bytes = stream.use { input ->
             val limit = 10 * 1024 * 1024
             val buffer = ByteArray(8 * 1024)
@@ -186,7 +189,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             lastPreview = preview
             _state.value = preview
         } catch (e: Exception) {
-            _state.value = ImportUiState.Error(e.message ?: "解析失败")
+            _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
         }
     }
 
@@ -280,7 +283,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     result.switchedToWeekly
                 )
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.message ?: "写入闹钟失败")
+                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
             }
         }
     }
@@ -299,7 +302,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 performUndo()
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.message ?: "撤销失败")
+                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
             }
         }
     }
@@ -310,7 +313,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 performUndo()
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.message ?: "撤销失败")
+                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
             }
         }
     }
@@ -326,7 +329,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
         _state.value = when (result) {
             AlarmImportWriter.UndoResult.Success -> lastPreview ?: ImportUiState.Idle
             AlarmImportWriter.UndoResult.Corrupted ->
-                ImportUiState.Error("上次导入记录已损坏，已清除，无法撤销")
+                ImportUiState.Error(
+                    getApplication<Application>().getString(com.cyclealarm.app.R.string.err_undo_snapshot_corrupt)
+                )
             AlarmImportWriter.UndoResult.NoSnapshot ->
                 ImportUiState.Error("没有可撤销的导入")
         }

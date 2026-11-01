@@ -1,5 +1,7 @@
 package com.cyclealarm.app.data
 
+import com.cyclealarm.app.core.LocalizedFailure
+import com.cyclealarm.app.R
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -107,7 +109,7 @@ object BackupCodec {
 
     fun decode(payload: String): Backup {
         val lines = payload.lineSequence().filter { it.isNotBlank() }.toList()
-        require(lines.firstOrNull() == HEADER) { "不是有效的 CycleAlarm 备份文件" }
+        if (lines.firstOrNull() != HEADER) throw LocalizedFailure(R.string.err_not_backup)
 
         var settings: AppSettingsEntity? = null
         var exportedAt = 0L
@@ -122,12 +124,12 @@ object BackupCodec {
             val parts = line.split('\t')
             when (parts.firstOrNull()) {
                 "M" -> {
-                    require(parts.size == 2) { "备份头格式错误" }
+                    if (parts.size != 2) throw LocalizedFailure(R.string.err_backup_head)
                     exportedAt = parts[1].toLong()
                 }
 
                 "S" -> {
-                    require(parts.size == 7) { "备份设置格式错误" }
+                    if (parts.size != 7) throw LocalizedFailure(R.string.err_backup_settings)
                     settings = AppSettingsEntity(
                         id = parts[1].toInt(),
                         cycleLength = parts[2].toInt(),
@@ -139,7 +141,7 @@ object BackupCodec {
                 }
 
                 "A" -> {
-                    require(parts.size == 9) { "备份周期闹钟格式错误" }
+                    if (parts.size != 9) throw LocalizedFailure(R.string.err_backup_cycle_alarms)
                     alarms += AlarmEntity(
                         id = parts[1].toInt(),
                         dayIndex = parts[2].toInt(),
@@ -153,7 +155,7 @@ object BackupCodec {
                 }
 
                 "D" -> {
-                    require(parts.size == 8) { "备份日期闹钟格式错误" }
+                    if (parts.size != 8) throw LocalizedFailure(R.string.err_backup_date_alarms)
                     dateAlarms += DateAlarmEntity(
                         id = parts[1].toInt(),
                         epochDay = parts[2].toLong(),
@@ -166,7 +168,7 @@ object BackupCodec {
                 }
 
                 "T" -> {
-                    require(parts.size == 7) { "备份安排类型格式错误" }
+                    if (parts.size != 7) throw LocalizedFailure(R.string.err_backup_types)
                     activityTypes += ActivityTypeEntity(
                         id = parts[1].toInt(),
                         name = decodeString(parts[2]),
@@ -178,7 +180,7 @@ object BackupCodec {
                 }
 
                 "P" -> {
-                    require(parts.size == 6) { "备份安排格式错误" }
+                    if (parts.size != 6) throw LocalizedFailure(R.string.err_backup_plans)
                     dayPlans += DayPlanEntity(
                         dayIndex = parts[1].toInt(),
                         typeId = parts[2].toInt(),
@@ -189,7 +191,7 @@ object BackupCodec {
                 }
 
                 "H" -> {
-                    require(parts.size == 6) { "备份假期格式错误" }
+                    if (parts.size != 6) throw LocalizedFailure(R.string.err_backup_holidays)
                     holidays += HolidayEntity(
                         id = parts[1].toInt(),
                         startEpochDay = parts[2].toLong(),
@@ -200,7 +202,7 @@ object BackupCodec {
                 }
 
                 "Z" -> {
-                    require(parts.size == 10) { "备份稍后提醒格式错误" }
+                    if (parts.size != 10) throw LocalizedFailure(R.string.err_backup_snoozes)
                     snoozes += SnoozeEntity(
                         id = parts[1].toLong(),
                         kind = decodeString(parts[2]),

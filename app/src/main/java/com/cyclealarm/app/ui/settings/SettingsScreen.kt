@@ -24,6 +24,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import com.cyclealarm.app.core.uiMessage
 import com.cyclealarm.app.data.BackupManager
 import com.cyclealarm.app.core.ShiftTemplate
 import com.cyclealarm.app.core.ShiftTemplates
@@ -155,7 +156,7 @@ fun SettingsScreen(
                 }.onFailure {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.toast_export_failed, it.message ?: ""),
+                        context.getString(R.string.toast_export_failed, it.uiMessage(context)),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -177,7 +178,7 @@ fun SettingsScreen(
                 }.onFailure {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.toast_import_failed, it.message ?: ""),
+                        context.getString(R.string.toast_import_failed, it.uiMessage(context)),
                         Toast.LENGTH_LONG
                     ).show()
                 }
