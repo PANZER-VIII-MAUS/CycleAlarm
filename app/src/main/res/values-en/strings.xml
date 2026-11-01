@@ -108,4 +108,14 @@
     <string name="toast_import_failed">Import failed: %1$s</string>
     <string name="cd_decrease">Decrease</string>
     <string name="cd_increase">Increase</string>
+    <string name="ring_duration_always">Ring until stopped (15 min cap)</string>
+    <string name="ring_duration_seconds">%1$d s</string>
+    <string name="ring_duration_minutes">%1$d min</string>
+    <string name="diagnosis_ok">OK</string>
+    <string name="diagnosis_missing">Scheduled alarms were missing from the system; rescheduled</string>
+    <string name="diagnosis_empty">No system alarm; rescheduled</string>
+    <string name="diagnosis_later">System schedule was later than expected; rescheduled</string>
+    <string name="diagnosis_stale">An earlier stale alarm exists (schedule kept)</string>
+    <string name="diagnosis_self_check_ok">Database structure check passed</string>
+    <string name="diagnosis_self_check_fail">Database structure issue: %1$s</string>
 </resources>

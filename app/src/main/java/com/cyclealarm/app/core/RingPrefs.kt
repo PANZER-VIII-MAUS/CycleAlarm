@@ -1,6 +1,7 @@
 package com.cyclealarm.app.core
 
 import android.content.Context
+import com.cyclealarm.app.R
 
 /**
  * 响铃相关偏好（响铃时长、稍后提醒间隔）。
@@ -34,9 +35,9 @@ object RingPrefs {
     /** 「一直响」的硬上限：通知被拒时没有任何停止入口，必须有兜底。 */
     const val ALWAYS_RING_CAP_SECONDS = 15 * 60
 
-    fun durationLabel(sec: Int): String = when {
-        sec == 0 -> "一直响（15 分钟上限）"
-        sec < 60 -> "${sec} 秒"
-        else -> "${sec / 60} 分钟"
+    fun durationLabel(context: Context, sec: Int): String = when {
+        sec == 0 -> context.getString(R.string.ring_duration_always)
+        sec < 60 -> context.getString(R.string.ring_duration_seconds, sec)
+        else -> context.getString(R.string.ring_duration_minutes, sec / 60)
     }
 }

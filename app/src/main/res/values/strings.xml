@@ -108,4 +108,14 @@
     <string name="toast_import_failed">导入失败：%1$s</string>
     <string name="cd_decrease">减少</string>
     <string name="cd_increase">增加</string>
+    <string name="ring_duration_always">一直响（15 分钟上限）</string>
+    <string name="ring_duration_seconds">%1$d 秒</string>
+    <string name="ring_duration_minutes">%1$d 分钟</string>
+    <string name="diagnosis_ok">正常</string>
+    <string name="diagnosis_missing">系统缺少已排期的闹钟，已重排</string>
+    <string name="diagnosis_empty">系统无闹钟，已重排</string>
+    <string name="diagnosis_later">系统排期偏晚，已重排</string>
+    <string name="diagnosis_stale">存在更早的历史闹钟（未动排期）</string>
+    <string name="diagnosis_self_check_ok">库结构自检通过</string>
+    <string name="diagnosis_self_check_fail">库结构异常：%1$s</string>
 </resources>

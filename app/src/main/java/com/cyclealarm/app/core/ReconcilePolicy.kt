@@ -41,11 +41,12 @@ object ReconcilePolicy {
         else -> Action.NONE
     }
 
-    fun diagnosticText(action: Action): String? = when (action) {
-        Action.RESCHEDULE_MISSING -> "系统缺少已排期的闹钟，已重排"
-        Action.RESCHEDULE_EMPTY -> "系统无闹钟，已重排"
-        Action.RESCHEDULE_LATER -> "系统排期偏晚，已重排"
-        Action.LOG_STALE -> "存在更早的历史闹钟（未动排期）"
+    /** 诊断原因码（展示时再翻译）。 */
+    fun diagnosticCode(action: Action): String? = when (action) {
+        Action.RESCHEDULE_MISSING -> ResyncCheckpoint.DiagnosticCode.MISSING
+        Action.RESCHEDULE_EMPTY -> ResyncCheckpoint.DiagnosticCode.EMPTY
+        Action.RESCHEDULE_LATER -> ResyncCheckpoint.DiagnosticCode.LATER
+        Action.LOG_STALE -> ResyncCheckpoint.DiagnosticCode.STALE
         Action.NONE -> null
     }
 }

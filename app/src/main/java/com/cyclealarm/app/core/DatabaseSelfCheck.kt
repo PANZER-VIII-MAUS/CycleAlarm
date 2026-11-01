@@ -86,13 +86,17 @@ object DatabaseSelfCheck {
             .getOrElse { listOf("自检执行失败：${it.message}") }
 
         if (issues.isEmpty()) {
-            ResyncCheckpoint.recordDiagnostic(context, System.currentTimeMillis(), "库结构自检通过")
+            ResyncCheckpoint.recordDiagnostic(
+                context,
+                System.currentTimeMillis(),
+                ResyncCheckpoint.DiagnosticCode.SELF_CHECK_OK
+            )
         } else {
             Log.w(TAG, "database structure issues: $issues")
             ResyncCheckpoint.recordDiagnostic(
                 context,
                 System.currentTimeMillis(),
-                "库结构异常：${issues.first()}"
+                ResyncCheckpoint.DiagnosticCode.SELF_CHECK_FAIL + ":" + issues.first()
             )
         }
         prefs.edit().putInt(KEY_CHECKED_VERSION, versionCode).apply()

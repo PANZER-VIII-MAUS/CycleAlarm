@@ -165,9 +165,9 @@ object AlarmResyncHelper {
         }
 
         val action = ReconcilePolicy.decide(expected, actual, missing)
-        ReconcilePolicy.diagnosticText(action)?.let { text ->
+        ReconcilePolicy.diagnosticCode(action)?.let { code ->
             Log.w(TAG, "reconcile action=$action missing=$missing expected=$expected actual=$actual")
-            ResyncCheckpoint.recordDiagnostic(context, now, text)
+            ResyncCheckpoint.recordDiagnostic(context, now, code)
         }
         when (action) {
             ReconcilePolicy.Action.RESCHEDULE_MISSING,

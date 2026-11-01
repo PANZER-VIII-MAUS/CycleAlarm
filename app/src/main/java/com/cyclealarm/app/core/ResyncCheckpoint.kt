@@ -1,6 +1,7 @@
 package com.cyclealarm.app.core
 
 import android.content.Context
+import com.cyclealarm.app.R
 
 /**
  * 重排检查点（SharedPreferences，不动 Room schema）。
@@ -92,6 +93,17 @@ object ResyncCheckpoint {
         }
     }
 
+    /** 诊断原因码：存储用码，展示时翻译，避免把界面语言写进数据。 */
+    object DiagnosticCode {
+        const val OK = "ok"
+        const val MISSING = "missing"
+        const val EMPTY = "empty"
+        const val LATER = "later"
+        const val STALE = "stale"
+        const val SELF_CHECK_OK = "self_check_ok"
+        const val SELF_CHECK_FAIL = "self_check_fail"
+    }
+
     /** 最近一次对账诊断，null 表示没记录过（或一直对得上）。 */
     fun lastDiagnostic(context: Context): Pair<Long, String>? {
         val at = runCatching { prefs(context).getLong(KEY_DIAG_AT, 0L) }.getOrDefault(0L)
@@ -101,10 +113,27 @@ object ResyncCheckpoint {
         return at to reason
     }
 
-    /** 设置页展示用的短标签。 */
+    /** 设置页展示用的短标签（原因码在此翻译成当前界面语言）。 */
     fun lastDiagnosticLabel(context: Context): String {
-        val diagnostic = lastDiagnostic(context) ?: return "正常"
+        val diagnostic = lastDiagnostic(context)
+            ?: return context.getString(R.string.diagnosis_ok)
         val formatter = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.CHINA)
-        return "${formatter.format(java.util.Date(diagnostic.first))} ${diagnostic.second}"
+        val text = diagnosticLabel(context, diagnostic.second)
+        return "${formatter.format(java.util.Date(diagnostic.first))} $text"
+    }
+
+    private fun diagnosticLabel(context: Context, codeOrText: String): String = when (codeOrText) {
+        DiagnosticCode.OK -> context.getString(R.string.diagnosis_ok)
+        DiagnosticCode.MISSING -> context.getString(R.string.diagnosis_missing)
+        DiagnosticCode.EMPTY -> context.getString(R.string.diagnosis_empty)
+        DiagnosticCode.LATER -> context.getString(R.string.diagnosis_later)
+        DiagnosticCode.STALE -> context.getString(R.string.diagnosis_stale)
+        DiagnosticCode.SELF_CHECK_OK -> context.getString(R.string.diagnosis_self_check_ok)
+        DiagnosticCode.SELF_CHECK_FAIL -> context.getString(
+            R.string.diagnosis_self_check_fail,
+            codeOrText.removePrefix(DiagnosticCode.SELF_CHECK_FAIL + ":").trim()
+        )
+        // 兼容旧版本已写入的中文文本
+        else -> codeOrText
     }
 }

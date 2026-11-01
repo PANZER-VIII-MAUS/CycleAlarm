@@ -49,6 +49,6 @@ class ReconcilePolicyTest {
             ReconcilePolicy.Action.NONE,
             ReconcilePolicy.decide(expected = 100L, actual = 100L, missingCount = 0)
         )
-        assertNull(ReconcilePolicy.diagnosticText(ReconcilePolicy.Action.NONE))
+        assertNull(ReconcilePolicy.diagnosticCode(ReconcilePolicy.Action.NONE))
     }
 }

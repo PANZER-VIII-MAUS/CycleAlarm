@@ -312,7 +312,7 @@ fun SettingsScreen(
                     HorizontalDivider()
                     SettingRow(
                         title = stringResource(R.string.row_ring_duration),
-                        value = RingPrefs.durationLabel(ringDuration),
+                        value = RingPrefs.durationLabel(context, ringDuration),
                         onClick = { dialog = SettingsDialog.DURATION }
                     )
                     SettingRow(
@@ -558,9 +558,9 @@ fun SettingsScreen(
 
         SettingsDialog.DURATION -> OptionDialog(
             title = stringResource(R.string.row_ring_duration),
-            currentLabel = RingPrefs.durationLabel(ringDuration),
+            currentLabel = RingPrefs.durationLabel(context, ringDuration),
             options = RingPrefs.DURATION_OPTIONS.map { option ->
-                RingPrefs.durationLabel(option) to {
+                RingPrefs.durationLabel(context, option) to {
                     ringDuration = option
                     RingPrefs.setDurationSeconds(context, option)
                 }

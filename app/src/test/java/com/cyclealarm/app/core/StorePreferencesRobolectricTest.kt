@@ -42,12 +42,15 @@ class StorePreferencesRobolectricTest {
         ResyncCheckpoint.markSelfWrite(context, 1_000L)
         assertEquals(1_000L, ResyncCheckpoint.lastSelfWriteAt(context))
 
-        ResyncCheckpoint.recordDiagnostic(context, 2_000L, "测试诊断")
+        ResyncCheckpoint.recordDiagnostic(context, 2_000L, ResyncCheckpoint.DiagnosticCode.LATER)
         val diagnostic = ResyncCheckpoint.lastDiagnostic(context)
         assertNotNull(diagnostic)
         assertEquals(2_000L, diagnostic!!.first)
-        assertEquals("测试诊断", diagnostic.second)
-        assertTrue(ResyncCheckpoint.lastDiagnosticLabel(context).contains("测试诊断"))
+        assertEquals(ResyncCheckpoint.DiagnosticCode.LATER, diagnostic.second)
+        // 标签按当前语言翻译：不会原样输出原因码，且包含时间前缀
+        val label = ResyncCheckpoint.lastDiagnosticLabel(context)
+        assertTrue(label.isNotBlank())
+        assertFalse(label.trim() == ResyncCheckpoint.DiagnosticCode.LATER)
     }
 
     @Test
