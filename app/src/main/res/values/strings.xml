@@ -340,4 +340,27 @@
     <string name="shift_label_day">白班</string>
     <string name="shift_label_night">夜班</string>
     <string name="shift_label_middle">中班</string>
+    <string name="channel_guard_name">闹钟守护</string>
+    <string name="channel_guard_desc">保持闹钟服务后台运行，请不要关闭此通知</string>
+    <string name="channel_ring_name">闹钟响铃</string>
+    <string name="channel_ring_desc">闹钟响铃时的提醒</string>
+    <string name="channel_fallback_name">响铃异常与漏响提醒</string>
+    <string name="channel_fallback_desc">响铃服务启动失败或错过闹钟时的提醒，建议保持开启</string>
+    <string name="time_am">上午</string>
+    <string name="time_pm">下午</string>
+    <string name="widget_empty_title">暂无响铃</string>
+    <string name="widget_empty_subtitle">打开 App 添加或打开某一天</string>
+    <string name="widget_minutes">%1$d 分钟</string>
+    <string name="widget_hours">%1$d 小时</string>
+    <string name="widget_days_hours">%1$d 天 %2$d 时</string>
+    <string name="widget_days">%1$d 天</string>
+    <string name="countdown_soon">即将响铃</string>
+    <string name="countdown_minutes_left">还有 %1$d 分钟</string>
+    <string name="countdown_today">今天</string>
+    <string name="countdown_tomorrow">明天</string>
+    <string name="countdown_date">%1$d 月 %2$d 日</string>
+    <string name="countdown_days_hours">%1$s · 还有 %2$d 天 %3$d 小时</string>
+    <string name="countdown_days">%1$s · 还有 %2$d 天</string>
+    <string name="countdown_hours_minutes">还有 %1$d 小时 %2$d 分</string>
+    <string name="countdown_hours">还有 %1$d 小时</string>
 </resources>

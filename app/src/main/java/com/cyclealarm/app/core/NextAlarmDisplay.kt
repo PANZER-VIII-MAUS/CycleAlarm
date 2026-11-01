@@ -1,26 +1,32 @@
 package com.cyclealarm.app.core
 
+import com.cyclealarm.app.R
 import java.time.Instant
 import java.time.ZoneId
 
 object NextAlarmDisplay {
     fun countdownText(
+        context: android.content.Context,
         triggerAt: Long,
         now: Long,
         zoneId: ZoneId = ZoneId.systemDefault()
     ): String {
         val remaining = (triggerAt - now).coerceAtLeast(0)
-        if (remaining < 60_000L) return "即将响铃"
+        if (remaining < 60_000L) return context.getString(R.string.countdown_soon)
 
         val totalMinutes = (remaining + 59_999L) / 60_000L
-        if (totalMinutes < 60) return "还有 $totalMinutes 分钟"
+        if (totalMinutes < 60) return context.getString(R.string.countdown_minutes_left, totalMinutes)
 
         val nowDate = Instant.ofEpochMilli(now).atZone(zoneId).toLocalDate()
         val triggerDate = Instant.ofEpochMilli(triggerAt).atZone(zoneId).toLocalDate()
         val dayLabel = when (triggerDate) {
-            nowDate -> "今天"
-            nowDate.plusDays(1) -> "明天"
-            else -> "${triggerDate.monthValue} 月 ${triggerDate.dayOfMonth} 日"
+            nowDate -> context.getString(R.string.countdown_today)
+            nowDate.plusDays(1) -> context.getString(R.string.countdown_tomorrow)
+            else -> context.getString(
+                R.string.countdown_date,
+                triggerDate.monthValue,
+                triggerDate.dayOfMonth
+            )
         }
         // 超过 48 小时不再用「还有 154 小时」这种读不出意义的数字，改成按天
         if (totalMinutes >= 24 * 60) {
@@ -29,17 +35,17 @@ object NextAlarmDisplay {
             val days = remaining / dayMs
             val hoursLeft = (remaining % dayMs) / (60 * 60_000L)
             return if (hoursLeft > 0L) {
-                "$dayLabel · 还有 $days 天 $hoursLeft 小时"
+                context.getString(R.string.countdown_days_hours, dayLabel, days, hoursLeft)
             } else {
-                "$dayLabel · 还有 $days 天"
+                context.getString(R.string.countdown_days, dayLabel, days)
             }
         }
         val hours = totalMinutes / 60
         val minutes = totalMinutes % 60
         val remainingText = if (minutes > 0) {
-            "还有 $hours 小时 $minutes 分"
+            context.getString(R.string.countdown_hours_minutes, hours, minutes)
         } else {
-            "还有 $hours 小时"
+            context.getString(R.string.countdown_hours, hours)
         }
         return "$dayLabel · $remainingText"
     }

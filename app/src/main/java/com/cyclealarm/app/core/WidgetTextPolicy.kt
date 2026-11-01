@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import com.cyclealarm.app.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -11,8 +12,16 @@ import java.util.TimeZone
  */
 object WidgetTextPolicy {
 
+    @Deprecated("旧的中文常量，界面请用 emptyTitle/emptySubtitle")
     const val EMPTY_TITLE = "暂无响铃"
+    @Deprecated("旧的中文常量，界面请用 emptyTitle/emptySubtitle")
     const val EMPTY_SUBTITLE = "打开 App 添加或打开某一天"
+
+    fun emptyTitle(context: android.content.Context): String =
+        context.getString(R.string.widget_empty_title)
+
+    fun emptySubtitle(context: android.content.Context): String =
+        context.getString(R.string.widget_empty_subtitle)
 
     data class WidgetText(val time: String, val subtitle: String)
 
@@ -34,16 +43,20 @@ object WidgetTextPolicy {
     }
 
     /** 小组件专用超短倒计时：「1 天 8 时」「8 小时」「30 分钟」。 */
-    fun compactCountdown(triggerAt: Long, now: Long): String {
+    fun compactCountdown(context: android.content.Context, triggerAt: Long, now: Long): String {
         val remaining = (triggerAt - now).coerceAtLeast(0L)
         val minutes = (remaining + 59_999L) / 60_000L
         return when {
-            minutes < 60L -> "$minutes 分钟"
-            minutes < 24L * 60L -> "${minutes / 60L} 小时"
+            minutes < 60L -> context.getString(R.string.widget_minutes, minutes)
+            minutes < 24L * 60L -> context.getString(R.string.widget_hours, minutes / 60L)
             else -> {
                 val days = minutes / (24L * 60L)
                 val hours = (minutes % (24L * 60L)) / 60L
-                if (hours > 0L) "$days 天 $hours 时" else "$days 天"
+                if (hours > 0L) {
+                    context.getString(R.string.widget_days_hours, days, hours)
+                } else {
+                    context.getString(R.string.widget_days, days)
+                }
             }
         }
     }
@@ -52,21 +65,25 @@ object WidgetTextPolicy {
      * @param next 下次响铃；null 表示当前没有开启的闹钟
      */
     fun render(
+        context: android.content.Context,
         next: NextAlarm?,
         now: Long,
         is24Hour: Boolean = true,
         zone: TimeZone = TimeZone.getDefault()
     ): WidgetText {
         if (next == null) {
-            return WidgetText(time = EMPTY_TITLE, subtitle = EMPTY_SUBTITLE)
+            return WidgetText(time = emptyTitle(context), subtitle = emptySubtitle(context))
         }
         val time = timeText(next.hour, next.minute, is24Hour, zone)
         val amPm = if (is24Hour) {
             ""
         } else {
-            val label = if (next.hour < 12) "上午" else "下午"
+            val label = context.getString(if (next.hour < 12) R.string.time_am else R.string.time_pm)
             " $label"
         }
-        return WidgetText(time = time + amPm, subtitle = compactCountdown(next.triggerAt, now))
+        return WidgetText(
+            time = time + amPm,
+            subtitle = compactCountdown(context, next.triggerAt, now)
+        )
     }
 }

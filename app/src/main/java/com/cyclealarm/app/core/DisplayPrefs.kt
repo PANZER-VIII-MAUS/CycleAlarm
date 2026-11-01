@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import com.cyclealarm.app.R
 import android.content.Context
 import java.util.Locale
 
@@ -21,10 +22,17 @@ object DisplayPrefs {
 
     /** 统一的时间格式化：24 小时制 "07:30"；12 小时制 "上午 7:30" / "下午 12:30"。 */
     fun formatTime(c: Context, hour: Int, minute: Int): String {
-        return formatTime(is24Hour(c), hour, minute)
+        return formatTime(
+            is24Hour(c), hour, minute,
+            c.getString(R.string.time_am), c.getString(R.string.time_pm)
+        )
     }
 
-    fun formatTime(is24Hour: Boolean, hour: Int, minute: Int): String {
+    fun formatTime(is24Hour: Boolean, hour: Int, minute: Int): String =
+        formatTime(is24Hour, hour, minute, "上午", "下午")
+
+    /** 带自定义上下午标签的格式化（界面用资源传入当前语言）。 */
+    fun formatTime(is24Hour: Boolean, hour: Int, minute: Int, amLabel: String, pmLabel: String): String {
         return if (is24Hour) {
             String.format(Locale.CHINA, "%02d:%02d", hour, minute)
         } else {
@@ -34,7 +42,7 @@ object DisplayPrefs {
                 hour > 12 -> hour - 12
                 else -> hour
             }
-            String.format(Locale.CHINA, "%s %d:%02d", if (am) "上午" else "下午", h12, minute)
+            String.format(Locale.CHINA, "%s %d:%02d", if (am) amLabel else pmLabel, h12, minute)
         }
     }
 
@@ -53,6 +61,9 @@ object DisplayPrefs {
     }
 
     /** 12 小时制返回「上午」/「下午」；24 小时制返回 null。 */
-    fun amPmLabel(c: Context, hour: Int): String? =
-        if (is24Hour(c)) null else if (hour < 12) "上午" else "下午"
+    fun amPmLabel(c: Context, hour: Int): String? = if (is24Hour(c)) {
+        null
+    } else {
+        c.getString(if (hour < 12) R.string.time_am else R.string.time_pm)
+    }
 }

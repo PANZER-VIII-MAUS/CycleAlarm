@@ -4,6 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import com.cyclealarm.app.R
 
 object NotificationChannels {
     const val GUARD = "alarm_guard"
@@ -16,12 +17,20 @@ object NotificationChannels {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
 
-        val guard = NotificationChannel(GUARD, "闹钟守护", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "保持闹钟服务后台运行，请不要关闭此通知"
+        val guard = NotificationChannel(
+            GUARD,
+            context.getString(R.string.channel_guard_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = context.getString(R.string.channel_guard_desc)
             setShowBadge(false)
         }
-        val ring = NotificationChannel(RING, "闹钟响铃", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "闹钟响铃时的提醒"
+        val ring = NotificationChannel(
+            RING,
+            context.getString(R.string.channel_ring_name),
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = context.getString(R.string.channel_ring_desc)
             setShowBadge(true)
             enableVibration(true)
             // 铃声由播放器自行处理，避免双重声音
@@ -29,10 +38,10 @@ object NotificationChannels {
         }
         val fallback = NotificationChannel(
             RING_FALLBACK,
-            "响铃异常与漏响提醒",
+            context.getString(R.string.channel_fallback_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "响铃服务启动失败或错过闹钟时的提醒，建议保持开启"
+            description = context.getString(R.string.channel_fallback_desc)
             setShowBadge(true)
             enableVibration(false)
             setSound(null, null)

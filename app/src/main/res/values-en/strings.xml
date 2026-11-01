@@ -340,4 +340,27 @@
     <string name="shift_label_day">Day shift</string>
     <string name="shift_label_night">Night shift</string>
     <string name="shift_label_middle">Middle shift</string>
+    <string name="channel_guard_name">Alarm guard</string>
+    <string name="channel_guard_desc">Keeps the alarm service running; please do not turn this off</string>
+    <string name="channel_ring_name">Alarm ringing</string>
+    <string name="channel_ring_desc">Alerts when an alarm rings</string>
+    <string name="channel_fallback_name">Ring issues and missed alarms</string>
+    <string name="channel_fallback_desc">Alerts when the ring service fails or an alarm is missed; keep this on</string>
+    <string name="time_am">AM</string>
+    <string name="time_pm">PM</string>
+    <string name="widget_empty_title">No alarms</string>
+    <string name="widget_empty_subtitle">Open the app to add or turn on a day</string>
+    <string name="widget_minutes">%1$d min</string>
+    <string name="widget_hours">%1$d h</string>
+    <string name="widget_days_hours">%1$d d %2$d h</string>
+    <string name="widget_days">%1$d d</string>
+    <string name="countdown_soon">Ringing soon</string>
+    <string name="countdown_minutes_left">%1$d min left</string>
+    <string name="countdown_today">Today</string>
+    <string name="countdown_tomorrow">Tomorrow</string>
+    <string name="countdown_date">%1$d/%2$d</string>
+    <string name="countdown_days_hours">%1$s · %2$d d %3$d h left</string>
+    <string name="countdown_days">%1$s · %2$d d left</string>
+    <string name="countdown_hours_minutes">%1$d h %2$d min left</string>
+    <string name="countdown_hours">%1$d h left</string>
 </resources>

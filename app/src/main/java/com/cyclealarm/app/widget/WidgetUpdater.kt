@@ -57,7 +57,7 @@ object WidgetUpdater {
             )
         }
         val is24Hour = DisplayPrefs.is24Hour(context)
-        return Payload(WidgetTextPolicy.render(next, now, is24Hour), is24Hour)
+        return Payload(WidgetTextPolicy.render(context, next, now, is24Hour), is24Hour)
     }
 
     private fun buildViews(context: Context, payload: Payload): RemoteViews =

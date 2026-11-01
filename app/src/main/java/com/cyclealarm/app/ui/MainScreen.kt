@@ -199,7 +199,7 @@ private fun NextAlarmCard(
                         }
                     }
                     Text(
-                        text = NextAlarmDisplay.countdownText(nextAlarm.triggerAt, now),
+                        text = NextAlarmDisplay.countdownText(context, nextAlarm.triggerAt, now),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         // 倒计时变化时让 TalkBack 播报，但不要打断用户当前的朗读
