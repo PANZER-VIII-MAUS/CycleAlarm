@@ -73,8 +73,9 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
-    // 把导出的 schema JSON 放进 assets，供 Robolectric 上的 MigrationTestHelper 读取
-    sourceSets["main"].assets.srcDir("$projectDir/schemas")
+    // 把导出的 schema JSON 放进 debug/test 的 assets（Robolectric 的 MigrationTestHelper 需要读它）；
+    // release 不打包，省 6KB 也能避免把数据库结构暴露在正式包里
+    sourceSets["debug"].assets.srcDir("$projectDir/schemas")
 
     // Kotlin 2.0 起 Compose 编译器随 kotlin("plugin.compose") 走，不再单独配置版本
 }

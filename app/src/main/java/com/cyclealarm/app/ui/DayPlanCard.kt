@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -92,6 +93,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -218,7 +220,10 @@ internal fun DayPlanCard(
         onClick = onOpenPlan,
         onClickLabel = stringResource(R.string.cd_open_plan)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        BoxWithConstraints {
+            // 卡宽不够（显示放大/小屏）或系统字号放大时，改用两行紧凑布局，避免时间被裁
+            val compact = largeFont || maxWidth < 340.dp
+            Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
                 modifier = Modifier
                     .weight(1f)
@@ -228,7 +233,7 @@ internal fun DayPlanCard(
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (largeFont) {
+                if (compact) {
                     // 大字号：时间独占第二行，避免「07:30」被挤压截断
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -277,9 +282,9 @@ internal fun DayPlanCard(
                         }
                     }
                     Spacer(Modifier.width(16.dp))
-                    // 固定最小宽度：让「07:30」与「未安排」等各行中间列同宽、中心线一致
+                    // 占据剩余宽度：字号/显示大小放大时也不会把「07:30」裁掉
                     Column(
-                        modifier = Modifier.widthIn(min = 80.dp),
+                        modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -287,7 +292,7 @@ internal fun DayPlanCard(
                             style = timeStyle,
                             color = timeColor,
                             maxLines = 1,
-                            softWrap = false
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             subtitle,
@@ -315,6 +320,7 @@ internal fun DayPlanCard(
                     stateDescription = planStateDescription
                 }
             )
+            }
         }
         manualAlarms.forEach { alarm ->
             ManualAlarmRow(
