@@ -50,4 +50,19 @@ class I18nResourcesTest {
             en.getString(com.cyclealarm.app.R.string.missed_multi, 2, "A, B")
         )
     }
+
+    @Test
+    fun `settings screen strings are translated`() {
+        val zh = contextWith("zh")
+        val en = contextWith("en")
+
+        assertEquals("设置", zh.getString(com.cyclealarm.app.R.string.settings_title))
+        assertEquals("Settings", en.getString(com.cyclealarm.app.R.string.settings_title))
+        assertEquals("循环方式", zh.getString(com.cyclealarm.app.R.string.row_cycle_mode))
+        assertEquals("Cycle mode", en.getString(com.cyclealarm.app.R.string.row_cycle_mode))
+        assertEquals(
+            "3 days",
+            en.getString(com.cyclealarm.app.R.string.format_days, 3)
+        )
+    }
 }

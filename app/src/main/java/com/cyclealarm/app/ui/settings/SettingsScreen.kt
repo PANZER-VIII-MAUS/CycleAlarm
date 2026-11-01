@@ -121,7 +121,7 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLanguageDialog = false }) { Text("关闭") }
+                TextButton(onClick = { showLanguageDialog = false }) { Text(stringResource(R.string.action_close)) }
             }
         )
     }
@@ -131,7 +131,11 @@ fun SettingsScreen(
             onPick = { template ->
                 viewModel.applyShiftTemplate(template)
                 showShiftTemplates = false
-                Toast.makeText(context, "已应用「${template.name}」", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.toast_template_applied, template.name),
+                    Toast.LENGTH_SHORT
+                ).show()
             },
             onDismiss = { showShiftTemplates = false }
         )
@@ -145,11 +149,15 @@ fun SettingsScreen(
                     val payload = BackupManager.export(context)
                     context.contentResolver.openOutputStream(uri)?.use { stream ->
                         stream.write(payload.toByteArray(Charsets.UTF_8))
-                    } ?: error("无法写入文件")
+                    } ?: error(context.getString(R.string.error_write_file))
                 }.onSuccess {
-                    Toast.makeText(context, "备份已导出", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.toast_backup_exported), Toast.LENGTH_SHORT).show()
                 }.onFailure {
-                    Toast.makeText(context, "导出失败：${it.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.toast_export_failed, it.message ?: ""),
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -162,12 +170,16 @@ fun SettingsScreen(
                 runCatching {
                     val text = context.contentResolver.openInputStream(uri)?.use { stream ->
                         stream.readBytes().toString(Charsets.UTF_8)
-                    } ?: error("无法读取文件")
+                    } ?: error(context.getString(R.string.error_read_file))
                     BackupManager.import(context, text)
                 }.onSuccess {
-                    Toast.makeText(context, "已从备份恢复", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.toast_backup_restored), Toast.LENGTH_SHORT).show()
                 }.onFailure {
-                    Toast.makeText(context, "导入失败：${it.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.toast_import_failed, it.message ?: ""),
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -224,10 +236,10 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("设置", style = MaterialTheme.typography.titleLarge) },
+                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -246,22 +258,22 @@ fun SettingsScreen(
         ) {
             item(key = "cycle") {
                 CycleCard {
-                    Text("循环", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.section_cycle), style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
                     SettingRow(
-                        title = "循环方式",
+                        title = stringResource(R.string.row_cycle_mode),
                         value = cycleTypeLabel(cycleType),
                         onClick = { dialog = SettingsDialog.CYCLE_MODE }
                     )
                     if (isCustom) {
                         SettingRow(
-                            title = "周期天数",
-                            value = "$cycleLength 天",
+                            title = stringResource(R.string.row_cycle_length),
+                            value = stringResource(R.string.format_days, cycleLength),
                             onClick = { dialog = SettingsDialog.CYCLE_LENGTH }
                         )
                         SettingRow(
-                            title = "今天对齐",
-                            value = "今天 = 第 $todayIndex 天",
+                            title = stringResource(R.string.row_align_today),
+                            value = stringResource(R.string.format_today_is_day, todayIndex),
                             onClick = { dialog = SettingsDialog.ALIGN_DAY }
                         )
                     }
@@ -270,7 +282,7 @@ fun SettingsScreen(
 
             item(key = "display") {
                 CycleCard {
-                    Text("显示", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.section_display), style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
                     SettingRow(
                         title = stringResource(R.string.settings_language),
@@ -282,13 +294,13 @@ fun SettingsScreen(
                         onClick = { showLanguageDialog = true }
                     )
                     SettingRow(
-                        title = "主题",
+                        title = stringResource(R.string.row_theme),
                         value = themeLabel(themeMode),
                         onClick = { dialog = SettingsDialog.THEME }
                     )
                     SettingRow(
-                        title = "时间格式",
-                        value = if (is24h) "24 小时制" else "12 小时制",
+                        title = stringResource(R.string.row_time_format),
+                        value = if (is24h) stringResource(R.string.opt_24h) else stringResource(R.string.opt_12h),
                         onClick = { dialog = SettingsDialog.TIME_FORMAT }
                     )
                 }
@@ -296,26 +308,26 @@ fun SettingsScreen(
 
             item(key = "ring") {
                 CycleCard {
-                    Text("响铃", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.section_ring), style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
                     SettingRow(
-                        title = "响铃时长",
+                        title = stringResource(R.string.row_ring_duration),
                         value = RingPrefs.durationLabel(ringDuration),
                         onClick = { dialog = SettingsDialog.DURATION }
                     )
                     SettingRow(
-                        title = "稍后提醒间隔",
-                        value = "$snoozeMinutes 分钟",
+                        title = stringResource(R.string.row_snooze_interval),
+                        value = stringResource(R.string.format_minutes, snoozeMinutes),
                         onClick = { dialog = SettingsDialog.SNOOZE }
                     )
                     SettingRow(
-                        title = "轮班模板",
-                        value = "白夜休休 / 做二休二 / 四班三运转",
+                        title = stringResource(R.string.row_shift_templates),
+                        value = stringResource(R.string.shift_templates_summary),
                         onClick = { showShiftTemplates = true }
                     )
                     SettingRow(
-                        title = "分享排班",
-                        value = "把当前排班发出去",
+                        title = stringResource(R.string.row_share_schedule),
+                        value = stringResource(R.string.share_schedule_value),
                         onClick = {
                             backupScope.launch {
                                 runCatching {
@@ -325,22 +337,22 @@ fun SettingsScreen(
                                         putExtra(Intent.EXTRA_TEXT, text)
                                     }
                                     context.startActivity(
-                                        Intent.createChooser(share, "分享排班")
+                                        Intent.createChooser(share, context.getString(R.string.share_schedule_title))
                                     )
                                 }.onFailure {
                                     Toast.makeText(
-                                        context, "生成分享文本失败", Toast.LENGTH_SHORT
+                                        context, context.getString(R.string.toast_share_failed), Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             }
                         }
                     )
                     SettingRow(
-                        title = "常驻保活服务",
+                        title = stringResource(R.string.row_guard_service),
                         value = if (GuardServicePolicy.isEnabled(context)) {
-                            "已开启（通知栏常驻）"
+                            stringResource(R.string.guard_on)
                         } else {
-                            "已关闭（更省电，后台可能被清理）"
+                            stringResource(R.string.guard_off)
                         },
                         onClick = {
                             val enabled = !GuardServicePolicy.isEnabled(context)
@@ -353,15 +365,19 @@ fun SettingsScreen(
                             }
                             Toast.makeText(
                                 context,
-                                if (enabled) "已开启常驻保活" else "已关闭常驻保活",
+                                if (enabled) {
+                                    context.getString(R.string.toast_guard_on)
+                                } else {
+                                    context.getString(R.string.toast_guard_off)
+                                },
                                 Toast.LENGTH_SHORT
                             ).show()
                             (context as? android.app.Activity)?.recreate()
                         }
                     )
                     SettingRow(
-                        title = "响铃历史",
-                        value = "最近 7 天的响铃记录",
+                        title = stringResource(R.string.row_ring_history),
+                        value = stringResource(R.string.ring_history_value),
                         onClick = {
                             context.startActivity(
                                 Intent(context, RingHistoryActivity::class.java)
@@ -369,47 +385,49 @@ fun SettingsScreen(
                         }
                     )
                     SettingRow(
-                        title = "今天临时静音",
+                        title = stringResource(R.string.row_mute_today),
                         value = if (
                             TemporaryMuteStore.mutedDays(context)
                                 .contains(LocalDate.now().toEpochDay())
                         ) {
-                            "已开启（明天恢复）"
+                            stringResource(R.string.mute_on)
                         } else {
-                            "未开启"
+                            stringResource(R.string.mute_off)
                         },
                         onClick = {
                             val today = LocalDate.now().toEpochDay()
                             if (TemporaryMuteStore.mutedDays(context).contains(today)) {
                                 viewModel.unmuteToday()
-                                Toast.makeText(context, "已取消今天静音", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.toast_mute_off), Toast.LENGTH_SHORT).show()
                             } else {
                                 viewModel.muteToday()
-                                Toast.makeText(context, "今天不再响铃", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.toast_mute_on), Toast.LENGTH_SHORT).show()
                             }
                         }
                     )
                     SettingRow(
-                        title = "导出备份",
-                        value = "生成单文件备份",
+                        title = stringResource(R.string.row_export_backup),
+                        value = stringResource(R.string.export_backup_value),
                         onClick = {
                             val stamp = SimpleDateFormat("yyyyMMdd-HHmm", Locale.CHINA)
                                 .format(Date())
-                            exportLauncher.launch("CycleAlarm-备份-$stamp.txt")
+                            exportLauncher.launch(
+                                context.getString(R.string.backup_file_name, stamp)
+                            )
                         }
                     )
                     SettingRow(
-                        title = "导入备份",
-                        value = "从备份文件恢复",
+                        title = stringResource(R.string.row_import_backup),
+                        value = stringResource(R.string.import_backup_value),
                         onClick = { importLauncher.launch(arrayOf("text/plain", "*/*")) }
                     )
                     SettingRow(
-                        title = "排期诊断",
+                        title = stringResource(R.string.row_schedule_diagnosis),
                         value = ResyncCheckpoint.lastDiagnosticLabel(context),
                         onClick = {
                             Toast.makeText(
                                 context,
-                                "对账结果会记录在这里，正常时显示「正常」",
+                                context.getString(R.string.diagnosis_hint),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -419,24 +437,24 @@ fun SettingsScreen(
 
             item(key = "systemTime") {
                 CycleCard {
-                    Text("系统时间", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.section_system_time), style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
                     SettingStaticRow(
-                        title = "当前时间",
+                        title = stringResource(R.string.row_current_time),
                         value = "${formatEpochDay(now.toLocalDate().toEpochDay())} " +
                             DisplayPrefs.formatTime(context, now.hour, now.minute)
                     )
-                    SettingStaticRow(title = "时区", value = "$tzName · $zoneId")
+                    SettingStaticRow(title = stringResource(R.string.row_timezone), value = "$tzName · $zoneId")
                     SettingStaticRow(
-                        title = "自动设置时间",
-                        value = if (autoTime) "开" else "关"
+                        title = stringResource(R.string.row_auto_time),
+                        value = if (autoTime) stringResource(R.string.state_on) else stringResource(R.string.state_off)
                     )
                     SettingStaticRow(
-                        title = "自动设置时区",
-                        value = if (autoTimeZone) "开" else "关"
+                        title = stringResource(R.string.row_auto_timezone),
+                        value = if (autoTimeZone) stringResource(R.string.state_on) else stringResource(R.string.state_off)
                     )
                     Text(
-                        "App 无法修改系统时间或时区。修改系统时区后，闹钟排期会自动重建，无需手动重排。",
+                        stringResource(R.string.system_time_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -448,22 +466,22 @@ fun SettingsScreen(
                             }.onFailure {
                                 Toast.makeText(
                                     context,
-                                    "请在系统设置里找到日期和时间",
+                                    context.getString(R.string.toast_find_date_settings),
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         }
-                    ) { Text("打开系统日期和时间设置") }
+                    ) { Text(stringResource(R.string.action_open_date_settings)) }
                 }
             }
 
             item(key = "about") {
                 CycleCard {
-                    Text("关于", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.section_about), style = MaterialTheme.typography.titleSmall)
                     HorizontalDivider()
-                    SettingStaticRow(title = "版本", value = versionName)
+                    SettingStaticRow(title = stringResource(R.string.row_version), value = versionName)
                     Text(
-                        "循环闹钟 · 个人自用",
+                        stringResource(R.string.about_text),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp)
@@ -475,21 +493,21 @@ fun SettingsScreen(
 
     when (dialog) {
         SettingsDialog.CYCLE_MODE -> OptionDialog(
-            title = "循环方式",
+            title = stringResource(R.string.row_cycle_mode),
             currentLabel = cycleTypeLabel(cycleType),
             options = listOf(
-                "每天" to { requestMode(CycleTypes.DAILY) },
-                "每周" to { requestMode(CycleTypes.WEEKLY) },
-                "自定义" to { requestMode(CycleTypes.CUSTOM) }
+                stringResource(R.string.cycle_daily) to { requestMode(CycleTypes.DAILY) },
+                stringResource(R.string.cycle_weekly) to { requestMode(CycleTypes.WEEKLY) },
+                stringResource(R.string.cycle_custom) to { requestMode(CycleTypes.CUSTOM) }
             ),
             onDismiss = { dialog = null }
         )
 
         SettingsDialog.CYCLE_LENGTH -> StepperDialog(
-            title = "周期天数",
+            title = stringResource(R.string.row_cycle_length),
             initial = cycleLength,
             range = 1..30,
-            format = { "$it 天" },
+            format = { context.getString(R.string.format_days, it) },
             onConfirm = { newLength ->
                 if (newLength < cycleLength) {
                     pendingLength = newLength
@@ -501,10 +519,10 @@ fun SettingsScreen(
         )
 
         SettingsDialog.ALIGN_DAY -> StepperDialog(
-            title = "今天对齐",
+            title = stringResource(R.string.row_align_today),
             initial = todayIndex,
             range = 1..cycleLength.coerceAtLeast(1),
-            format = { "今天 = 第 $it 天" },
+            format = { context.getString(R.string.format_today_is_day, it) },
             onConfirm = { day ->
                 viewModel.applyCycleSettings(CycleTypes.CUSTOM, cycleLength, day)
             },
@@ -512,25 +530,25 @@ fun SettingsScreen(
         )
 
         SettingsDialog.THEME -> OptionDialog(
-            title = "主题",
+            title = stringResource(R.string.row_theme),
             currentLabel = themeLabel(themeMode),
             options = listOf(
-                "跟随系统" to { ThemeManager.set(context, ThemeManager.MODE_SYSTEM) },
-                "浅色" to { ThemeManager.set(context, ThemeManager.MODE_LIGHT) },
-                "深色" to { ThemeManager.set(context, ThemeManager.MODE_DARK) }
+                stringResource(R.string.theme_system) to { ThemeManager.set(context, ThemeManager.MODE_SYSTEM) },
+                stringResource(R.string.theme_light) to { ThemeManager.set(context, ThemeManager.MODE_LIGHT) },
+                stringResource(R.string.theme_dark) to { ThemeManager.set(context, ThemeManager.MODE_DARK) }
             ),
             onDismiss = { dialog = null }
         )
 
         SettingsDialog.TIME_FORMAT -> OptionDialog(
-            title = "时间格式",
-            currentLabel = if (is24h) "24 小时制" else "12 小时制",
+            title = stringResource(R.string.row_time_format),
+            currentLabel = if (is24h) stringResource(R.string.opt_24h) else stringResource(R.string.opt_12h),
             options = listOf(
-                "24 小时制" to {
+                stringResource(R.string.opt_24h) to {
                     is24h = true
                     DisplayPrefs.set24Hour(context, true)
                 },
-                "12 小时制" to {
+                stringResource(R.string.opt_12h) to {
                     is24h = false
                     DisplayPrefs.set24Hour(context, false)
                 }
@@ -539,7 +557,7 @@ fun SettingsScreen(
         )
 
         SettingsDialog.DURATION -> OptionDialog(
-            title = "响铃时长",
+            title = stringResource(R.string.row_ring_duration),
             currentLabel = RingPrefs.durationLabel(ringDuration),
             options = RingPrefs.DURATION_OPTIONS.map { option ->
                 RingPrefs.durationLabel(option) to {
@@ -551,10 +569,10 @@ fun SettingsScreen(
         )
 
         SettingsDialog.SNOOZE -> OptionDialog(
-            title = "稍后提醒间隔",
-            currentLabel = "$snoozeMinutes 分钟",
+            title = stringResource(R.string.row_snooze_interval),
+            currentLabel = stringResource(R.string.format_minutes, snoozeMinutes),
             options = RingPrefs.SNOOZE_OPTIONS.map { option ->
-                "$option 分钟" to {
+                context.getString(R.string.format_minutes, option) to {
                     snoozeMinutes = option
                     RingPrefs.setSnoozeMinutes(context, option)
                 }
@@ -568,16 +586,16 @@ fun SettingsScreen(
     pendingMode?.let { mode ->
         AlertDialog(
             onDismissRequest = { pendingMode = null },
-            title = { Text("确认") },
-            text = { Text("切换循环方式会缩短周期天数，末尾天的闹钟会被删除，确定吗？") },
+            title = { Text(stringResource(R.string.dialog_confirm_title)) },
+            text = { Text(stringResource(R.string.confirm_cycle_mode)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.applyCycleSettings(mode, cycleLength, todayIndex)
                     pendingMode = null
-                }) { Text("确定") }
+                }) { Text(stringResource(R.string.action_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingMode = null }) { Text("取消") }
+                TextButton(onClick = { pendingMode = null }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -585,16 +603,16 @@ fun SettingsScreen(
     pendingLength?.let { length ->
         AlertDialog(
             onDismissRequest = { pendingLength = null },
-            title = { Text("确认") },
-            text = { Text("缩短天数会删除第 $length 天之后的所有闹钟，确定吗？") },
+            title = { Text(stringResource(R.string.dialog_confirm_title)) },
+            text = { Text(context.getString(R.string.confirm_shrink_length, length)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.applyCycleSettings(CycleTypes.CUSTOM, length, todayIndex)
                     pendingLength = null
-                }) { Text("确定") }
+                }) { Text(stringResource(R.string.action_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingLength = null }) { Text("取消") }
+                TextButton(onClick = { pendingLength = null }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -611,7 +629,7 @@ private fun ShiftTemplateDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("轮班模板") },
+        title = { Text(stringResource(R.string.row_shift_templates)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 ShiftTemplates.ALL.forEach { template ->
@@ -630,7 +648,7 @@ private fun ShiftTemplateDialog(
                     }
                 }
                 Text(
-                    "应用模板会把循环方式设为自定义、并写入一个周期的闹钟；已有闹钟不会被删除。",
+                    stringResource(R.string.shift_templates_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp)
@@ -638,7 +656,7 @@ private fun ShiftTemplateDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         }
     )
 }
@@ -725,7 +743,7 @@ private fun OptionDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -749,7 +767,7 @@ private fun StepperDialog(
                 IconButton(
                     onClick = { value = (value - 1).coerceAtLeast(range.first) }
                 ) {
-                    Icon(Icons.Outlined.Remove, contentDescription = "减少")
+                    Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.cd_decrease))
                 }
                 Text(
                     format(value),
@@ -759,7 +777,7 @@ private fun StepperDialog(
                 IconButton(
                     onClick = { value = (value + 1).coerceAtMost(range.last) }
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "增加")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase))
                 }
             }
         },
@@ -767,9 +785,9 @@ private fun StepperDialog(
             TextButton(onClick = {
                 onConfirm(value)
                 onDismiss()
-            }) { Text("确定") }
+            }) { Text(stringResource(R.string.action_confirm)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -777,14 +795,16 @@ private fun StepperDialog(
 // 文案
 // ---------------------------------------------------------------------
 
+@Composable
 private fun cycleTypeLabel(type: String): String = when (type) {
-    CycleTypes.DAILY -> "每天"
-    CycleTypes.WEEKLY -> "每周"
-    else -> "自定义"
+    CycleTypes.DAILY -> stringResource(R.string.cycle_daily)
+    CycleTypes.WEEKLY -> stringResource(R.string.cycle_weekly)
+    else -> stringResource(R.string.cycle_custom)
 }
 
+@Composable
 private fun themeLabel(mode: String): String = when (mode) {
-    ThemeManager.MODE_LIGHT -> "浅色"
-    ThemeManager.MODE_DARK -> "深色"
-    else -> "跟随系统"
+    ThemeManager.MODE_LIGHT -> stringResource(R.string.theme_light)
+    ThemeManager.MODE_DARK -> stringResource(R.string.theme_dark)
+    else -> stringResource(R.string.theme_system)
 }
