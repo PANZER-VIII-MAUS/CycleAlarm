@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.plan
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.ui.components.PillButton
 import com.cyclealarm.app.ui.components.ScrimDialog
@@ -57,7 +59,7 @@ fun PlanTimeDialog(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "只修改这一天的安排时间，其他日期不受影响",
+            text = stringResource(R.string.plan_time_only_today),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -72,7 +74,7 @@ fun PlanTimeDialog(
         }
         Spacer(Modifier.height(16.dp))
         PillButton(
-            text = "保存",
+            text = stringResource(R.string.action_save),
             onClick = { onSave(state.hour, state.minute) }
         )
         Row(
@@ -82,7 +84,7 @@ fun PlanTimeDialog(
         ) {
             TextButton(onClick = onDismiss) {
                 Text(
-                    text = "取消",
+                    text = stringResource(R.string.action_cancel),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -90,7 +92,7 @@ fun PlanTimeDialog(
             Spacer(Modifier.width(24.dp))
             TextButton(onClick = onDeletePlan) {
                 Text(
-                    text = "删除",
+                    text = stringResource(R.string.action_delete),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.error
                 )

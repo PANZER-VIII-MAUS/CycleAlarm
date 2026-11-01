@@ -389,4 +389,23 @@
     <string name="err_undo_snapshot_corrupt">上次导入记录已损坏，已清除，无法撤销</string>
     <string name="err_csv_no_data">CSV 里没有可读取的内容</string>
     <string name="err_csv_parse_failed">解析 CSV 失败：%1$s</string>
+    <string name="plan_day_title">%1$s 的安排</string>
+    <string name="plan_current">当前：%1$s</string>
+    <string name="plan_tap_change">点击改这一天的安排时间</string>
+    <string name="action_change_time">改时间</string>
+    <string name="plan_no_types_hint">还没有安排类型，请先到「管理安排类型」里新增。</string>
+    <string name="plan_current_marker">（当前）</string>
+    <string name="cd_current_plan">当前安排</string>
+    <string name="plan_manage">管理安排类型…</string>
+    <string name="plan_time_only_today">只修改这一天的安排时间，其他日期不受影响</string>
+    <string name="preview_untitled">未命名</string>
+    <string name="cd_edit_row">编辑这一行</string>
+    <string name="cd_delete_row">删除这一行</string>
+    <string name="preview_edit_item">编辑这一条</string>
+    <string name="preview_title_label">标题（课程 / 班次）</string>
+    <string name="err_web_table">该文件其实是网页表格，请用 Excel 打开后另存为 .xlsx</string>
+    <string name="err_file_too_large">文件过大（超过 10MB），请精简后再导入</string>
+    <string name="err_file_empty">文件是空的</string>
+    <string name="err_no_sheets">文件里没有可读取的工作表</string>
+    <string name="err_nothing_to_undo">没有可撤销的导入</string>
 </resources>

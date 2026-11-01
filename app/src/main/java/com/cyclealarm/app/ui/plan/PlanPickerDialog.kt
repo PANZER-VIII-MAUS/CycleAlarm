@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.plan
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.PlanPickerAction
 import com.cyclealarm.app.data.ActivityTypeEntity
@@ -50,7 +52,7 @@ fun PlanPickerDialog(
     val currentType = currentPlan?.let { plan -> types.firstOrNull { it.id == plan.typeId } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("$dayText 的安排") },
+        title = { Text(stringResource(R.string.plan_day_title, dayText)) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())
@@ -68,7 +70,7 @@ fun PlanPickerDialog(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "当前：${currentType?.name ?: "自定义"} " +
+                                stringResource(R.string.plan_current, currentType?.name ?: stringResource(R.string.cycle_custom)) +
                                     DisplayPrefs.formatTime(
                                         context,
                                         currentPlan.hour,
@@ -77,21 +79,21 @@ fun PlanPickerDialog(
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
-                                "点击改这一天的安排时间",
+                                stringResource(R.string.plan_tap_change),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Icon(
                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "改时间"
+                            contentDescription = stringResource(R.string.action_change_time)
                         )
                     }
                     HorizontalDivider()
                 }
                 if (types.isEmpty()) {
                     Text(
-                        "还没有安排类型，请先到「管理安排类型」里新增。",
+                        stringResource(R.string.plan_no_types_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp)
@@ -116,27 +118,27 @@ fun PlanPickerDialog(
                     ) {
                         Column(Modifier.weight(1f)) {
                             Text(
-                                type.name + if (selected) "（当前）" else "",
+                                type.name + if (selected) stringResource(R.string.plan_current_marker) else "",
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
                                 if (type.rings) {
-                                    "${DisplayPrefs.formatTime(context, type.hour, type.minute)} 响铃"
+                                    stringResource(R.string.ptm_ring_at, DisplayPrefs.formatTime(context, type.hour, type.minute))
                                 } else {
-                                    "不响铃"
+                                    stringResource(R.string.ptm_no_ring)
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         if (selected) {
-                            Icon(Icons.Default.Check, contentDescription = "当前安排")
+                            Icon(Icons.Default.Check, contentDescription = stringResource(R.string.cd_current_plan))
                         }
                     }
                 }
                 HorizontalDivider()
                 Text(
-                    "未安排",
+                    stringResource(R.string.plan_unset),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -146,10 +148,10 @@ fun PlanPickerDialog(
                         .padding(horizontal = 12.dp, vertical = 12.dp)
                 )
                 TextButton(onClick = onManage, modifier = Modifier.fillMaxWidth()) {
-                    Text("管理安排类型…")
+                    Text(stringResource(R.string.plan_manage))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

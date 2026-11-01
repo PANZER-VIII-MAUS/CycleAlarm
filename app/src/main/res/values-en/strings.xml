@@ -389,4 +389,23 @@
     <string name="err_undo_snapshot_corrupt">The last import record was corrupted and cleared, so undo is unavailable</string>
     <string name="err_csv_no_data">The CSV file has no readable content</string>
     <string name="err_csv_parse_failed">Failed to parse the CSV: %1$s</string>
+    <string name="plan_day_title">%1$s plan</string>
+    <string name="plan_current">Current: %1$s</string>
+    <string name="plan_tap_change">Tap to change this day\'s plan time</string>
+    <string name="action_change_time">Change time</string>
+    <string name="plan_no_types_hint">No plan types yet — add one in "Manage plan types" first.</string>
+    <string name="plan_current_marker"> (current)</string>
+    <string name="cd_current_plan">Current plan</string>
+    <string name="plan_manage">Manage plan types…</string>
+    <string name="plan_time_only_today">Only this day\'s time changes; other days are unaffected</string>
+    <string name="preview_untitled">Untitled</string>
+    <string name="cd_edit_row">Edit this row</string>
+    <string name="cd_delete_row">Delete this row</string>
+    <string name="preview_edit_item">Edit this item</string>
+    <string name="preview_title_label">Title (class / shift)</string>
+    <string name="err_web_table">This file is actually a web table; open it in Excel and save as .xlsx</string>
+    <string name="err_file_too_large">The file is too large (over 10 MB); trim it first</string>
+    <string name="err_file_empty">The file is empty</string>
+    <string name="err_no_sheets">The file has no readable sheets</string>
+    <string name="err_nothing_to_undo">There is no import to undo</string>
 </resources>

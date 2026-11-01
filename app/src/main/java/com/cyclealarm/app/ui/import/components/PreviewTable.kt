@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.import.components
 
+import androidx.compose.ui.res.stringResource
 import android.app.TimePickerDialog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.ImportedEntry
 import com.cyclealarm.app.importer.ScheduleKind
@@ -75,16 +77,16 @@ fun PreviewTable(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            entry.title.ifBlank { "未命名" },
+                            entry.title.ifBlank { stringResource(R.string.preview_untitled) },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = { editingIndex = index }) {
-                        Icon(Icons.Default.Edit, contentDescription = "编辑这一行")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.cd_edit_row))
                     }
                     IconButton(onClick = { onDelete(index) }) {
-                        Icon(Icons.Default.Delete, contentDescription = "删除这一行")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.cd_delete_row))
                     }
                 }
             }
@@ -118,13 +120,13 @@ private fun EditEntryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑这一条") },
+        title = { Text(stringResource(R.string.preview_edit_item)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("标题（课程 / 班次）") },
+                    label = { Text(stringResource(R.string.preview_title_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -143,7 +145,7 @@ private fun EditEntryDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("时间：${DisplayPrefs.formatTime(context, hour, minute)}")
+                    Text(stringResource(R.string.edit_time, DisplayPrefs.formatTime(context, hour, minute)))
                 }
                 if (entry.kind == ScheduleKind.WEEKLY) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -172,16 +174,28 @@ private fun EditEntryDialog(
         confirmButton = {
             TextButton(onClick = {
                 onSave(entry.copy(title = title.trim(), hour = hour, minute = minute, weekday = weekday))
-            }) { Text("保存") }
+            }) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
+@Composable
 private fun entryLabel(entry: ImportedEntry): String = when (entry.kind) {
-    ScheduleKind.WEEKLY -> entry.weekday?.let { weekdayName(it) } ?: "每周"
-    ScheduleKind.DATED -> entry.epochDay?.let { formatEpochDay(it) } ?: "按日期"
+    ScheduleKind.WEEKLY -> entry.weekday?.let { weekdayName(it) } ?: stringResource(R.string.cycle_weekly)
+    ScheduleKind.DATED -> entry.epochDay?.let { formatEpochDay(it) } ?: stringResource(R.string.main_date_kind)
 }
 
+@Composable
 private fun weekdayName(weekday: Int): String =
-    listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")[(weekday - 1).coerceIn(0, 6)]
+    stringResource(weekdayRes((weekday - 1).coerceIn(0, 6) + 1))
+
+private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
+    1 -> R.string.week_mon
+    2 -> R.string.week_tue
+    3 -> R.string.week_wed
+    4 -> R.string.week_thu
+    5 -> R.string.week_fri
+    6 -> R.string.week_sat
+    else -> R.string.week_sun
+}

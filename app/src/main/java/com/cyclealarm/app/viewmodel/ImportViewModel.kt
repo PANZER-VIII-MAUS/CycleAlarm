@@ -96,7 +96,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 val kind = FileTypeSniffer.sniff(bytes.take(512).toByteArray())
                 when (kind) {
                     FileKind.HTML_TABLE -> {
-                        _state.value = ImportUiState.Error("该文件其实是网页表格，请用 Excel 打开后另存为 .xlsx")
+                        _state.value = ImportUiState.Error(
+            getApplication<Application>().getString(com.cyclealarm.app.R.string.err_web_table)
+        )
                         return@launch
                     }
                     FileKind.XLSX -> {
@@ -140,18 +142,24 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 val read = input.read(buffer)
                 if (read <= 0) break
                 total += read
-                if (total > limit) throw IllegalStateException("文件过大（超过 10MB），请精简后再导入")
+                if (total > limit) throw com.cyclealarm.app.core.LocalizedFailure(
+                com.cyclealarm.app.R.string.err_file_too_large
+            )
                 out.write(buffer, 0, read)
             }
             out.toByteArray()
         }
-        if (bytes.isEmpty()) throw IllegalStateException("文件是空的")
+        if (bytes.isEmpty()) throw com.cyclealarm.app.core.LocalizedFailure(
+                com.cyclealarm.app.R.string.err_file_empty
+            )
         return bytes to name
     }
 
     private fun handleParsedSheets(parsed: List<Sheet>) {
         if (parsed.isEmpty()) {
-            _state.value = ImportUiState.Error("文件里没有可读取的工作表")
+            _state.value = ImportUiState.Error(
+            getApplication<Application>().getString(com.cyclealarm.app.R.string.err_no_sheets)
+        )
             return
         }
         sheets = parsed
@@ -333,7 +341,9 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     getApplication<Application>().getString(com.cyclealarm.app.R.string.err_undo_snapshot_corrupt)
                 )
             AlarmImportWriter.UndoResult.NoSnapshot ->
-                ImportUiState.Error("没有可撤销的导入")
+                ImportUiState.Error(
+                getApplication<Application>().getString(com.cyclealarm.app.R.string.err_nothing_to_undo)
+            )
         }
     }
 
