@@ -59,9 +59,9 @@ class RingHistoryFormatterTest {
     }
 
     @Test
-    fun `labels are user readable`() {
-        assertEquals("已处理", RingHistoryFormatter.label(RingHistoryStatus.ACKED))
-        assertEquals("响过未处理", RingHistoryFormatter.label(RingHistoryStatus.UNHANDLED))
-        assertEquals("漏响", RingHistoryFormatter.label(RingHistoryStatus.MISSED))
+    fun `each status maps to a label resource`() {
+        assertEquals(com.cyclealarm.app.R.string.history_acked, RingHistoryFormatter.labelRes(RingHistoryStatus.ACKED))
+        assertEquals(com.cyclealarm.app.R.string.history_unhandled, RingHistoryFormatter.labelRes(RingHistoryStatus.UNHANDLED))
+        assertEquals(com.cyclealarm.app.R.string.history_missed, RingHistoryFormatter.labelRes(RingHistoryStatus.MISSED))
     }
 }

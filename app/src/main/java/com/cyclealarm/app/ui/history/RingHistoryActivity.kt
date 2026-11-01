@@ -24,10 +24,12 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.RingHistoryFormatter
 import com.cyclealarm.app.core.RingHistoryStatus
 import com.cyclealarm.app.data.RingEventEntity
@@ -66,10 +68,10 @@ fun RingHistoryScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("响铃历史") },
+                title = { Text(stringResource(R.string.history_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -85,14 +87,14 @@ fun RingHistoryScreen(
                 .padding(horizontal = 20.dp)
         ) {
             Text(
-                "最近 7 天：已处理 ${summary.acked} · 未处理 ${summary.unhandled} · 漏响 ${summary.missed}",
+                stringResource(R.string.history_summary, summary.acked, summary.unhandled, summary.missed),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 12.dp)
             )
             if (events.isEmpty()) {
                 Text(
-                    "暂无记录（响铃、漏响会记录在这里）",
+                    stringResource(R.string.history_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -113,11 +115,11 @@ private fun RingHistoryRow(event: RingEventEntity) {
     CycleCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
         Text(
             text = RingHistoryFormatter.timeText(event.expectedAt) +
-                " · " + event.label.ifBlank { "闹钟" },
+                " · " + event.label.ifBlank { stringResource(R.string.alarm_fallback) },
             style = MaterialTheme.typography.titleSmall
         )
         Text(
-            text = RingHistoryFormatter.label(status),
+            text = stringResource(RingHistoryFormatter.labelRes(status)),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(top = 2.dp)
         )

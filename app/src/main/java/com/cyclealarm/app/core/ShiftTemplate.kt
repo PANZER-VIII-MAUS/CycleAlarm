@@ -7,13 +7,13 @@ data class ShiftSlot(
     val dayIndex: Int,
     val hour: Int,
     val minute: Int,
-    val label: String
+    val labelRes: Int
 )
 
 data class ShiftTemplate(
     val key: String,
-    val name: String,
-    val description: String,
+    val nameRes: Int,
+    val descRes: Int,
     val cycleLength: Int,
     val slots: List<ShiftSlot>
 )
@@ -26,57 +26,58 @@ data class ShiftTemplate(
  */
 object ShiftTemplates {
 
-    private fun slot(day: Int, hour: Int, minute: Int, label: String) =
-        ShiftSlot(dayIndex = day, hour = hour, minute = minute, label = label)
+    private fun slot(day: Int, hour: Int, minute: Int, labelRes: Int) =
+        ShiftSlot(dayIndex = day, hour = hour, minute = minute, labelRes = labelRes)
 
     val ALL: List<ShiftTemplate> = listOf(
         ShiftTemplate(
             key = "white_night_rest_rest",
-            name = "白夜休休",
-            description = "4 天一轮：第 1 天白班 08:00，第 2 天夜班 20:00，第 3–4 天休息",
+            nameRes = com.cyclealarm.app.R.string.shift_white_night_name,
+            descRes = com.cyclealarm.app.R.string.shift_white_night_desc,
             cycleLength = 4,
             slots = listOf(
-                slot(0, 8, 0, "白班"),
-                slot(1, 20, 0, "夜班")
+                slot(0, 8, 0, com.cyclealarm.app.R.string.shift_label_day),
+                slot(1, 20, 0, com.cyclealarm.app.R.string.shift_label_night)
             )
         ),
         ShiftTemplate(
             key = "work_two_rest_two",
-            name = "做二休二",
-            description = "4 天一轮：第 1–2 天白班 08:00，第 3–4 天休息",
+            nameRes = com.cyclealarm.app.R.string.shift_two_two_name,
+            descRes = com.cyclealarm.app.R.string.shift_two_two_desc,
             cycleLength = 4,
             slots = listOf(
-                slot(0, 8, 0, "白班"),
-                slot(1, 8, 0, "白班")
+                slot(0, 8, 0, com.cyclealarm.app.R.string.shift_label_day),
+                slot(1, 8, 0, com.cyclealarm.app.R.string.shift_label_day)
             )
         ),
         ShiftTemplate(
             key = "four_crew_three_shift",
-            name = "四班三运转",
-            description = "8 天一轮：白班 ×2、中班 ×2、夜班 ×2、休息 ×2",
+            nameRes = com.cyclealarm.app.R.string.shift_four_crew_name,
+            descRes = com.cyclealarm.app.R.string.shift_four_crew_desc,
             cycleLength = 8,
             slots = listOf(
-                slot(0, 8, 0, "白班"),
-                slot(1, 8, 0, "白班"),
-                slot(2, 16, 0, "中班"),
-                slot(3, 16, 0, "中班"),
-                slot(4, 0, 0, "夜班"),
-                slot(5, 0, 0, "夜班")
+                slot(0, 8, 0, com.cyclealarm.app.R.string.shift_label_day),
+                slot(1, 8, 0, com.cyclealarm.app.R.string.shift_label_day),
+                slot(2, 16, 0, com.cyclealarm.app.R.string.shift_label_middle),
+                slot(3, 16, 0, com.cyclealarm.app.R.string.shift_label_middle),
+                slot(4, 0, 0, com.cyclealarm.app.R.string.shift_label_night),
+                slot(5, 0, 0, com.cyclealarm.app.R.string.shift_label_night)
             )
         )
     )
 
     fun byKey(key: String): ShiftTemplate? = ALL.firstOrNull { it.key == key }
 
-    /** 把模板转成待插入的周期闹钟（id=0 表示新建）。 */
-    fun toAlarms(template: ShiftTemplate): List<AlarmEntity> = template.slots.map { slot ->
-        AlarmEntity(
-            dayIndex = slot.dayIndex,
-            hour = slot.hour,
-            minute = slot.minute,
-            enabled = true,
-            mutedDuringHoliday = true,
-            label = slot.label
-        )
-    }
+    /** 把模板转成待插入的周期闹钟（id=0 表示新建）；标签按当前语言解析。 */
+    fun toAlarms(context: android.content.Context, template: ShiftTemplate): List<AlarmEntity> =
+        template.slots.map { slot ->
+            AlarmEntity(
+                dayIndex = slot.dayIndex,
+                hour = slot.hour,
+                minute = slot.minute,
+                enabled = true,
+                mutedDuringHoliday = true,
+                label = context.getString(slot.labelRes)
+            )
+        }
 }

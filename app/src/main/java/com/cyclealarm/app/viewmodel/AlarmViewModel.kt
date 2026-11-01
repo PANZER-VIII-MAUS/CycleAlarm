@@ -238,7 +238,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         db.settingsDao().upsert(
             current.copy(cycleLength = template.cycleLength, cycleType = CycleTypes.CUSTOM)
         )
-        ShiftTemplates.toAlarms(template).forEach { db.alarmDao().upsert(it) }
+        ShiftTemplates.toAlarms(getApplication(), template).forEach { db.alarmDao().upsert(it) }
         syncPlans()
     }
 

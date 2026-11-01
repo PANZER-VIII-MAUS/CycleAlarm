@@ -34,9 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.ui.components.CycleSwitch
 import com.cyclealarm.app.data.ActivityTypeEntity
@@ -70,14 +72,14 @@ fun PlanTypeManagerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("管理安排类型") },
+        title = { Text(stringResource(R.string.ptm_title)) },
         text = {
             Column(
                 modifier = Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())
             ) {
                 if (types.isEmpty()) {
                     Text(
-                        "还没有安排类型",
+                        stringResource(R.string.ptm_empty),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp)
@@ -93,11 +95,11 @@ fun PlanTypeManagerDialog(
                             Text(
                                 buildString {
                                     if (type.rings) {
-                                        append("${DisplayPrefs.formatTime(context, type.hour, type.minute)} 响铃")
+                                        append(stringResource(R.string.ptm_ring_at, DisplayPrefs.formatTime(context, type.hour, type.minute)))
                                     } else {
-                                        append("不响铃")
+                                        append(stringResource(R.string.ptm_no_ring))
                                     }
-                                    append(" · 使用 ${usage[type.id] ?: 0} 天")
+                                    append(stringResource(R.string.ptm_used_days, usage[type.id] ?: 0))
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -107,19 +109,19 @@ fun PlanTypeManagerDialog(
                             onClick = { onMove(type.id, true) },
                             enabled = index > 0
                         ) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "上移")
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.action_move_up))
                         }
                         IconButton(
                             onClick = { onMove(type.id, false) },
                             enabled = index < types.lastIndex
                         ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "下移")
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.action_move_down))
                         }
                         IconButton(onClick = { editing = type }) {
-                            Icon(Icons.Default.Edit, contentDescription = "编辑")
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
                         }
                         IconButton(onClick = { deleting = type }) {
-                            Icon(Icons.Default.Delete, contentDescription = "删除")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                         }
                     }
                     HorizontalDivider()
@@ -130,11 +132,11 @@ fun PlanTypeManagerDialog(
                     },
                     modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                 ) {
-                    Text("＋ 新增安排类型")
+                    Text(stringResource(R.string.ptm_add))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("完成") } }
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_done)) } }
     )
 
     editing?.let { type ->
@@ -158,24 +160,24 @@ fun PlanTypeManagerDialog(
         val days = usage[updated.id] ?: 0
         AlertDialog(
             onDismissRequest = { pendingTimeChange = null },
-            title = { Text("更新已安排的日子？") },
+            title = { Text(stringResource(R.string.ptm_update_title)) },
             text = {
                 Text(
-                    "该安排有 $days 天正在使用，改时间会一起更新，确定吗？\n\n" +
-                        "确定：这 $days 天一起改成新时间。\n取消：只改类型默认值，已安排的日子保持原时间。"
+                    stringResource(R.string.ptm_update_text, days) + "\n\n" +
+                        stringResource(R.string.ptm_update_detail, days)
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     onUpdate(updated, true)
                     pendingTimeChange = null
-                }) { Text("确定") }
+                }) { Text(stringResource(R.string.action_confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     onUpdate(updated, false)
                     pendingTimeChange = null
-                }) { Text("取消") }
+                }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -184,13 +186,13 @@ fun PlanTypeManagerDialog(
         val days = usage[type.id] ?: 0
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("删除「${type.name}」") },
+            title = { Text(stringResource(R.string.ptm_delete_title, type.name)) },
             text = {
                 Text(
                     if (days > 0) {
-                        "$days 天正在使用，删除后这些天变为未安排。"
+                        stringResource(R.string.ptm_delete_in_use, days)
                     } else {
-                        "确定删除该安排类型？"
+                        stringResource(R.string.ptm_delete_confirm)
                     }
                 )
             },
@@ -203,9 +205,9 @@ fun PlanTypeManagerDialog(
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
-                ) { Text("删除") }
+                ) { Text(stringResource(R.string.action_delete)) }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -225,13 +227,15 @@ private fun PlanTypeEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (type.id == 0) "新增安排类型" else "编辑安排类型") },
+        title = {
+                    Text(if (type.id == 0) stringResource(R.string.ptm_add_title) else stringResource(R.string.ptm_edit_title))
+                },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("名称（如：上课 / 自习 / 早读）") },
+                    label = { Text(stringResource(R.string.ptm_name_label)) },
                     singleLine = true,
                     isError = !nameValid,
                     modifier = Modifier.fillMaxWidth()
@@ -254,26 +258,31 @@ private fun PlanTypeEditDialog(
                 ) {
                     Text(
                         if (rings) {
-                            "响铃时间：${DisplayPrefs.formatTime(context, hour, minute)}"
+                            stringResource(R.string.ptm_ring_time, DisplayPrefs.formatTime(context, hour, minute))
                         } else {
-                            "不响铃（无时间）"
+                            stringResource(R.string.ptm_no_ring_time)
                         }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("响铃", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.ptm_ring_title), style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "关闭表示这类安排不产生闹钟（如休息）",
+                            stringResource(R.string.ptm_ring_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                    val ringStateText = if (rings) {
+                        stringResource(R.string.ptm_ring_state_on)
+                    } else {
+                        stringResource(R.string.ptm_no_ring)
                     }
                     CycleSwitch(
                         checked = rings,
                         onCheckedChange = { rings = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (rings) "响铃已开启" else "不响铃"
+                            stateDescription = ringStateText
                         }
                     )
                 }
@@ -292,8 +301,8 @@ private fun PlanTypeEditDialog(
                         )
                     )
                 }
-            ) { Text("保存") }
+            ) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }

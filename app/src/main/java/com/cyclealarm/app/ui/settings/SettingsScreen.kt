@@ -133,7 +133,7 @@ fun SettingsScreen(
                 showShiftTemplates = false
                 Toast.makeText(
                     context,
-                    context.getString(R.string.toast_template_applied, template.name),
+                    context.getString(R.string.toast_template_applied, context.getString(template.nameRes)),
                     Toast.LENGTH_SHORT
                 ).show()
             },
@@ -638,9 +638,9 @@ private fun ShiftTemplateDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(template.name, style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(template.nameRes), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                template.description,
+                                stringResource(template.descRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

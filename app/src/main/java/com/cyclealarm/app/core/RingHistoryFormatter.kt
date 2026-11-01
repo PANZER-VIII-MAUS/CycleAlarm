@@ -30,10 +30,11 @@ object RingHistoryFormatter {
         else -> RingHistoryStatus.ACKED
     }
 
-    fun label(status: RingHistoryStatus): String = when (status) {
-        RingHistoryStatus.ACKED -> "已处理"
-        RingHistoryStatus.UNHANDLED -> "响过未处理"
-        RingHistoryStatus.MISSED -> "漏响"
+    /** 状态对应的文案资源 id（展示时由 UI 用当前语言解析）。 */
+    fun labelRes(status: RingHistoryStatus): Int = when (status) {
+        RingHistoryStatus.ACKED -> com.cyclealarm.app.R.string.history_acked
+        RingHistoryStatus.UNHANDLED -> com.cyclealarm.app.R.string.history_unhandled
+        RingHistoryStatus.MISSED -> com.cyclealarm.app.R.string.history_missed
     }
 
     /** 例如「10-31 07:30」。 */
