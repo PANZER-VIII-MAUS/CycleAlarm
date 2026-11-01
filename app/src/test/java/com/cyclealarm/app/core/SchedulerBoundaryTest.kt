@@ -110,4 +110,42 @@ class SchedulerBoundaryTest {
             AlarmScheduler.nextTriggerForDateAlarm(alarm, disabledSettings, listOf(holiday), now)
         )
     }
+    @Test
+    fun `cross midnight snooze maps back to the original day`() {
+        val zone = java.time.ZoneId.systemDefault()
+        // 00:05 触发「原定 23:55」的 snooze：期望值应落在前一天 23:55，而不是今天 23:55
+        val firedAt = java.time.LocalDate.of(2026, 11, 2)
+            .atTime(0, 5)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+
+        val expected = AlarmScheduler.expectedMillisOfOriginal(23, 55, firedAt)
+
+        val expectedDay = java.time.LocalDate.of(2026, 11, 1)
+            .atTime(23, 55)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+        assertEquals(expectedDay, expected)
+    }
+
+    @Test
+    fun `same day snooze keeps today's date`() {
+        val zone = java.time.ZoneId.systemDefault()
+        val firedAt = java.time.LocalDate.of(2026, 11, 2)
+            .atTime(12, 5)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+
+        val expected = AlarmScheduler.expectedMillisOfOriginal(11, 55, firedAt)
+
+        val expectedDay = java.time.LocalDate.of(2026, 11, 2)
+            .atTime(11, 55)
+            .atZone(zone)
+            .toInstant()
+            .toEpochMilli()
+        assertEquals(expectedDay, expected)
+    }
 }

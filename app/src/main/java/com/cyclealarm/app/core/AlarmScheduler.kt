@@ -88,6 +88,16 @@ object AlarmScheduler {
     const val MAX_ALARM_ID = SNOOZE_REQUEST_OFFSET - 1
 
     /** 把「今天（now 所在日）的 hour:minute」换算成时间戳；用于响铃留痕与漏响对账。 */
+    /**
+     * 「原定时间」对应的毫秒：以 [now] 所在日为基准，若算出来是未来（跨午夜 snooze：
+     * 23:55 的闹钟 00:05 触发），说明原时间属于前一天，回退一天（四轮复审 N5）。
+     */
+    fun expectedMillisOfOriginal(hour: Int, minute: Int, now: Long): Long {
+        val today = expectedMillisOfToday(hour, minute, now)
+        val dayMs = 24L * 60 * 60 * 1000
+        return if (today > now) today - dayMs else today
+    }
+
     fun expectedMillisOfToday(hour: Int, minute: Int, now: Long): Long {
         val zone = java.time.ZoneId.systemDefault()
         val date = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
@@ -261,8 +271,16 @@ object AlarmScheduler {
         val pi = preAlertPendingIntent(
             context, requestCode, kind, alarmId, hour, minute, label, minutes
         )
+        // Doze 下 setAndAllowWhileIdle 最坏会晚 9 分钟，5/10 分钟的提前量就废了：
+        // 有精确闹钟权限时用 setExactAndAllowWhileIdle，没有则退回不精确版本
         runCatching {
-            am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+            val exact = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
+                am.canScheduleExactAlarms()
+            if (exact) {
+                am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+            } else {
+                am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+            }
         }.onFailure { Log.e(TAG, "pre alert schedule failed id=$alarmId", it) }
     }
 
@@ -293,7 +311,7 @@ object AlarmScheduler {
     }
 
     private fun cancelPreAlert(context: Context, alarmId: Int, kind: String, minutes: Int) {
-        if (minutes <= 0) return
+        // 不能因为「当前 preAlertMinutes = 0」就跳过：用户正是从「有提醒」改成「关闭」时才需要取消
         val am = context.getSystemService(android.app.AlarmManager::class.java) ?: return
         val requestCode = schedulerId(kind, alarmId)
         val pi = preAlertPendingIntent(

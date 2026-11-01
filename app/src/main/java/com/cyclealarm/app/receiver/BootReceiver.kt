@@ -67,13 +67,18 @@ class BootReceiver : BroadcastReceiver() {
                     .onFailure {
                         Log.e(TAG, "scheduled resync failed for $action", it)
                     }
-                runCatching {
-                    ContextCompat.startForegroundService(
+                // 用户关掉「常驻保活」后重启不该再拉起常驻服务（四轮复审 N5）
+                if (GuardServicePolicy.isEnabled(context)) {
+                    runCatching {
+                        ContextCompat.startForegroundService(
                             context,
                             Intent(context, AlarmGuardService::class.java)
                         )
-                }.onFailure {
-                    Log.e(TAG, "guard service start failed for ${intent.action}", it)
+                    }.onFailure {
+                        Log.e(TAG, "guard service start failed for ${intent.action}", it)
+                    }
+                } else {
+                    Log.d(TAG, "guard service disabled by user, skip start")
                 }
             } finally {
                 pendingResult.finish()

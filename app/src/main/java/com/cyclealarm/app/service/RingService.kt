@@ -112,6 +112,8 @@ class RingService : Service() {
         // v10：用闹钟自己的铃声与渐强设置（自定义为空则回退全局默认）
         runCatching { RingtonePlayer.play(this, customRingtoneUri, rampEnabled) }
             .onFailure { Log.e(TAG, "ringtone init failed", it) }
+        // 先无条件停掉上一条：否则「上一条振动开着、这一条关了」时旧振动会一直转（四轮复审 N5）
+        runCatching { VibratorUtil.stop(this) }
         if (vibrateEnabled) {
             runCatching { VibratorUtil.start(this) }
                 .onFailure { Log.e(TAG, "vibration init failed", it) }

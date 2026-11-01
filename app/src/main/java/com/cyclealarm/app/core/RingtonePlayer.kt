@@ -24,35 +24,44 @@ object RingtonePlayer {
         val fallback: Uri? = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        val resolved = RingOptionPolicy.resolveUri(customUri)?.let { runCatching { Uri.parse(it) }.getOrNull() }
-        val uri: Uri? = resolved ?: fallback
-        if (uri == null) error("No default ringtone available")
-        var pendingPlayer: MediaPlayer? = null
-        try {
-            val p = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(context, uri)
-                isLooping = true
-                prepare()
-                if (ramp) {
-                    setVolume(RingOptionPolicy.RAMP_START, RingOptionPolicy.RAMP_START)
-                }
-                start()
-            }
-            pendingPlayer = p
-            player = p
-            if (ramp) {
-                scheduleRamp()
-            }
-        } catch (throwable: Exception) {
+        // 候选：自定义铃声 → 系统闹钟铃声 → 提示音。
+        // 自定义 URI 失效（文件被删、权限被回收）时必须回退，否则就是「静音响铃」（四轮复审 N5）
+        val candidates = buildList {
+            RingOptionPolicy.resolveUri(customUri)
+                ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+                ?.let { add(it) }
+            fallback?.let { if (it !in this) add(it) }
+        }
+        if (candidates.isEmpty()) error("No default ringtone available")
+        var lastError: Exception? = null
+        for (uri in candidates) {
+            val started = runCatching { startWith(context, uri, ramp) }
+            if (started.isSuccess) return
+            lastError = started.exceptionOrNull() as? Exception
             player = null
-            runCatching { pendingPlayer?.release() }
-            throw throwable
+        }
+        throw lastError ?: IllegalStateException("ringtone unavailable")
+    }
+
+    private fun startWith(context: Context, uri: Uri, ramp: Boolean) {
+        val p = MediaPlayer().apply {
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            runCatching { setDataSource(context, uri) }
+            isLooping = true
+            prepare()
+            if (ramp) {
+                setVolume(RingOptionPolicy.RAMP_START, RingOptionPolicy.RAMP_START)
+            }
+            start()
+        }
+        player = p
+        if (ramp) {
+            scheduleRamp()
         }
     }
 

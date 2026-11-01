@@ -41,6 +41,15 @@ class AlarmReceiver : BroadcastReceiver() {
                 val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
                 AlarmScheduler.clearSnoozeForAlarm(context, kind, alarmId)
                 context.stopService(Intent(context, RingService::class.java))
+                // 停铃后「下次响铃」可能就变了：小组件不能停在旧值（四轮复审 N5）
+                val pendingResult = goAsync()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        com.cyclealarm.app.widget.WidgetUpdater.updateAll(context)
+                    } finally {
+                        pendingResult.finish()
+                    }
+                }
             }
 
             AlarmScheduler.ACTION_PRE_ALERT -> {
@@ -48,7 +57,10 @@ class AlarmReceiver : BroadcastReceiver() {
                 val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
                 val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
                 val minutes = intent.getIntExtra(AlarmScheduler.EXTRA_PRE_ALERT_MINUTES, 10)
-                notifyPreAlert(context, hour, minute, label, minutes)
+                val preAlertAlarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
+                val preAlertKind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
+                    ?: AlarmScheduler.KIND_CYCLE
+                notifyPreAlert(context, preAlertKind, preAlertAlarmId, hour, minute, label, minutes)
             }
 
             AlarmScheduler.ACTION_RESYNC -> {
@@ -117,7 +129,8 @@ class AlarmReceiver : BroadcastReceiver() {
                         // snooze 触发时登记原定时间，这样漏响判定对的是原闹钟而不是 snooze 时间。
                         val firedNow = System.currentTimeMillis()
                         val expectedAt = if (snoozed && originalHour != null && originalMinute != null) {
-                            AlarmScheduler.expectedMillisOfToday(
+                            // 跨午夜 snooze（23:55 的闹钟 00:05 触发）要算回前一天，否则期望值在未来
+                            AlarmScheduler.expectedMillisOfOriginal(
                                 originalHour!!, originalMinute!!, firedNow
                             )
                         } else {
@@ -209,6 +222,8 @@ class AlarmReceiver : BroadcastReceiver() {
     @SuppressLint("MissingPermission") // 权限已由 NotificationPermissionCheck.canSignal 显式判断
     private fun notifyPreAlert(
         context: Context,
+        kind: String,
+        alarmId: Int,
         hour: Int,
         minute: Int,
         label: String,
@@ -220,9 +235,11 @@ class AlarmReceiver : BroadcastReceiver() {
             return
         }
         runCatching {
+            // 通知 id 按闹钟区分：多条提前提醒同时存在时不再互相覆盖（四轮复审 N5）
+            val notificationId = PRE_ALERT_NOTIFICATION_BASE + AlarmScheduler.schedulerId(kind, alarmId)
             val contentIntent = PendingIntent.getActivity(
                 context,
-                PRE_ALERT_NOTIFICATION_ID,
+                notificationId,
                 Intent(context, com.cyclealarm.app.MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 },
@@ -248,7 +265,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 .setAutoCancel(true)
                 .build()
             androidx.core.app.NotificationManagerCompat.from(context)
-                .notify(PRE_ALERT_NOTIFICATION_ID, notification)
+                .notify(notificationId, notification)
         }.onFailure { Log.e(TAG, "pre alert notification failed", it) }
     }
 
@@ -360,7 +377,7 @@ class AlarmReceiver : BroadcastReceiver() {
         // 通知 id 分区：1 = 前台服务；2 = 响铃；2_000_000 + schedulerId = 兜底；
         // 3_000_001 = 排期失败（避开兜底区间，三轮复审 §4.4-1）
         const val RESCHEDULE_NOTIFICATION_ID = 3_000_001
-        /** 提前提醒通知 id。 */
-        const val PRE_ALERT_NOTIFICATION_ID = 3_000_003
+        /** 提前提醒通知 id 基址（按调度 id 偏移，互不覆盖）。 */
+        const val PRE_ALERT_NOTIFICATION_BASE = 3_000_100
     }
 }
