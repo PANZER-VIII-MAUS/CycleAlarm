@@ -10,10 +10,12 @@
 - 每天可以挂一个「安排」（上课 / 自习 / 休息，类型可自定义增删改），按安排自动生成或撤销当天闹钟
 - 支持「从课表 / 排班表导入」：Excel(.xlsx) 与 CSV，导入前有可编辑预览
 - 支持"假期模式"：多段假期 + 总开关，可一键导入中国法定节假日，假期结束自动恢复
+- **中英双语**：主界面 / 设置 / 导入 / 响铃 / 通知 / 小组件 / 分享文本全部支持中文与 English，设置里可切换（跟随系统 / 中文 / English）
+- **横屏与大字号适配**：矮屏时头部随列表滚动；大字号或窄卡片下日卡自动改两行布局；宽屏内容收窄居中
 - Kotlin + Jetpack Compose 界面，Room 持久化，AlarmManager 精确排期，WorkManager 每日兜底重排 + 前台服务响铃
 - 适配 ColorOS / HyperOS 等国产 ROM：自启动、电池优化、后台弹出界面等权限引导，`setAlarmClock()` 高优先级排期，常驻前台服务降低被杀概率
 
-> 兼容性：最低 Android 8.0（minSdk 26）；精确闹钟、通知权限、全屏提醒等按 Android 12 / 13 / 14 的行为分别做了处理。
+> 兼容性：最低 Android 8.0（minSdk 26），targetSdk 36（Android 16）；精确闹钟、通知权限、全屏提醒等按 Android 12 / 13 / 14 / 15 / 16 的行为分别做了处理。
 > 目前的真机验证环境是 OPPO Find X7（ColorOS / Android 14），其它机型尚未逐一实测——遇到问题欢迎提 Issue。
 
 <p align="center">
@@ -30,6 +32,8 @@
 </details>
 
 ## 下载安装
+
+当前最新版本：**0.6.1**（versionCode 29，targetSdk 36）。
 
 正式 APK 请从项目的 **GitHub Releases** 页面下载并侧载安装。覆盖安装新版本时，必须使用与原安装包相同的签名；签名不一致时，Android 会拒绝覆盖安装，只能卸载旧版，卸载会清除应用数据。
 
@@ -56,6 +60,26 @@
 ---
 
 ## 更新日志
+
+### 0.6.1（2026-11-01）
+
+- **横屏适配**：矮屏（高 < 480dp）时下次响铃卡与「今天是第 N 天」进入滚动列表，整页一起滚动，不再挤压列表区域
+- **大字号适配**：系统字号放大或卡片宽度 < 340dp 时，日卡自动切换两行布局（第 X 天 / 07:30 / 已暂停），不再截断时间
+- **宽屏优化**：屏宽 > 700dp 时内容收窄到 640dp 居中
+- `MainScreen` 从 1442 行拆为 7 个文件（下次响铃卡 / 循环卡 / 日卡 / 假期卡 / 假期对话框 / 编辑闹钟 / 主脚手架），并补充 4 个 `@Preview`
+- **R8 keep 规则收缩**：去掉「整个 data 包全保留」的粗放规则，只保留 Room 的 `AppDatabase_Impl` 与枚举 `values()/valueOf()`；数据库 schema 不再打进正式包
+- 正式包体积 1,908,083 → 1,884,159 字节
+- release 签名密钥已更换密码（密钥本身未变，签名指纹一致，可直接覆盖升级）
+
+### 0.6.0（2026-11-01）
+
+- **中英双语**：新增 `values-en` 全量英文资源（500+ 条），覆盖主界面、设置页、导入页、响铃页、通知、小组件、分享文本、权限引导、节假日名、全部错误提示
+- 设置 → 显示 → 语言：跟随系统 / 中文 / English，切换后立即生效
+- 架构：新增 `LocalizedFailure`（数据层只抛错误码，界面层按语言解析）、`uiMessage()` 统一解析异常
+- `RingHistoryFormatter` / `DateAlarmStatus` / `ShiftTemplate` / `RomHelper` 由中文常量改为资源 id，纯逻辑层不接触语言
+- 兼容旧数据：之前已存的中文排期诊断记录仍可正常显示
+- 识别关键词（匹配中文课表用的「周一 / 第1-2节 / 单双周」等）刻意保留中文，并加注释说明
+- 单测 253 个（含 Robolectric 迁移测试、通知/广播/服务契约、i18n 资源断言）
 
 ### 0.5.0（2026-11-01）
 
@@ -290,7 +314,7 @@
 - 底部固定胶囊「添加闹钟」：选任意一天后新建一条手动闹钟（默认 07:00），与安排互不影响
 - 时间选择：安排时间用 Material3 `TimePicker` 表盘；手动闹钟沿用系统时间选择器
 - 顶部固定一行「今天是第 N 天」（每周模式为「今天是 周X」），不随列表滚动
-- 右上角「设置」是独立页面：循环（方式 / 天数 / 今天对齐）、显示（主题 / 12 或 24 小时制）、
+- 右上角「设置」是独立页面：循环（方式 / 天数 / 今天对齐）、显示（语言 / 主题 / 12 或 24 小时制）、
   响铃（响铃时长 / 重复间隔）、系统时间（只读 + 跳转系统设置）、关于
 - 假期卡片：假期模式总开关；「导入法定节假日」一键加入内置的官方放假安排（自动跳过已过去的日期）；
   「＋自定义假期」添加任意区间；每段假期可单独开关、编辑、删除
@@ -303,77 +327,97 @@
 
 | 组件 | 版本 |
 |---|---|
-| Kotlin / Compose | 1.9.22 / BOM 2024.06.00（Compose 1.6.8 + Material 3，编译器 1.5.10） |
-| AGP / Gradle | 8.2.2 / 8.2 |
-| Room（KSP） | 2.6.1 |
+| Kotlin / Compose | 2.0.21 / BOM 2024.10.01（Compose 1.7 + Material 3，`kotlin.plugin.compose` 编译器插件） |
+| AGP / Gradle | 8.9.1 / 8.11.1 |
+| Room（KSP） | 2.6.1（`ksp.useKSP2=false`，KSP 2.0.21-1.0.28） |
 | WorkManager | 2.9.1 |
-| minSdk / targetSdk / compileSdk | 26 / 34 / 34 |
+| JVM target | 17 |
+| minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
-> 版本说明：该组合与 Android Studio Hedgehog (2023.1.1) 完全兼容。
-> 若以后升级 Android Studio（Ladybug 及以上），可以把 AGP 升回 8.5.2、
-> Kotlin 升回 2.0.20 并换回 Compose BOM 2024.09.02，其余代码无需改动。
+> 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
+> 单元测试 253 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error。
 
 ## 工程结构
 
 ```
 CycleAlarm/
 ├── app/
-│   └── src/main/java/com/cyclealarm/app/
-│       ├── CycleAlarmApp.kt            # Application：创建通知渠道
-│       ├── MainActivity.kt             # 入口：启动守护服务、每日兜底任务、前台重排
-│       ├── core/
-│       │   ├── AlarmScheduler.kt       # 排期算法 + setAlarmClock + 唯一 PendingIntent
-│       │   ├── AlarmResyncHelper.kt    # 从数据库重建全部排期
-│       │   ├── DayPlanSync.kt          # 纯函数：安排 → 闹钟的差异计算
-│       │   ├── DayPlanAlarmSync.kt     # 薄壳：把差异落到数据库并重排
-│       │   ├── RingPrefs.kt            # 响铃时长 / 稍后提醒间隔（SharedPreferences）
-│       │   ├── DisplayPrefs.kt         # 12 / 24 小时制与时间格式化
-│       │   ├── NotificationChannels.kt # 守护/响铃两个通知渠道
-│       │   ├── PermissionHelper.kt     # ColorOS 权限跳转
-│       │   ├── RingtonePlayer.kt       # 循环播放系统闹钟铃声
-│       │   └── VibratorUtil.kt
-│       ├── data/                       # Room：alarms / date_alarms / activity_types / day_plans / holidays / settings
-│       ├── importer/                   # 纯 JVM 解析层：xlsx / csv / 时间归一化 / 结构探测
-│       ├── ui/
-│       │   ├── MainScreen.kt           # 主界面：每日卡片、假期卡、底部「添加闹钟」
-│       │   ├── theme/                  # Color.kt（设计令牌）/ Type.kt / Theme.kt
-│       │   ├── components/             # CycleCard / PillButton / ScrimDialog
-│       │   ├── import/                 # 导入流程 UI（选择 → 预览 → 选项 → 写入）
-│       │   ├── plan/                   # 安排 UI：选择安排、类型管理、单日改时间
-│       │   ├── settings/               # 设置页（循环 / 显示 / 响铃 / 系统时间 / 关于）
-│       │   └── ring/                   # 全屏响铃页
-│       ├── receiver/
-│       │   ├── AlarmReceiver.kt        # 触发响铃、停止响铃、响后重排
-│       │   └── BootReceiver.kt         # 开机/改时区等重建排期
-│       ├── worker/
-│       │   └── DailyResyncWorker.kt    # 每日兜底重排
-│       ├── service/
-│       │   ├── AlarmGuardService.kt    # 常驻前台服务（持续通知）
-│       │   └── RingService.kt          # 响铃前台服务：铃声 + 振动 + 全屏通知
-│       └── viewmodel/                  # AlarmViewModel / ImportViewModel
-├── app/src/test/                       # JVM 单测：解析层、时间归一化、安排同步 diff
-├── docs/                               # design-tokens.md、design-reference.jpg、screenshots/
-├── .github/workflows/android.yml       # CI：JDK 17 + 单测 + assembleDebug
-├── tools/create_keystore.ps1           # 一键生成 .jks + keystore.properties
+│   ├── schemas/                        # Room 导出的 schema（debug/test 当迁移测试数据用）
+│   ├── src/main/java/com/cyclealarm/app/
+│   │   ├── CycleAlarmApp.kt            # Application：通知渠道初始化
+│   │   ├── MainActivity.kt             # 入口：守护服务、每日兜底、前台重排
+│   │   ├── core/                       # 纯逻辑层（可单测，不依赖 Android 界面）
+│   │   │   ├── AlarmScheduler.kt       # 排期 + setAlarmClock + 唯一 PendingIntent
+│   │   │   ├── AlarmResyncHelper.kt    # 重建全部排期 + 对账
+│   │   │   ├── ReconcilePolicy.kt      # 对账决策（缺/空/偏晚/历史）
+│   │   │   ├── SkipPolicy.kt           # 「跳过下一次」
+│   │   │   ├── RingOptionPolicy.kt     # 铃声 / 振动 / 渐强
+│   │   │   ├── PreAlertPolicy.kt       # 提前提醒时间计算
+│   │   │   ├── DayPlanSync.kt          # 安排 → 闹钟的差异计算
+│   │   │   ├── DatabaseSelfCheck.kt    # 库结构自检
+│   │   │   ├── LocalizedFailure.kt     # 数据层错误码 + uiMessage()
+│   │   │   ├── AppLanguage.kt          # 应用内语言（跟随系统/中/英）
+│   │   │   ├── DisplayPrefs.kt         # 12/24 小时制与时间格式化
+│   │   │   ├── RingPrefs.kt            # 响铃时长 / 稍后提醒间隔
+│   │   │   ├── NotificationChannels.kt # 守护 / 响铃 / 异常 三个通知渠道
+│   │   │   ├── RomHelper.kt            # 国产 ROM 识别 + 设置路径指引
+│   │   │   ├── PermissionHelper.kt     # 权限跳转
+│   │   │   └── RingtonePlayer.kt / VibratorUtil.kt
+│   │   ├── data/                       # Room：数据库 / 迁移 / 备份编解码 / 节假日数据
+│   │   ├── importer/                   # 纯 JVM 解析层：xlsx / csv / 时间归一化 / 结构探测
+│   │   ├── ui/
+│   │   │   ├── MainScreen.kt           # 主脚手架（状态 / 对话框调度 / 列表）
+│   │   │   ├── NextAlarmCard.kt        # 下次响铃卡
+│   │   │   ├── CycleInfoCard.kt        # 循环周期卡
+│   │   │   ├── DayPlanCard.kt          # 每日卡片 + 手动闹钟行
+│   │   │   ├── HolidayCard.kt          # 假期模式卡
+│   │   │   ├── HolidayDialogs.kt       # 假期编辑 / 日期选择
+│   │   │   ├── EditAlarmDialog.kt      # 闹钟编辑（时间/铃声/振动/渐强/提前提醒）
+│   │   │   ├── DateAlarmSection.kt     # 按日期闹钟区
+│   │   │   ├── PermissionGuide.kt      # 权限引导
+│   │   │   ├── DateUtils.kt            # 日期格式化 + 共享 weekdayRes
+│   │   │   ├── theme/                  # Color（设计令牌）/ Type / Theme
+│   │   │   ├── components/             # CycleCard / PillButton / ScrimDialog
+│   │   │   ├── import/                 # 导入流程 UI（选择 → 预览 → 选项 → 写入）
+│   │   │   ├── plan/                   # 安排类型管理 / 选择 / 单日改时间
+│   │   │   ├── settings/               # 设置页（循环 / 显示 / 响铃 / 系统时间 / 关于）
+│   │   │   ├── history/                # 响铃历史
+│   │   │   └── ring/                   # 全屏响铃页
+│   │   ├── receiver/                   # AlarmReceiver / BootReceiver
+│   │   ├── service/                    # AlarmGuardService / RingService
+│   │   ├── widget/                     # 桌面小组件（下次响铃）
+│   │   └── viewmodel/                  # AlarmViewModel / ImportViewModel
+│   ├── src/main/res/values/            # 中文资源（默认）
+│   ├── src/main/res/values-en/         # 英文资源
+│   └── src/test/                       # JUnit4 + Robolectric：迁移 / 策略 / i18n 断言
+├── docs/                               # 设计与可靠性文档、截图
+├── tools/
+│   ├── change-signing-password.ps1     # 更换签名密码（不改密钥、指纹不变）
+│   └── README-signing.md               # 签名与备份说明
+├── .github/workflows/android.yml       # CI：JDK17 + platform36 + 单测 + lint + assemble
 ├── keystore.properties.example
 ├── LICENSE                             # Apache-2.0
-└── gradle/wrapper/                     # 标准 Gradle Wrapper（8.2）
+└── gradle/wrapper/                     # Gradle Wrapper 8.11.1
 ```
 
 ## 构建要求
 
 - **JDK 17**
-- **Android Studio Hedgehog（2023.1.1）或更高版本**
+- **Android Studio Ladybug（2024.2）或更高版本**（AGP 8.9.1 / Gradle 8.11.1）
+- **Android SDK Platform 36**（targetSdk 36）与 **Build-Tools 35.0.0**；CI 会在 runner 里自动安装
 
 命令行验证与构建：
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
-.\gradlew.bat testDebugUnitTest
+.\gradlew.bat testDebugUnitTest        # 253 个 JVM/Robolectric 单测
+.\gradlew.bat lintDebug                # 应为 0 error
 .\gradlew.bat assembleDebug
+.\gradlew.bat assembleRelease          # 需要 keystore.properties，见下节
 ```
 
-Release 签名与正式 APK 的生成方式见下方「打包发布（正式签名 APK）」章节。
+Release 签名与正式 APK 的生成方式见下方「打包发布（正式签名 APK）」章节；
+更换签名密码见 [tools/README-signing.md](tools/README-signing.md)（换密码不改签名指纹，可直接覆盖升级）
 
 ## 快速开始
 
@@ -495,14 +539,28 @@ Manifest 已声明：
 
 ### 方式 B：命令行（Gradle 自动签名）
 
-1. 运行 `tools\create_keystore.ps1`（或手动 keytool），生成 `cycle_alarm.jks` 与 `keystore.properties`
-2. 执行：
+1. 首次：运行 `tools\create_keystore.ps1`（或手动 keytool）生成 `.jks` 与 `keystore.properties`
+2. 之后每次发布：
 
 ```bat
 gradlew.bat assembleRelease
 ```
 
 3. 产物在 `app\build\outputs\apk\release\app-release.apk`，已按 V1+V2 签名
+
+### 更换签名密码（不改密钥）
+
+仓库自带脚本 [tools/change-signing-password.ps1](tools/change-signing-password.ps1)，详见
+[tools/README-signing.md](tools/README-signing.md)。要点：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\change-signing-password.ps1
+```
+
+- 隐藏输入新密码（不回显、不落盘）
+- 自动备份旧密钥为 `<storeFile>.bak-<时间戳>`
+- 提示：脚本写 `keystore.properties` 时**必须是无 BOM 的 UTF-8**，否则 Gradle 会把首行键读成
+  `\uFEFFstoreFile`，报 `storeFile must not be null`（脚本已处理）
 
 ### 密钥库（.jks）的创建与保管（重要）
 
@@ -511,8 +569,10 @@ gradlew.bat assembleRelease
 - 建议：
   - 存到项目之外的安全位置（加密盘/密码管理器），不要放仓库
   - 密码用密码管理器记录；`keystore.properties` 已被 `.gitignore` 排除
-  - 至少做一份异地备份（U 盘 / 网盘加密压缩包）
+  - **至少做一份异地备份**：把 `.jks` 与 `keystore.properties` 一起复制到 U 盘/加密云盘；
+    `keystore.properties` 含密码明文，备份介质需自己加密
   - 有效期设 25 年以上（本脚本默认 100 年）
+  - 换密码用 `tools/change-signing-password.ps1`（签名指纹不变，已安装版本可正常覆盖升级）
 - Debug 签名与 release 签名互不通用；真机长期自用请务必使用正式密钥
 
 ## 常见问题排查
@@ -531,12 +591,16 @@ gradlew.bat assembleRelease
 - 「图片识别」暂不支持：为避免引入联网与 API Key，课表 / 排班表请用 Excel(.xlsx) 或 CSV 导入
 - `allowBackup=true`：闹钟与设置会随系统 / Google 备份上云；由于周期锚点是绝对日期，
   换机恢复后「今天是第几天」可能错位，必要时在设置里重新「今天对齐」
-- 数据库当前为 v9（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
-  / `snoozes` / `import_snapshots` / `ring_events`）；已提供 4→5→6→7→8→9 迁移链，从 v4 起升级不会清空数据；
+- 数据库当前为 v10（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
+  / `snoozes` / `import_snapshots` / `ring_events`）；已提供 4→5→6→7→8→9→10 迁移链，从 v4 起升级不会清空数据；
 - **迁移链策略**：不提供 v1~v3 的自动迁移（那是早期内部构建）。若你从极老版本升级，
   请先升级到 0.2.x 再升级到 0.3.x；任何情况下都可以用设置页的「导出/导入备份」把数据带走；
   低于 v4 的极旧测试版缺迁移，会直接报错而不是静默清空
 - 法定节假日目前内置 2025/2026 两年；2027 年通知发布后需在代码里追加数据并重新打包（也可临时用"＋自定义假期"手动添加）
+- 中英双语只覆盖界面文案：**识别关键词**（如「周一 / 第1-2节 / 单双周 / 休息」）刻意保留中文，用于匹配中文课表；
+  闹钟备注是用户数据，切换语言不会改写已保存的备注
+- 签名密钥只保存在本机（`keystore.properties` + `.jks`，均已 gitignore）；换密码可用 `tools/change-signing-password.ps1`，
+  但**密钥本身务必单独备份**——密钥丢失将无法覆盖更新老版本
 - 若上架 Google Play：`specialUse` 前台服务与 `SCHEDULE_EXACT_ALARM` 需要按政策填写用途声明
 
 ## 免责声明
