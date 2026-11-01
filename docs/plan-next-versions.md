@@ -1,73 +1,87 @@
-# 后续执行顺序（0.6.2 → 0.6.4 → 上线前）
+# CycleAlarm 后续执行顺序
 
-> 依据：`CycleAlarm 四轮复审报告（v0.2.7 → v0.6.1）`。
-> 排序原则：**先修数据/真相源，再修响铃可靠性，再清 UI 与测试债，最后做上架工程**。
-> 同一组内，**先做被其它修复依赖的共用改造**，再做点状修复。
+> 依据：五轮复审报告（2026-11-01，基线 0.6.5）。排序原则：**先修「假完成/死代码」，再补数据安全网，最后 UI 与文档**。
+> 每条都带「怎么验证」，下次继续时按顺序往下做即可。
 
-## 已完成（0.6.2 第一批，commit cb7e7e2）
+## 当前状态（2026-11-01 收工时）
 
-| # | 项 | 状态 |
-|---|---|---|
-| ✅ 1 | 备份格式 V2：A 记录补 v10 四字段 + 尾记录 sha256/条数（X1、X2） | 完成 |
-| ✅ 2 | 导入快照 V3：补四字段，兼容 V1/V2（X1） | 完成 |
-| ✅ 3 | 恢复备份：清 `import_snapshots` / `ring_events`、自动落恢复前备份、二次确认（X3） | 完成 |
-| ✅ 4 | 覆盖导入传 `weeklyConfirmed`、完成页显示被跳过条目（H1） | 完成 |
-
----
-
-## 0.6.2 · 数据真相源（继续，P0）
-
-| 顺序 | 项 | 为什么在这个位置 | 涉及文件 |
-|---|---|---|---|
-| **5** | **抽 `EffectiveTriggerPolicy`**：跳过 / 临时静音 / 生效触发点，供排期、漏响判定、对账、首页「下次响铃」、桌面小组件共用（N1） | 本轮最重；后续「小组件/首页不认 skip」「对账误判 RESCHEDULE_LATER」都依赖它 | `core/SkipPolicy`、`TemporaryMuteStore`、`AlarmScheduler`、`ResyncAuditPolicy`、`AlarmResyncHelper`、`NextAlarmFinder`、`WidgetTextPolicy` |
-| 6 | `markSelfWrite` 挪出 `dateAlarms.forEach` 循环（N2） | 1 行修复，但影响所有对账防抖 | `core/AlarmScheduler.kt` |
-| 7 | `markRung` 移到 `RingService.startForeground` 成功后（N3）；`ackedAt` 接上真实停止路径（N4） | 漏响漏报 + 历史页全「未处理」，同一处改造 | `AlarmReceiver`、`RingService`、`RingActivity` |
-| 8 | 周导入不再硬删 `dayIndex ≥ 7` 的手动闹钟（H2） | 与 0.3.0 的「保留数据、排期层过滤」同源 | `AlarmImportWriter` |
-| 9 | `DatabaseSelfCheck` 移到 IO 线程；排期诊断在对齐正常时也写回「正常」（N5 两条） | 首启 ANR 风险 + 诊断永远显示旧异常 | `MainActivity`、`ReconcilePolicy`、`ResyncCheckpoint` |
-| 10 | 收尾验证：259+ 单测、lint、装机冒烟（改铃声→备份往返、静音 20 分钟不误报、覆盖导入周课表） | 本版三条主诉的验收 | — |
-
-## 0.6.3 · 响铃链路收紧
-
-| 顺序 | 项 | 说明 |
-|---|---|---|
-| 11 | 自定义铃声失效回退系统铃声；`vibrate=false` 时停止上一条振动 | 最坏情况是「静音响铃」 |
-| 12 | 跨午夜 snooze 的 `expectedAt` 按触发点所在日计算 | 23:55 → 00:05 场景 |
-| 13 | 提前提醒：改用精确闹钟、关闭时取消已武装 PI、通知 id 按闹钟区分 | 三个独立小修 |
-| 14 | 小组件：点「稍后/停止」后立即刷新；`BootReceiver` 尊重「常驻保活」开关 | 用户可见的陈旧状态 |
-| 15 | `ring_events` 加唯一约束 + `snooze` 去重（**DB v11**：迁移 + schema 导出 + `DatabaseSelfCheck` 期望值 + 迁移测试一起改） | 涉及库结构，整块做一次 |
-| 16 | `MissedAlarm` 带上 `alarmId`（同一时刻两条闹钟都漏响只报一次的问题） | 与 15 一起改数据模型 |
-| 17 | `resyncAll(auditMissed=false)` 不推进 checkpoint | 避免吞掉待上报事件 |
-
-## 0.6.4 · UI 与测试债
-
-| 顺序 | 项 | 说明 |
-|---|---|---|
-| 18 | 主界面开关对比度 ≥ 3:1；日卡 `compact` 阈值改按**屏宽**判定（当前普通手机永远走三行） | 两块都是「看起来能用但不对」 |
-| 19 | 撤销展示时序（`pendingUndo` 在 Snackbar 前被清空）；删安排类型时先关对话框 | 撤销窗口实际上点不到 |
-| 20 | `RingActivity` 边到边 + 200% 字号不溢出 | targetSdk 36 强制边到边 |
-| 21 | 读屏：liveRegion 从每分钟变化的倒计时移走；12h 模式补上午/下午 | 无障碍 |
-| 22 | i18n 收尾：Manifest label、widget 布局文字、`BackupManager` require、导入警告、DB 自检细节、旧迁移类型名；VM/服务改用**应用内语言**取字符串；切语言后全栈重建 | 报告 §3.3 的最后一批中文残留 |
-| 23 | 节假日按内置 key 去重（不按本地化 label）；`DateAlarmStatus` 补时间维度；小组件深色版 | 三个独立数据/显示问题 |
-| 24 | 测试补强：迁移从 v4/v5 起点、v10 默认值断言、`DatabaseSelfCheck.EXPECTED` 与导出 schema 对齐、i18n key 集合一致性 | 报告 §5.3 盲区 |
-| 25 | 清理拆分文件里每个 130+ 行的 import 复制（含未使用 import） | 可读性 |
-
-## 上线前必修（0.6.4 之后）
-
-| 顺序 | 项 |
+| 项 | 值 |
 |---|---|
-| 26 | instrumentation 冒烟：AlarmManager → Receiver → Service → Activity 全链路 + R8 包 |
-| 27 | API 35 / 36 真机回归（边到边、FGS、通知权限） |
-| 28 | CI 归档 `mapping.txt`；产物命名区分「未签名」；`if-no-files-found: error` |
-| 29 | 密钥口令迁出 `keystore.properties`（环境变量 / CI secret） |
-| 30 | Play 上架包默认关闭常驻 `specialUse` 服务 |
+| 版本 | 0.6.5（versionCode 33）已发布；仓库 main 已包含 0.6.6 第一批修复（未发版） |
+| 数据库 | v11，迁移链 4→5→6→7→8→9→10→11 |
+| 单测 | 279 × 2 flavor（direct + play）= 558 全绿 |
+| lint | 0 error |
+| CI | build-debug + instrumentation（API 34 / API 36 模拟器）双 job |
+| flavor | `direct`（个人自用，含常驻守护服务）/ `play`（manifest 删除该服务） |
 
-## 关键依赖
+## 已完成（0.6.6 第一批，commit 36affcc）
 
+| # | 项 | 验证方式 |
+|---|---|---|
+| ✅ 1 | Play flavor 在 manifest 层真删 `AlarmGuardService`（`tools:node="remove"`） | `find app/build/intermediates -path '*playRelease*' -name AndroidManifest.xml` 后确认无该服务声明、仍有 `RingService` |
+| ✅ 2 | CI 改 flavor 明确任务 + play manifest 断言 + instrumentation 真跑报告 | CI run 77 的 `instrumentation (34)/(36)` |
+| ✅ 3 | 迁移护栏：版本从 schema 推导、`@Before` 重置单例、builder 必须 `addMigrations(*ALL_MIGRATIONS)` 源码断言 | `AppDatabaseMigrationChainTest` |
+| ✅ 4 | `skippedWeeklyCount` 接进完成页（原死代码） | 覆盖导入未切每周时，完成页显示红字提示 |
+
+## 待做（按顺序）
+
+### 第二批：数据安全网（§4.2–§4.5）
+
+| # | 项 | 怎么验证 |
+|---|---|---|
+| 5 | V1 老备份（无校验和）解码时给出「未校验」提示或要求二次确认，避免把截断文件当成功 | 新增单测：V1 payload 缺行 → decode 仍成功但带 `unverified` 标记；UI 提示 |
+| 6 | v11 去重补边界：同一 (kind, alarmId, expectedAt) 里 `rungAt` 一条非空、一条为空 | Robolectric 迁移测试补一例 |
+| 7 | 撤销 token 语义：连删两条后点第二条的撤销，应只撤销第二条（当前静默失效） | UI 自动化/单测：`PendingUndo` 带 token，Snackbar 关闭只清对应 token |
+| 8 | 自动备份「有产出没入口」：`BackupManager` 写入 `filesDir/auto-backups` 但没有任何恢复入口 | 设置页加「恢复最近自动备份」入口 + 单测 |
+| 9 | 备份安全网：每日自动导出到 `Download/CycleAlarm/`（MediaStore，免权限），保留最近 5 份 | Robolectric/真机：安装后第二天出现文件；文档写明路径 |
+
+### 第三批：调度残余（§4.6）
+
+| # | 项 | 怎么验证 |
+|---|---|---|
+| 10 | DST/跨时区：`expectedMillisOfOriginal` 用减 24h 在夏令时切换日会错 1 小时 | 单测用 `America/New_York` 3 月/11 月切换日 |
+| 11 | `RingEventDao.find()` 写好了没人用 → 接到事件式漏响判定 | 单测 + 调用点 |
+| 12 | `BackupCodec.SCHEMA_VERSION=10` 只写不校验 → 解码时校验并给版本提示 | 单测：写 v11 文件、读时断言 |
+| 13 | 重启/改时区后 `resyncAll(auditMissed=false)` 的检查点推进边界 | 单测覆盖 `lastCheckAt` 不变 |
+
+### 第四批：UI 与 i18n（§4.7–§4.8）
+
+| # | 项 | 怎么验证 |
+|---|---|---|
+| 14 | 日卡 130% 字号下时间字号反而变小（阈值 `>1.25f` 才降级） | 手动 130%/150% 截图对比 |
+| 15 | 通知/服务文案仍跟随系统语言（`getString` 直接用 application context） | 应用内切英文、系统中文，触发通知看语言 |
+| 16 | 旧迁移里的类型名仍是中文（`上课/自习/休息` 存库） | 迁移 SQL 用 key 而非文案，或首次启动按语言重写 |
+| 17 | `values-night` 只有小组件颜色，主题色仍走 Compose 令牌 | 视觉检查深色模式 |
+
+### 第五批：文档与发布（§4.9 + 0.6.6 发布）
+
+| # | 项 | 说明 |
+|---|---|---|
+| 18 | README/docs 版本号、测试数、flavor 路径全量同步 | 发布前用 `grep` 核对 |
+| 19 | 发布 0.6.6：`assembleDirectRelease`（产物 `apk/direct/release/app-direct-release.apk`） | 打 tag + GitHub Release + 上传 |
+| 20 | 2027 法定节假日数据（等国务院公布，通常 11 月底） | `ChinaHolidaysProvider.official` 追加 + 小版本 |
+| 21 | 真机 API 35/36 回归（手机升 ColorOS 16 = Android 16 后） | 全链路手测 |
+
+## 发布命令（flavor 拆分后）
+
+```powershell
+# 单测与 lint
+.\gradlew.bat testDirectDebugUnitTest lintDirectDebug
+
+# 打印建（个人自用，含常驻守护服务）
+.\gradlew.bat assembleDirectRelease
+# 产物：app/build/outputs/apk/direct/release/app-direct-release.apk
+
+# 上架包（manifest 无守护服务）
+.\gradlew.bat assemblePlayRelease
+# 产物：app/build/outputs/apk/play/release/app-play-release.apk
+
+# 真机冒烟（debug 包独立包名，可与正式包共存）
+.\gradlew.bat connectedDirectDebugAndroidTest
 ```
-5 (EffectiveTriggerPolicy)
- ├── 14 (小组件/首页认 skip)
- ├── 17 (checkpoint 推进策略)
- └── 16 (MissedAlarm 去重口径)
-15 (DB v11) ── 24 (迁移测试以 v11 为终态)
-7  (markRung/acked) ── 15/16 的历史页口径
-```
+
+## 教训（写进流程，避免重犯）
+
+1. **测试与生产配置必须同源**：0.6.3 事故根因是 builder 手写迁移列表，测试却用 `ALL_MIGRATIONS`。已有源码断言兜底。
+2. **不在用户日常手机上安装非正式签名包**：debug 覆盖安装会因签名不同触发卸载，数据全失。已改为 `com.cyclealarm.app.debug` 独立包名 + CI 模拟器。
+3. **「做了没接线」是本项目主要缺陷形态**：新增字段/参数后，必须同时检查①谁生产②谁消费③测试是否覆盖消费侧。
