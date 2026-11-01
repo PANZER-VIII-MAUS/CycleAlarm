@@ -15,6 +15,15 @@ if (keystorePropertiesFile.exists()) {
     FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
+// 口令优先从环境变量读取（CI/发布机用），没有再回退到 keystore.properties。
+// 这样可以把密码从工作区明文文件里挪走，properties 只留 storeFile / keyAlias。
+fun signingSecret(envName: String, propertyName: String): String? =
+    System.getenv(envName)?.takeIf { it.isNotBlank() }
+        ?: keystoreProperties.getProperty(propertyName)
+
+// 上架包（Play）默认关闭常驻 specialUse 前台服务：./gradlew assembleRelease -PplayBuild=true
+val guardServiceDefaultOn = !project.hasProperty("playBuild")
+
 android {
     namespace = "com.cyclealarm.app"
     compileSdk = 36
@@ -25,15 +34,18 @@ android {
         targetSdk = 36
         versionCode = 33
         versionName = "0.6.5"
+        // 常驻保活服务的默认开关（Play 包默认关，见上方 -PplayBuild）
+        buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", guardServiceDefaultOn.toString())
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
                 storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
+                storePassword = signingSecret("CYCLEALARM_STORE_PASSWORD", "storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                keyPassword = signingSecret("CYCLEALARM_KEY_PASSWORD", "keyPassword")
                 // 按需求同时启用 V1（JAR 签名）与 V2（APK 签名方案）
                 enableV1Signing = true
                 enableV2Signing = true
@@ -45,6 +57,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // debug 包用独立 package name：真机上已装正式签名包时也能直接跑 instrumentation
+            //（否则 debug 签名会因签名不一致装不上去）
+            applicationIdSuffix = ".debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -66,6 +83,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 
@@ -113,4 +131,12 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.14.1")
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("androidx.room:room-testing:2.6.1")
+
+    // instrumentation 冒烟（真机/模拟器）：启动、导航、R8 包行为
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

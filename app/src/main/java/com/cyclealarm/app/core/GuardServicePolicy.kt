@@ -22,11 +22,15 @@ object GuardServicePolicy {
         else -> Action.KEEP
     }
 
+    /** 未设置过时的默认值：直装包默认开，Play 上架包默认关（见 build.gradle.kts -PplayBuild）。 */
+    private val defaultEnabled: Boolean
+        get() = com.cyclealarm.app.BuildConfig.GUARD_SERVICE_DEFAULT_ON
+
     fun isEnabled(context: Context): Boolean = runCatching {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getBoolean(KEY, true)
-    }.getOrDefault(true)
+            .getBoolean(KEY, defaultEnabled)
+    }.getOrDefault(defaultEnabled)
 
     fun setEnabled(context: Context, enabled: Boolean) {
         context.applicationContext

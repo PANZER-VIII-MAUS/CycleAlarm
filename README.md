@@ -460,8 +460,9 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDebugKotlin
-.\gradlew.bat testDebugUnitTest        # 253 个 JVM/Robolectric 单测
+.\gradlew.bat testDebugUnitTest        # 278 个 JVM/Robolectric 单测
 .\gradlew.bat lintDebug                # 应为 0 error
+.\gradlew.bat connectedDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 .\gradlew.bat assembleDebug
 .\gradlew.bat assembleRelease          # 需要 keystore.properties，见下节
 ```
@@ -597,6 +598,25 @@ gradlew.bat assembleRelease
 ```
 
 3. 产物在 `app\build\outputs\apk\release\app-release.apk`，已按 V1+V2 签名
+
+### 口令与变体（CI / 上架用）
+
+- 口令可放环境变量，优先于 `keystore.properties`：
+
+```powershell
+$env:CYCLEALARM_STORE_PASSWORD = "..."
+$env:CYCLEALARM_KEY_PASSWORD   = "..."
+.\gradlew.bat assembleRelease
+```
+
+- **Play 上架包默认关闭常驻 `specialUse` 前台服务**（降低上架审核风险）：
+
+```powershell
+.\gradlew.bat assembleRelease -PplayBuild=true
+```
+
+- `debug` 构建使用独立包名 `com.cyclealarm.app.debug`，可与正式签名包在同一台设备共存，
+  便于在已安装正式版的手机上直接跑 instrumentation 冒烟
 
 ### 更换签名密码（不改密钥）
 
