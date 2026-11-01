@@ -3,6 +3,7 @@ package com.cyclealarm.app.importer
 import java.time.LocalDate
 
 /** 日期归一化：文本日期与 Excel 日期序列 → LocalDate。 */
+// 注意：本文件里的中文是「识别关键词」，用于匹配中文课表/排班表，刻意不翻译。
 object DateNormalizer {
 
     private val textPattern =

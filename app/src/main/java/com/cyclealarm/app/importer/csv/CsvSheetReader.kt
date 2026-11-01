@@ -18,7 +18,7 @@ class CsvSheetReader : SheetReader {
     override fun read(input: InputStream, sheetName: String?): List<Sheet> {
         try {
             val bytes = input.readBytes()
-            if (bytes.isEmpty()) throw SheetReadException("文件是空的")
+            if (bytes.isEmpty()) throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_csv_empty)
             val text = decode(bytes)
             val delimiter = detectDelimiter(text)
             val rows = parseRows(text, delimiter)
@@ -51,7 +51,11 @@ class CsvSheetReader : SheetReader {
         }
         strictUtf8.getOrNull()?.let { return it }
         return runCatching { String(payload, Charset.forName("GB18030")) }
-            .getOrElse { throw SheetReadException("无法识别 CSV 的文件编码（支持 UTF-8 / GBK）") }
+            .getOrElse {
+                throw SheetReadException(
+                    messageRes = com.cyclealarm.app.R.string.err_csv_encoding
+                )
+            }
     }
 
     private fun detectDelimiter(text: String): Char {

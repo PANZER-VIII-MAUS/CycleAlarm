@@ -31,6 +31,7 @@ sealed interface DetectedLayout {
  * 表格结构探测：先找"一行里有 ≥3 个星期标签"（周课表），
  * 再找"一列里有 ≥3 个日期"（按日期排班表）；都找不到就返回 NeedsManual，绝不猜。
  */
+// 注意：本文件里的中文是「识别关键词」，用于匹配中文课表/排班表，刻意不翻译。
 object LayoutDetector {
 
     private val weekdayKeywords: Map<Int, List<String>> = mapOf(

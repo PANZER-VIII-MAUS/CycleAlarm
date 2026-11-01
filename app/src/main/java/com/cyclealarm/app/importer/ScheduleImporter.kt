@@ -7,6 +7,7 @@ import java.time.LocalTime
  * 编排：Sheet + 结构 → ImportedEntry 列表 + warnings。
  * 这里只做"识别与归一化"，绝不写库、绝不猜结构。
  */
+// 注意：本文件里的中文是「识别关键词」，用于匹配中文课表/排班表，刻意不翻译。
 object ScheduleImporter {
 
     private val weekHintPattern = Regex("""单周|双周|第?\s*\d{1,2}\s*[-–—~至]\s*\d{1,2}\s*周|\d{1,2}\s*周""")

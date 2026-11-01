@@ -443,4 +443,17 @@
     <string name="share_cycle_alarms">Cycle alarms:</string>
     <string name="share_cycle_alarm_line">  Day %1$d %2$s</string>
     <string name="share_date_alarms">Date alarms:</string>
+    <string name="state_disabled">Disabled</string>
+    <string name="state_expired">Expired</string>
+    <string name="state_holiday_muted">Muted by holiday</string>
+    <string name="state_pending">Scheduled</string>
+    <string name="err_csv_empty">The file is empty</string>
+    <string name="err_csv_encoding">Cannot detect the CSV encoding (UTF-8 / GBK supported)</string>
+    <string name="err_backup_unknown_record">Unknown backup record</string>
+    <string name="err_backup_bool">Backup boolean value is malformed</string>
+    <string name="err_snapshot_unknown_record">Unknown import snapshot record</string>
+    <string name="err_snapshot_bool">Import snapshot boolean value is malformed</string>
+    <string name="err_backup_no_data">The backup file contains no restorable data</string>
+    <string name="pp_current_type">Current type</string>
+    <string name="plan_conflict_same_minute">Conflict in the same minute</string>
 </resources>

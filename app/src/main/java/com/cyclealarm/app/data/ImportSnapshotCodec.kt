@@ -160,7 +160,7 @@ object ImportSnapshotCodec {
                     )
                 }
 
-                else -> error("未知的导入快照记录")
+                else -> error(com.cyclealarm.app.R.string.err_snapshot_unknown_record)
             }
         }
 
@@ -186,6 +186,6 @@ object ImportSnapshotCodec {
     private fun String.toBooleanFlag(): Boolean = when (this) {
         "1" -> true
         "0" -> false
-        else -> error("导入快照布尔值格式错误")
+        else -> error(com.cyclealarm.app.R.string.err_snapshot_bool)
     }
 }

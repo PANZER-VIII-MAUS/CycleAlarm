@@ -6,6 +6,7 @@ import java.time.LocalTime
  * 时间归一化：把各种写法的上课时间解析成 LocalTime。
  * 任何解析不了的输入都返回 null，绝不抛异常。
  */
+// 注意：本文件里的中文是「识别关键词」，用于匹配中文课表/排班表，刻意不翻译。
 object TimeNormalizer {
 
     private val rangeSplitter = Regex("""\s*(?:[-–—~～]|至|到)\s*""")

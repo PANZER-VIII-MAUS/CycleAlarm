@@ -216,7 +216,7 @@ object BackupCodec {
                     )
                 }
 
-                else -> error("未知的备份记录")
+                else -> error(com.cyclealarm.app.R.string.err_backup_unknown_record)
             }
         }
 
@@ -244,6 +244,6 @@ object BackupCodec {
     private fun String.toBooleanFlag(): Boolean = when (this) {
         "1" -> true
         "0" -> false
-        else -> error("备份布尔值格式错误")
+        else -> error(com.cyclealarm.app.R.string.err_backup_bool)
     }
 }

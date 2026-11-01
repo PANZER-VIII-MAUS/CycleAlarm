@@ -443,4 +443,17 @@
     <string name="share_cycle_alarms">周期闹钟：</string>
     <string name="share_cycle_alarm_line">  第 %1$d 天 %2$s</string>
     <string name="share_date_alarms">按日期闹钟：</string>
+    <string name="state_disabled">已停用</string>
+    <string name="state_expired">已过期</string>
+    <string name="state_holiday_muted">假期静音</string>
+    <string name="state_pending">待响铃</string>
+    <string name="err_csv_empty">文件是空的</string>
+    <string name="err_csv_encoding">无法识别 CSV 的文件编码（支持 UTF-8 / GBK）</string>
+    <string name="err_backup_unknown_record">未知的备份记录</string>
+    <string name="err_backup_bool">备份布尔值格式错误</string>
+    <string name="err_snapshot_unknown_record">未知的导入快照记录</string>
+    <string name="err_snapshot_bool">导入快照布尔值格式错误</string>
+    <string name="err_backup_no_data">备份文件里没有可恢复的数据</string>
+    <string name="pp_current_type">当前类型</string>
+    <string name="plan_conflict_same_minute">同分钟冲突</string>
 </resources>

@@ -493,6 +493,8 @@ private fun OptionsDialog(
     onDismiss: () -> Unit,
     onApply: (lead: Int, fallback: LocalTime, overwrite: Boolean, sections: Map<Int, LocalTime>) -> Unit
 ) {
+    val stateOnText = stringResource(R.string.state_on)
+    val stateOffText = stringResource(R.string.state_off)
     val context = LocalContext.current
     var lead by rememberSaveable { mutableStateOf(options.leadMinutes) }
     var fallbackHour by rememberSaveable { mutableStateOf(options.fallbackTime.hour) }
@@ -559,7 +561,7 @@ private fun OptionsDialog(
                         checked = overwrite,
                         onCheckedChange = { overwrite = it },
                         modifier = Modifier.semantics {
-                            stateDescription = if (overwrite) "已开启" else "已关闭"
+                            stateDescription = if (overwrite) stateOnText else stateOffText
                         }
                     )
                 }
@@ -685,7 +687,7 @@ private fun ManualMappingDialog(
                     )
                 }
                 onApply(layout)
-            }) { Text("应用") }
+            }) { Text(stringResource(R.string.action_apply)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )

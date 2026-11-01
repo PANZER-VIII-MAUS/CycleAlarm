@@ -105,7 +105,7 @@ fun DateAlarmSection(
                             hasNextTrigger = next != null
                         )
                         Text(
-                            DateAlarmStatus.label(state),
+                            stringResource(DateAlarmStatus.labelRes(state)),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (state == DateAlarmState.PENDING) {
                                 MaterialTheme.colorScheme.primary

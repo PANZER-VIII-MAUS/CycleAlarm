@@ -30,10 +30,11 @@ object DateAlarmStatus {
         else -> DateAlarmState.EXPIRED
     }
 
-    fun label(state: DateAlarmState): String = when (state) {
-        DateAlarmState.DISABLED -> "已停用"
-        DateAlarmState.EXPIRED -> "已过期"
-        DateAlarmState.HOLIDAY_MUTED -> "假期静音"
-        DateAlarmState.PENDING -> "待响铃"
+    /** 状态文案资源 id（界面按当前语言解析）。 */
+    fun labelRes(state: DateAlarmState): Int = when (state) {
+        DateAlarmState.DISABLED -> com.cyclealarm.app.R.string.state_disabled
+        DateAlarmState.EXPIRED -> com.cyclealarm.app.R.string.state_expired
+        DateAlarmState.HOLIDAY_MUTED -> com.cyclealarm.app.R.string.state_holiday_muted
+        DateAlarmState.PENDING -> com.cyclealarm.app.R.string.state_pending
     }
 }

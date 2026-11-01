@@ -6,7 +6,7 @@ import com.cyclealarm.app.data.DayPlanEntity
  * 安排选择器一次点击应该产生什么动作。
  *
  * 规则：没有安排 → 选类型；点了当前类型 → 进「改时间」；点了别的类型 → 换类型。
- * 抽成纯逻辑，避免把"当前类型"的判定散落到 UI 里且无法测试。
+ * 抽成纯逻辑，避免把com.cyclealarm.app.R.string.pp_current_type的判定散落到 UI 里且无法测试。
  */
 sealed interface PlanPickerAction {
     /** 把这一天改成目标类型（时间取该类型的默认值）。 */

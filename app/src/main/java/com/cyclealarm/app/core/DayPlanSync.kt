@@ -49,7 +49,7 @@ sealed interface AlarmOp {
  * 1. 期望闹钟 = plan.enabled && type.rings；时间用 plan.hour/minute（不是类型默认值），label 用类型名；
  * 2. 现有安排闹钟 = alarms.filter { planGenerated }，按 dayIndex 匹配；
  * 3. planGenerated=true 但无 plan / plan 变休息 / plan 停用 / typeId 不存在 → 删除；
- * 4. planGenerated=false 的手动/导入闹钟一律不碰，但它们会参与"同分钟冲突"判断：
+ * 4. planGenerated=false 的手动/导入闹钟一律不碰，但它们会参与com.cyclealarm.app.R.string.plan_conflict_same_minute判断：
  *    当天已有同 (hour, minute) 的手动闹钟时，安排闹钟不生成；已存在则删除；
  * 5. 输出按 dayIndex 升序、同天按 id 升序，保证同样输入得到同样输出。
  */

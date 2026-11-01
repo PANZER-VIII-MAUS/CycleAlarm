@@ -6,6 +6,7 @@ import java.time.LocalTime
  * 节次 → 上课时间。
  * 默认值针对常见上午 4 节 + 下午 4 节的作息，导入页里可以逐节修改。
  */
+// 注意：本文件里的中文是「识别关键词」，用于匹配中文课表/排班表，刻意不翻译。
 object SectionTimeTable {
 
     private val sectionPattern = Regex("""第?\s*(\d{1,2})\s*(?:[-–—~～至到]\s*\d{1,2})?\s*节""")

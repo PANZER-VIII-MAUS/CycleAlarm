@@ -12,11 +12,6 @@ import java.util.TimeZone
  */
 object WidgetTextPolicy {
 
-    @Deprecated("旧的中文常量，界面请用 emptyTitle/emptySubtitle")
-    const val EMPTY_TITLE = "暂无响铃"
-    @Deprecated("旧的中文常量，界面请用 emptyTitle/emptySubtitle")
-    const val EMPTY_SUBTITLE = "打开 App 添加或打开某一天"
-
     fun emptyTitle(context: android.content.Context): String =
         context.getString(R.string.widget_empty_title)
 
