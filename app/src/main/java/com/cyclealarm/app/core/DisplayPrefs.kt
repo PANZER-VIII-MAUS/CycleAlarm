@@ -29,7 +29,7 @@ object DisplayPrefs {
     }
 
     fun formatTime(is24Hour: Boolean, hour: Int, minute: Int): String =
-        formatTime(is24Hour, hour, minute, "上午", "下午")
+        formatTime(is24Hour, hour, minute, "AM", "PM")
 
     /** 带自定义上下午标签的格式化（界面用资源传入当前语言）。 */
     fun formatTime(is24Hour: Boolean, hour: Int, minute: Int, amLabel: String, pmLabel: String): String {

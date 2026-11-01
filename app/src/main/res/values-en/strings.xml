@@ -456,4 +456,13 @@
     <string name="err_backup_no_data">The backup file contains no restorable data</string>
     <string name="pp_current_type">Current type</string>
     <string name="plan_conflict_same_minute">Conflict in the same minute</string>
+    <string name="date_month_day">%1$d/%2$d</string>
+    <string name="hol_new_year">New Year</string>
+    <string name="hol_spring_festival">Chinese New Year</string>
+    <string name="hol_qingming">Qingming</string>
+    <string name="hol_labor_day">Labour Day</string>
+    <string name="hol_dragon_boat">Dragon Boat</string>
+    <string name="hol_mid_autumn_national">Mid-Autumn and National Day</string>
+    <string name="hol_mid_autumn">Mid-Autumn</string>
+    <string name="hol_national_day">National Day</string>
 </resources>

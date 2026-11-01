@@ -15,10 +15,10 @@ class DisplayPrefsTest {
 
     @Test
     fun `12 hour format distinguishes midnight and noon`() {
-        assertEquals("上午 12:00", DisplayPrefs.formatTime(false, 0, 0))
-        assertEquals("下午 12:00", DisplayPrefs.formatTime(false, 12, 0))
-        assertEquals("下午 12:30", DisplayPrefs.formatTime(false, 12, 30))
-        assertEquals("下午 11:05", DisplayPrefs.formatTime(false, 23, 5))
+        assertEquals("AM 12:00", DisplayPrefs.formatTime(false, 0, 0))
+        assertEquals("PM 12:00", DisplayPrefs.formatTime(false, 12, 0))
+        assertEquals("PM 12:30", DisplayPrefs.formatTime(false, 12, 30))
+        assertEquals("PM 11:05", DisplayPrefs.formatTime(false, 23, 5))
     }
 
     @Test

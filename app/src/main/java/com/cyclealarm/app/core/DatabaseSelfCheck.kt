@@ -13,6 +13,7 @@ import com.cyclealarm.app.data.AppDatabase
  * - 逐表比对列集合与当前版本期望（与导出的 schema JSON 对齐）；
  * - 发现异常写入排期诊断，用户能在设置页看到。
  */
+// 注意：本文件里的中文只出现在开发日志/断言里，不上界面，刻意不资源化。
 object DatabaseSelfCheck {
     private const val TAG = "DatabaseSelfCheck"
     private const val PREFS = "app_prefs"

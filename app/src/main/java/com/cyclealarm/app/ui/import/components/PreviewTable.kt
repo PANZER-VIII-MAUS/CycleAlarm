@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.cyclealarm.app.ui.weekdayRes
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.importer.ImportedEntry
@@ -164,7 +165,7 @@ private fun EditEntryDialog(
                     }
                 } else {
                     Text(
-                        entry.epochDay?.let { formatEpochDay(it) }.orEmpty(),
+                        entry.epochDay?.let { formatEpochDay(context, it) }.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -181,21 +182,15 @@ private fun EditEntryDialog(
 }
 
 @Composable
-private fun entryLabel(entry: ImportedEntry): String = when (entry.kind) {
+private fun entryLabel(entry: ImportedEntry): String = entryLabel(LocalContext.current, entry)
+
+@Composable
+private fun entryLabel(context: android.content.Context, entry: ImportedEntry): String = when (entry.kind) {
     ScheduleKind.WEEKLY -> entry.weekday?.let { weekdayName(it) } ?: stringResource(R.string.cycle_weekly)
-    ScheduleKind.DATED -> entry.epochDay?.let { formatEpochDay(it) } ?: stringResource(R.string.main_date_kind)
+    ScheduleKind.DATED -> entry.epochDay?.let { formatEpochDay(context, it) } ?: stringResource(R.string.main_date_kind)
 }
 
 @Composable
 private fun weekdayName(weekday: Int): String =
     stringResource(weekdayRes((weekday - 1).coerceIn(0, 6) + 1))
 
-private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
-    1 -> R.string.week_mon
-    2 -> R.string.week_tue
-    3 -> R.string.week_wed
-    4 -> R.string.week_thu
-    5 -> R.string.week_fri
-    6 -> R.string.week_sat
-    else -> R.string.week_sun
-}

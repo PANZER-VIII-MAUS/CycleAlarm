@@ -442,7 +442,7 @@ fun SettingsScreen(
                     HorizontalDivider()
                     SettingStaticRow(
                         title = stringResource(R.string.row_current_time),
-                        value = "${formatEpochDay(now.toLocalDate().toEpochDay())} " +
+                        value = "${formatEpochDay(context, now.toLocalDate().toEpochDay())} " +
                             DisplayPrefs.formatTime(context, now.hour, now.minute)
                     )
                     SettingStaticRow(title = stringResource(R.string.row_timezone), value = "$tzName · $zoneId")

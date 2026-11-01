@@ -515,7 +515,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun importChinaHolidaysInternal() {
         val existing = db.holidayDao().getAll().associateBy { it.label }
-        ChinaHolidaysProvider.upcomingOrActive().forEach { official ->
+        ChinaHolidaysProvider.upcomingOrActive(getApplication()).forEach { official ->
             val old = existing[official.label]
             db.holidayDao().upsert(
                 if (old == null) {

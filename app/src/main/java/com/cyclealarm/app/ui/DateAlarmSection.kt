@@ -86,7 +86,7 @@ fun DateAlarmSection(
                             .semantics { role = Role.Button }
                     ) {
                         Text(
-                            formatEpochDay(alarm.epochDay),
+                            formatEpochDay(context, alarm.epochDay),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
@@ -156,7 +156,7 @@ private fun DateAlarmEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.date_alarm_title, formatEpochDay(alarm.epochDay))) },
+        title = { Text(stringResource(R.string.date_alarm_title, formatEpochDay(context, alarm.epochDay))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(

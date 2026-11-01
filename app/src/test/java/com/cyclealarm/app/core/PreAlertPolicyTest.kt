@@ -29,14 +29,8 @@ class PreAlertPolicyTest {
     }
 
     @Test
-    fun `text mentions minutes and clock time`() {
-        assertEquals(
-            "10 分钟后（07:30）：早课",
-            PreAlertPolicy.text(7, 30, "早课", 10)
-        )
-        assertEquals(
-            "10 分钟后（07:30）：闹钟",
-            PreAlertPolicy.text(7, 30, "", 10)
-        )
+    fun `pre alert text is built from resources in the receiver`() {
+        // 文案已移到 AlarmReceiver + strings.xml（pre_alert_text），策略类只负责算时间
+        assertNull(PreAlertPolicy.preAlertAt(0L, 0, 0L))
     }
 }

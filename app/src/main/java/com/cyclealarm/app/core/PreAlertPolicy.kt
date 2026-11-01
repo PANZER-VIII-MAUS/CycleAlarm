@@ -18,9 +18,4 @@ object PreAlertPolicy {
         return at.takeIf { it > now }
     }
 
-    fun text(hour: Int, minute: Int, label: String, minutes: Int): String {
-        val what = label.ifBlank { "闹钟" }
-        val clock = String.format(java.util.Locale.CHINA, "%02d:%02d", hour, minute)
-        return "$minutes 分钟后（$clock）：$what"
-    }
 }

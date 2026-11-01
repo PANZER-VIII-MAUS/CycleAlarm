@@ -33,6 +33,7 @@ import java.time.ZoneId
  * 3. 假期模式下，被标记“假期静音”的闹钟会被跳过一次；周期闹钟会顺延到假期后的下一个匹配日，
  *    按日期闹钟则直接跳过当天（一次性语义），因此假期结束会自动恢复，无需额外定时任务。
  */
+// 注意：本文件里的中文只出现在开发日志/断言里，不上界面，刻意不资源化。
 object AlarmScheduler {
     private const val TAG = "AlarmScheduler"
 

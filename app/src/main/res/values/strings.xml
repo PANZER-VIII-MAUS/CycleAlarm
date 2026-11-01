@@ -456,4 +456,13 @@
     <string name="err_backup_no_data">备份文件里没有可恢复的数据</string>
     <string name="pp_current_type">当前类型</string>
     <string name="plan_conflict_same_minute">同分钟冲突</string>
+    <string name="date_month_day">%1$d月%2$d日</string>
+    <string name="hol_new_year">元旦</string>
+    <string name="hol_spring_festival">春节</string>
+    <string name="hol_qingming">清明</string>
+    <string name="hol_labor_day">劳动节</string>
+    <string name="hol_dragon_boat">端午</string>
+    <string name="hol_mid_autumn_national">中秋国庆</string>
+    <string name="hol_mid_autumn">中秋</string>
+    <string name="hol_national_day">国庆</string>
 </resources>

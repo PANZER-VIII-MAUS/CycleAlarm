@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.cyclealarm.app.ui.weekdayRes
 import com.cyclealarm.app.R
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.ui.components.CycleSwitch
@@ -760,12 +761,3 @@ private fun decodeWeekColumns(raw: String): Map<Int, Int> =
         if (weekday != null && column != null) weekday to column else null
     }.toMap().ifEmpty { DEFAULT_WEEK_COLUMNS }
 
-private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
-    1 -> R.string.week_mon
-    2 -> R.string.week_tue
-    3 -> R.string.week_wed
-    4 -> R.string.week_thu
-    5 -> R.string.week_fri
-    6 -> R.string.week_sat
-    else -> R.string.week_sun
-}

@@ -1,5 +1,7 @@
 package com.cyclealarm.app.data
 
+import android.content.Context
+import com.cyclealarm.app.R
 import java.time.LocalDate
 
 /**
@@ -12,7 +14,8 @@ import java.time.LocalDate
 object ChinaHolidaysProvider {
 
     private data class Official(
-        val label: String,
+        val nameRes: Int,
+        val year: Int,
         val start: LocalDate,
         val end: LocalDate
     )
@@ -25,33 +28,33 @@ object ChinaHolidaysProvider {
      */
     private val official: List<Official> = listOf(
         // 2025
-        Official("元旦 2025", LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)),
-        Official("春节 2025", LocalDate.of(2025, 1, 28), LocalDate.of(2025, 2, 4)),
-        Official("清明 2025", LocalDate.of(2025, 4, 4), LocalDate.of(2025, 4, 6)),
-        Official("劳动节 2025", LocalDate.of(2025, 5, 1), LocalDate.of(2025, 5, 5)),
-        Official("端午 2025", LocalDate.of(2025, 5, 31), LocalDate.of(2025, 6, 2)),
-        Official("中秋国庆 2025", LocalDate.of(2025, 10, 1), LocalDate.of(2025, 10, 8)),
+        Official(R.string.hol_new_year, 2025, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 1)),
+        Official(R.string.hol_spring_festival, 2025, LocalDate.of(2025, 1, 28), LocalDate.of(2025, 2, 4)),
+        Official(R.string.hol_qingming, 2025, LocalDate.of(2025, 4, 4), LocalDate.of(2025, 4, 6)),
+        Official(R.string.hol_labor_day, 2025, LocalDate.of(2025, 5, 1), LocalDate.of(2025, 5, 5)),
+        Official(R.string.hol_dragon_boat, 2025, LocalDate.of(2025, 5, 31), LocalDate.of(2025, 6, 2)),
+        Official(R.string.hol_mid_autumn_national, 2025, LocalDate.of(2025, 10, 1), LocalDate.of(2025, 10, 8)),
         // 2026
-        Official("元旦 2026", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3)),
-        Official("春节 2026", LocalDate.of(2026, 2, 15), LocalDate.of(2026, 2, 23)),
-        Official("清明 2026", LocalDate.of(2026, 4, 4), LocalDate.of(2026, 4, 6)),
-        Official("劳动节 2026", LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 5)),
-        Official("端午 2026", LocalDate.of(2026, 6, 19), LocalDate.of(2026, 6, 21)),
-        Official("中秋 2026", LocalDate.of(2026, 9, 25), LocalDate.of(2026, 9, 27)),
-        Official("国庆 2026", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7))
+        Official(R.string.hol_new_year, 2026, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3)),
+        Official(R.string.hol_spring_festival, 2026, LocalDate.of(2026, 2, 15), LocalDate.of(2026, 2, 23)),
+        Official(R.string.hol_qingming, 2026, LocalDate.of(2026, 4, 4), LocalDate.of(2026, 4, 6)),
+        Official(R.string.hol_labor_day, 2026, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 5)),
+        Official(R.string.hol_dragon_boat, 2026, LocalDate.of(2026, 6, 19), LocalDate.of(2026, 6, 21)),
+        Official(R.string.hol_mid_autumn, 2026, LocalDate.of(2026, 9, 25), LocalDate.of(2026, 9, 27)),
+        Official(R.string.hol_national_day, 2026, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7))
     )
 
-    /** 全部官方假期（未过滤，含历史年份）。 */
-    fun all(): List<HolidayEntity> = official.map { o ->
+    /** 全部官方假期（未过滤，含历史年份）；名称按当前界面语言生成。 */
+    fun all(context: Context): List<HolidayEntity> = official.map { o ->
         HolidayEntity(
             startEpochDay = o.start.toEpochDay(),
             endEpochDay = o.end.toEpochDay(),
             enabled = true,
-            label = o.label
+            label = context.getString(o.nameRes) + " " + o.year
         )
     }
 
     /** 只保留还没完全过去的假期（endEpochDay >= 今天）。 */
-    fun upcomingOrActive(today: LocalDate = LocalDate.now()): List<HolidayEntity> =
-        all().filter { it.endEpochDay >= today.toEpochDay() }
+    fun upcomingOrActive(context: Context, today: LocalDate = LocalDate.now()): List<HolidayEntity> =
+        all(context).filter { it.endEpochDay >= today.toEpochDay() }
 }

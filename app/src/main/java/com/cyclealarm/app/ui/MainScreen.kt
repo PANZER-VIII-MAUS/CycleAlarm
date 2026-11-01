@@ -135,16 +135,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-private fun weekdayRes(isoDay: Int): Int = when (isoDay) {
-    1 -> R.string.week_mon
-    2 -> R.string.week_tue
-    3 -> R.string.week_wed
-    4 -> R.string.week_thu
-    5 -> R.string.week_fri
-    6 -> R.string.week_sat
-    else -> R.string.week_sun
-}
-
 /** 按循环方式生成某天的显示名：每天 / 周一..周日 / 第 X 天。 */
 private fun dayLabel(
     context: android.content.Context,
@@ -827,7 +817,7 @@ private fun HolidayCard(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
-                                    "${formatEpochDay(h.startEpochDay)} ~ ${formatEpochDay(h.endEpochDay)}" +
+                                    "${formatEpochDay(context, h.startEpochDay)} ~ ${formatEpochDay(context, h.endEpochDay)}" +
                                         when {
                                             !holidayModeEnabled -> stringResource(R.string.holiday_suffix_master_off)
                                             !h.enabled -> stringResource(R.string.holiday_suffix_disabled)
@@ -932,13 +922,13 @@ private fun HolidayEditDialog(
                     onClick = { pickStart = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.holiday_start, formatEpochDay(start)))
+                    Text(stringResource(R.string.holiday_start, formatEpochDay(context, start)))
                 }
                 OutlinedButton(
                     onClick = { pickEnd = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.holiday_end, formatEpochDay(end)))
+                    Text(stringResource(R.string.holiday_end, formatEpochDay(context, end)))
                 }
             }
         },
