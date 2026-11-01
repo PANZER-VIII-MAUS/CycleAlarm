@@ -159,6 +159,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-instrumentation-api${{ matrix.api-level }}
-          path: app/build/reports/androidTests/connected/direct/debug
+          # flavor 拆分后报告目录是 connected/<flavor><BuildType>，上传父目录避免路径猜测
+          path: |
+            app/build/reports/androidTests
+            app/build/outputs/androidTest-results
           if-no-files-found: error
           retention-days: 7
