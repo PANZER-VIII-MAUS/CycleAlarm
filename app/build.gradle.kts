@@ -23,8 +23,8 @@ android {
         applicationId = "com.cyclealarm.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
-        versionName = "0.6.1"
+        versionCode = 30
+        versionName = "0.6.2"
     }
 
     signingConfigs {
