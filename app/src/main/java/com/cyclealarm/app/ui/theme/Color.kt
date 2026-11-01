@@ -19,7 +19,8 @@ val LightInk = Color(0xFF101418)
 val LightInkSecondary = Color(0xFF5F6672)
 val LightNavy = Color(0xFF0A3B5F)
 val LightDanger = Color(0xFFC84239)
-val LightSwitchOffTrack = Color(0xFFD6DBE1)
+// 关闭态轨道：原来 #D6DBE1 与白色滑块只有 1.39:1（WCAG 要求 3:1），加深到 #6B7280（约 4.6:1）
+val LightSwitchOffTrack = Color(0xFF6B7280)
 
 // 深色（同色系推导）
 val DarkPrimary = Color(0xFF4ED0C6)

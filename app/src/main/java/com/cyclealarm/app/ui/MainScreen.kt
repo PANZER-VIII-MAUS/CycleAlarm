@@ -183,7 +183,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         refreshTick++
     }
 
-    fun showUndoSnackbar(message: String, onUndo: () -> Unit) {
+    // 注意参数顺序：onClosed 有默认值，onUndo 放最后，既有调用点可以继续用尾随 lambda
+    fun showUndoSnackbar(message: String, onClosed: () -> Unit = {}, onUndo: () -> Unit) {
         uiScope.launch {
             // 连删时替换上一条提示，避免排队等满 5 秒
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -199,6 +200,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 SnackbarResult.ActionPerformed -> onUndo()
                 else -> snackbarHostState.currentSnackbarData?.dismiss()
             }
+            onClosed()
         }
     }
 
@@ -216,8 +218,12 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
             is AlarmViewModel.PendingUndo.Plan -> pending.message
             is AlarmViewModel.PendingUndo.Type -> pending.message
         }
-        showUndoSnackbar(message) { viewModel.undoPending() }
-        viewModel.clearPendingUndo()
+        // 不能在弹 Snackbar 之前就清空：那样用户还没来得及点「撤销」，待撤销状态就没了
+        showUndoSnackbar(
+            message = message,
+            onUndo = { viewModel.undoPending() },
+            onClosed = { viewModel.clearPendingUndo() }
+        )
     }
 
     // 只在前台计时：后台空转的 60 秒循环没有意义，还会阻止进程休眠
@@ -652,6 +658,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 viewModel.updateActivityType(type, applyToExisting)
             },
             onDelete = { id ->
+                // 先关对话框再弹撤销：模态框会挡住 Snackbar，5 秒窗口基本点不到（四轮复审 §3.3）
+                showTypeManager = false
                 uiScope.launch { viewModel.deleteActivityTypeWithUndo(id) }
             },
             onMove = { id, up -> viewModel.moveActivityType(id, up) },
