@@ -204,7 +204,7 @@
     <string name="state_vibrate_on">Vibration on</string>
     <string name="state_vibrate_off">Vibration off</string>
     <string name="ramp_title">Volume ramp</string>
-    <string name="ramp_desc">Starts at 30% and reaches full volume in about 20 s</string>
+    <string name="ramp_desc">Starts at 30 percent and reaches full volume in about 20 s</string>
     <string name="pre_alert_off">Pre-alert: off</string>
     <string name="pre_alert_on">Pre-alert: %1$d min</string>
     <string name="week_mon">Mon</string>
