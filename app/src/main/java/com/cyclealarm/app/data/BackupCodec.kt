@@ -3,16 +3,36 @@ package com.cyclealarm.app.data
 import com.cyclealarm.app.core.LocalizedFailure
 import com.cyclealarm.app.R
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Base64
 
 /**
  * 备份文件编解码（自有文本格式，不依赖 JSON 库）。
  *
- * 设计目标：单文件、可人眼检查、跨版本可读。格式与导入快照同源（TAB 分隔 + 字符串 base64）。
- * 备份包含：设置 + 周期闹钟 + 按日期闹钟 + 安排类型 + 安排 + 假期 + 稍后提醒。
+ * 设计目标：单文件、可人眼检查、跨版本可读、**能发现被截断或损坏的文件**。
+ *
+ * 格式 V2：
+ * ```
+ * CYCLE_ALARM_BACKUP_V2
+ * M	<exportedAt>
+ * S/A/D/T/P/H/Z ...        ← 每条记录一行，TAB 分隔
+ * E	<记录条数>	<正文 sha256>
+ * ```
+ * 校验和覆盖「E 记录之前的全部正文行」，所以导出中途被杀、文件被截断、
+ * 或人为改动任何一行都会在解码阶段被拒绝，数据库保持原样。
+ *
+ * 兼容：仍能读旧版 `CYCLE_ALARM_BACKUP_V1`（无校验和、A 记录只有 9 段），
+ * 旧文件里的闹钟会按默认值补齐 V2 新增的四个字段（铃声/振动/渐强/提前提醒）。
  */
 object BackupCodec {
-    private const val HEADER = "CYCLE_ALARM_BACKUP_V1"
+    private const val HEADER_V1 = "CYCLE_ALARM_BACKUP_V1"
+    private const val HEADER_V2 = "CYCLE_ALARM_BACKUP_V2"
+
+    /** v10 的实体结构版本；备份格式将来变化时递增。 */
+    private const val SCHEMA_VERSION = 10
+
+    private const val A_SEGMENTS_V1 = 9
+    private const val A_SEGMENTS_V2 = 13
 
     data class Backup(
         val settings: AppSettingsEntity?,
@@ -25,91 +45,131 @@ object BackupCodec {
         val exportedAt: Long = 0L
     )
 
-    fun encode(backup: Backup): String = buildString {
-        appendLine(HEADER)
-        append("M")
-        append('\t').append(backup.exportedAt)
-        appendLine()
+    fun encode(backup: Backup): String {
+        val body = buildString {
+            append("M")
+            append('\t').append(backup.exportedAt)
+            append('\t').append(SCHEMA_VERSION)
+            appendLine()
 
-        backup.settings?.let { settings ->
-            append("S")
-            append('\t').append(settings.id)
-            append('\t').append(settings.cycleLength)
-            append('\t').append(settings.cycleStartEpochDay)
-            append('\t').append(encodeString(settings.cycleType))
-            append('\t').append(settings.holidayModeEnabled.flag())
-            append('\t').append(settings.plansSeeded.flag())
-            appendLine()
+            backup.settings?.let { settings ->
+                append("S")
+                append('\t').append(settings.id)
+                append('\t').append(settings.cycleLength)
+                append('\t').append(settings.cycleStartEpochDay)
+                append('\t').append(encodeString(settings.cycleType))
+                append('\t').append(settings.holidayModeEnabled.flag())
+                append('\t').append(settings.plansSeeded.flag())
+                appendLine()
+            }
+            backup.alarms.forEach { alarm ->
+                append("A")
+                append('\t').append(alarm.id)
+                append('\t').append(alarm.dayIndex)
+                append('\t').append(alarm.hour)
+                append('\t').append(alarm.minute)
+                append('\t').append(alarm.enabled.flag())
+                append('\t').append(alarm.mutedDuringHoliday.flag())
+                append('\t').append(alarm.planGenerated.flag())
+                append('\t').append(encodeString(alarm.label))
+                append('\t').append(encodeString(alarm.ringtoneUri.orEmpty()))
+                append('\t').append(alarm.vibrate.flag())
+                append('\t').append(alarm.rampVolume.flag())
+                append('\t').append(alarm.preAlertMinutes)
+                appendLine()
+            }
+            backup.dateAlarms.forEach { alarm ->
+                append("D")
+                append('\t').append(alarm.id)
+                append('\t').append(alarm.epochDay)
+                append('\t').append(alarm.hour)
+                append('\t').append(alarm.minute)
+                append('\t').append(alarm.enabled.flag())
+                append('\t').append(alarm.mutedDuringHoliday.flag())
+                append('\t').append(encodeString(alarm.label))
+                appendLine()
+            }
+            backup.activityTypes.forEach { type ->
+                append("T")
+                append('\t').append(type.id)
+                append('\t').append(encodeString(type.name))
+                append('\t').append(type.hour)
+                append('\t').append(type.minute)
+                append('\t').append(type.rings.flag())
+                append('\t').append(type.sortOrder)
+                appendLine()
+            }
+            backup.dayPlans.forEach { plan ->
+                append("P")
+                append('\t').append(plan.dayIndex)
+                append('\t').append(plan.typeId)
+                append('\t').append(plan.hour)
+                append('\t').append(plan.minute)
+                append('\t').append(plan.enabled.flag())
+                appendLine()
+            }
+            backup.holidays.forEach { holiday ->
+                append("H")
+                append('\t').append(holiday.id)
+                append('\t').append(holiday.startEpochDay)
+                append('\t').append(holiday.endEpochDay)
+                append('\t').append(holiday.enabled.flag())
+                append('\t').append(encodeString(holiday.label))
+                appendLine()
+            }
+            backup.snoozes.forEach { snooze ->
+                append("Z")
+                append('\t').append(snooze.id)
+                append('\t').append(encodeString(snooze.kind))
+                append('\t').append(snooze.alarmId)
+                append('\t').append(snooze.dayIndex)
+                append('\t').append(snooze.hour)
+                append('\t').append(snooze.minute)
+                append('\t').append(encodeString(snooze.label))
+                append('\t').append(snooze.triggerAt)
+                append('\t').append(snooze.requestCode)
+                appendLine()
+            }
         }
-        backup.alarms.forEach { alarm ->
-            append("A")
-            append('\t').append(alarm.id)
-            append('\t').append(alarm.dayIndex)
-            append('\t').append(alarm.hour)
-            append('\t').append(alarm.minute)
-            append('\t').append(alarm.enabled.flag())
-            append('\t').append(alarm.mutedDuringHoliday.flag())
-            append('\t').append(alarm.planGenerated.flag())
-            append('\t').append(encodeString(alarm.label))
-            appendLine()
-        }
-        backup.dateAlarms.forEach { alarm ->
-            append("D")
-            append('\t').append(alarm.id)
-            append('\t').append(alarm.epochDay)
-            append('\t').append(alarm.hour)
-            append('\t').append(alarm.minute)
-            append('\t').append(alarm.enabled.flag())
-            append('\t').append(alarm.mutedDuringHoliday.flag())
-            append('\t').append(encodeString(alarm.label))
-            appendLine()
-        }
-        backup.activityTypes.forEach { type ->
-            append("T")
-            append('\t').append(type.id)
-            append('\t').append(encodeString(type.name))
-            append('\t').append(type.hour)
-            append('\t').append(type.minute)
-            append('\t').append(type.rings.flag())
-            append('\t').append(type.sortOrder)
-            appendLine()
-        }
-        backup.dayPlans.forEach { plan ->
-            append("P")
-            append('\t').append(plan.dayIndex)
-            append('\t').append(plan.typeId)
-            append('\t').append(plan.hour)
-            append('\t').append(plan.minute)
-            append('\t').append(plan.enabled.flag())
-            appendLine()
-        }
-        backup.holidays.forEach { holiday ->
-            append("H")
-            append('\t').append(holiday.id)
-            append('\t').append(holiday.startEpochDay)
-            append('\t').append(holiday.endEpochDay)
-            append('\t').append(holiday.enabled.flag())
-            append('\t').append(encodeString(holiday.label))
-            appendLine()
-        }
-        backup.snoozes.forEach { snooze ->
-            append("Z")
-            append('\t').append(snooze.id)
-            append('\t').append(encodeString(snooze.kind))
-            append('\t').append(snooze.alarmId)
-            append('\t').append(snooze.dayIndex)
-            append('\t').append(snooze.hour)
-            append('\t').append(snooze.minute)
-            append('\t').append(encodeString(snooze.label))
-            append('\t').append(snooze.triggerAt)
-            append('\t').append(snooze.requestCode)
+
+        val recordCount = body.lineSequence().count { it.isNotBlank() }
+        return buildString {
+            appendLine(HEADER_V2)
+            append(body)
+            append("E")
+            append('\t').append(recordCount)
+            append('\t').append(sha256(body))
             appendLine()
         }
     }
 
     fun decode(payload: String): Backup {
-        val lines = payload.lineSequence().filter { it.isNotBlank() }.toList()
-        if (lines.firstOrNull() != HEADER) throw LocalizedFailure(R.string.err_not_backup)
+        val allLines = payload.lineSequence().filter { it.isNotBlank() }.toList()
+        val header = allLines.firstOrNull() ?: throw LocalizedFailure(R.string.err_not_backup)
+
+        val recordLines: List<String> = when (header) {
+            HEADER_V1 -> allLines.drop(1)
+
+            HEADER_V2 -> {
+                if (allLines.size < 2) throw LocalizedFailure(R.string.err_backup_head)
+                val trailer = allLines.last()
+                val trailerParts = trailer.split('\t')
+                if (trailerParts.firstOrNull() != "E" || trailerParts.size != 3) {
+                    throw LocalizedFailure(R.string.err_backup_truncated)
+                }
+                val declaredCount = trailerParts[1].toIntOrNull()
+                    ?: throw LocalizedFailure(R.string.err_backup_truncated)
+                val body = allLines.subList(1, allLines.size - 1)
+                if (body.size != declaredCount) throw LocalizedFailure(R.string.err_backup_truncated)
+                val actualSum = sha256(body.joinToString("\n", postfix = "\n"))
+                if (!actualSum.equals(trailerParts[2], ignoreCase = true)) {
+                    throw LocalizedFailure(R.string.err_backup_checksum)
+                }
+                body
+            }
+
+            else -> throw LocalizedFailure(R.string.err_not_backup)
+        }
 
         var settings: AppSettingsEntity? = null
         var exportedAt = 0L
@@ -120,12 +180,13 @@ object BackupCodec {
         val holidays = mutableListOf<HolidayEntity>()
         val snoozes = mutableListOf<SnoozeEntity>()
 
-        lines.drop(1).forEach { line ->
+        recordLines.forEach { line ->
             val parts = line.split('\t')
             when (parts.firstOrNull()) {
                 "M" -> {
-                    if (parts.size != 2) throw LocalizedFailure(R.string.err_backup_head)
-                    exportedAt = parts[1].toLong()
+                    if (parts.size < 2) throw LocalizedFailure(R.string.err_backup_head)
+                    exportedAt = parts[1].toLongOrNull()
+                        ?: throw LocalizedFailure(R.string.err_backup_head)
                 }
 
                 "S" -> {
@@ -141,7 +202,9 @@ object BackupCodec {
                 }
 
                 "A" -> {
-                    if (parts.size != 9) throw LocalizedFailure(R.string.err_backup_cycle_alarms)
+                    if (parts.size != A_SEGMENTS_V2 && parts.size != A_SEGMENTS_V1) {
+                        throw LocalizedFailure(R.string.err_backup_cycle_alarms)
+                    }
                     alarms += AlarmEntity(
                         id = parts[1].toInt(),
                         dayIndex = parts[2].toInt(),
@@ -150,7 +213,16 @@ object BackupCodec {
                         enabled = parts[5].toBooleanFlag(),
                         mutedDuringHoliday = parts[6].toBooleanFlag(),
                         planGenerated = parts[7].toBooleanFlag(),
-                        label = decodeString(parts[8])
+                        label = decodeString(parts[8]),
+                        // 以下四个字段只有 V2 才有，旧文件按默认值补齐
+                        ringtoneUri = if (parts.size > 9) {
+                            decodeString(parts[9]).ifBlank { null }
+                        } else {
+                            null
+                        },
+                        vibrate = if (parts.size > 10) parts[10].toBooleanFlag() else true,
+                        rampVolume = if (parts.size > 11) parts[11].toBooleanFlag() else false,
+                        preAlertMinutes = if (parts.size > 12) parts[12].toInt() else 0
                     )
                 }
 
@@ -216,7 +288,7 @@ object BackupCodec {
                     )
                 }
 
-                else -> error(com.cyclealarm.app.R.string.err_backup_unknown_record)
+                else -> throw LocalizedFailure(R.string.err_backup_unknown_record)
             }
         }
 
@@ -232,6 +304,12 @@ object BackupCodec {
         )
     }
 
+    private fun sha256(text: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(text.toByteArray(StandardCharsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
     private fun encodeString(value: String): String =
         Base64.getUrlEncoder().withoutPadding()
             .encodeToString(value.toByteArray(StandardCharsets.UTF_8))
@@ -244,6 +322,6 @@ object BackupCodec {
     private fun String.toBooleanFlag(): Boolean = when (this) {
         "1" -> true
         "0" -> false
-        else -> error(com.cyclealarm.app.R.string.err_backup_bool)
+        else -> throw LocalizedFailure(R.string.err_backup_bool)
     }
 }

@@ -465,4 +465,11 @@
     <string name="hol_mid_autumn_national">中秋国庆</string>
     <string name="hol_mid_autumn">中秋</string>
     <string name="hol_national_day">国庆</string>
+    <string name="err_backup_truncated">备份文件不完整（可能被截断），已拒绝导入</string>
+    <string name="err_backup_checksum">备份文件校验失败（内容被改动或损坏），已拒绝导入</string>
+    <string name="backup_confirm_title">导入备份会覆盖现有数据</string>
+    <string name="backup_confirm_text">当前全部闹钟、安排、假期与设置都会被备份内容替换，且「撤销上次导入」记录会失效。\n\n恢复前会自动保存一份当前数据的备份。确定继续吗？</string>
+    <string name="backup_confirm_ok">覆盖并恢复</string>
+    <string name="toast_backup_auto_saved">恢复前的数据已自动备份：%1$s</string>
+    <string name="import_done_skipped">有 %1$d 条周课表条目被跳过：循环方式没有切换成「每周」</string>
 </resources>

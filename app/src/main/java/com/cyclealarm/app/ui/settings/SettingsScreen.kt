@@ -163,27 +163,70 @@ fun SettingsScreen(
             }
         }
     }
+    // 选完文件先不导入：读出内容后弹二次确认，确认后才整库替换
+    var pendingImportPayload by remember { mutableStateOf<String?>(null) }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            backupScope.launch {
-                runCatching {
-                    val text = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        stream.readBytes().toString(Charsets.UTF_8)
-                    } ?: error(context.getString(R.string.error_read_file))
-                    BackupManager.import(context, text)
-                }.onSuccess {
-                    Toast.makeText(context, context.getString(R.string.toast_backup_restored), Toast.LENGTH_SHORT).show()
-                }.onFailure {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.toast_import_failed, it.uiMessage(context)),
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.readBytes().toString(Charsets.UTF_8)
+                } ?: error(context.getString(R.string.error_read_file))
+            }.onSuccess { text ->
+                pendingImportPayload = text
+            }.onFailure {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.toast_import_failed, it.uiMessage(context)),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
+    }
+
+    pendingImportPayload?.let { payload ->
+        AlertDialog(
+            onDismissRequest = { pendingImportPayload = null },
+            title = { Text(stringResource(R.string.backup_confirm_title)) },
+            text = { Text(stringResource(R.string.backup_confirm_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingImportPayload = null
+                        backupScope.launch {
+                            runCatching { BackupManager.import(context, payload) }
+                                .onSuccess { summary ->
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_backup_restored),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    summary.autoBackupPath?.let { path ->
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.toast_backup_auto_saved, path),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                                .onFailure {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_import_failed, it.uiMessage(context)),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                        }
+                    }
+                ) { Text(stringResource(R.string.backup_confirm_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportPayload = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val cycleLength by viewModel.cycleLength.collectAsStateWithLifecycle()

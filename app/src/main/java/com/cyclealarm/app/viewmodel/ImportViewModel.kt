@@ -49,7 +49,9 @@ sealed interface ImportUiState {
     data class Done(
         val cycleCount: Int,
         val dateCount: Int,
-        val switchedToWeekly: Boolean
+        val switchedToWeekly: Boolean,
+        /** 因为循环方式没切「每周」而被跳过的周课表条目数。 */
+        val skippedWeeklyCount: Int = 0
     ) : ImportUiState
     data class Error(val message: String) : ImportUiState
 }

@@ -220,7 +220,8 @@ fun ImportScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showOverwrite = false
-                    viewModel.write()
+                    // 用户已经明确确认覆盖 → 等同于确认「切每周」，否则周课表条目会被静默跳过
+                    viewModel.write(weeklyConfirmed = true)
                 }) { Text(stringResource(R.string.import_overwrite_confirm)) }
             },
             dismissButton = {
@@ -458,6 +459,14 @@ private fun DoneContent(
                 stringResource(R.string.import_done_weekly),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
+            )
+        }
+        if (state.skippedWeeklyCount > 0) {
+            // 之前这里静默丢弃周课表条目，用户只看到「已导入 0 条」
+            Text(
+                stringResource(R.string.import_done_skipped, state.skippedWeeklyCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
             )
         }
         if (undoAvailable) {

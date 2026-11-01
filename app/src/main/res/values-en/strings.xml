@@ -465,4 +465,11 @@
     <string name="hol_mid_autumn_national">Mid-Autumn and National Day</string>
     <string name="hol_mid_autumn">Mid-Autumn</string>
     <string name="hol_national_day">National Day</string>
+    <string name="err_backup_truncated">The backup file is incomplete (truncated); import refused</string>
+    <string name="err_backup_checksum">Backup checksum failed (modified or corrupted); import refused</string>
+    <string name="backup_confirm_title">Importing a backup replaces existing data</string>
+    <string name="backup_confirm_text">All current alarms, plans, holidays and settings will be replaced, and the "undo last import" record becomes invalid.\n\nA backup of the current data is saved automatically before restoring. Continue?</string>
+    <string name="backup_confirm_ok">Replace and restore</string>
+    <string name="toast_backup_auto_saved">Current data was saved to: %1$s</string>
+    <string name="import_done_skipped">%1$d weekly rows were skipped because the cycle was not switched to weekly</string>
 </resources>

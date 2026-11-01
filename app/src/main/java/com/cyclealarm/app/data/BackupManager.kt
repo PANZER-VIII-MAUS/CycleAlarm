@@ -2,8 +2,11 @@ package com.cyclealarm.app.data
 
 import android.content.Context
 import androidx.room.withTransaction
+import com.cyclealarm.app.R
 import com.cyclealarm.app.core.AlarmResyncHelper
+import com.cyclealarm.app.core.LocalizedFailure
 import android.util.Log
+import java.io.File
 
 /**
  * 数据备份的导出 / 导入。
@@ -20,8 +23,13 @@ object BackupManager {
         val activityTypes: Int,
         val dayPlans: Int,
         val holidays: Int,
-        val snoozes: Int
+        val snoozes: Int,
+        /** 恢复前自动保存的当前数据备份路径；保存失败时为 null。 */
+        val autoBackupPath: String? = null
     )
+
+    /** 自动备份保留的份数。 */
+    private const val AUTO_BACKUP_KEEP = 3
 
     suspend fun export(context: Context): String {
         val db = AppDatabase.get(context)
@@ -41,10 +49,15 @@ object BackupManager {
     suspend fun import(context: Context, payload: String): BackupSummary {
         // 先解码：格式错误在这里就抛出，数据库保持原样
         val backup = BackupCodec.decode(payload)
-        require(
-            backup.settings != null || backup.alarms.isNotEmpty() ||
-                backup.dateAlarms.isNotEmpty() || backup.dayPlans.isNotEmpty()
-        ) { "备份文件里没有可恢复的数据" }
+        if (
+            backup.settings == null && backup.alarms.isEmpty() &&
+            backup.dateAlarms.isEmpty() && backup.dayPlans.isEmpty()
+        ) {
+            throw LocalizedFailure(R.string.err_backup_no_data)
+        }
+
+        // 恢复前先把「当前数据」落一份自动备份，误导入时还能救回来
+        val autoBackupPath = runCatching { writeAutoBackup(context, export(context)) }.getOrNull()
 
         val db = AppDatabase.get(context)
         db.withTransaction {
@@ -54,6 +67,9 @@ object BackupManager {
             db.dayPlanDao().deleteAll()
             db.holidayDao().deleteAll()
             db.snoozeDao().deleteAll()
+            // 恢复语义 = 回到备份时刻：撤销点与响铃历史都属于「当前状态」，必须一起清掉
+            db.importSnapshotDao().deleteAll()
+            db.ringEventDao().deleteAll()
 
             backup.settings?.let { db.settingsDao().upsert(it) }
             backup.activityTypes.forEach { db.activityTypeDao().upsert(it) }
@@ -73,7 +89,20 @@ object BackupManager {
             activityTypes = backup.activityTypes.size,
             dayPlans = backup.dayPlans.size,
             holidays = backup.holidays.size,
-            snoozes = backup.snoozes.size
+            snoozes = backup.snoozes.size,
+            autoBackupPath = autoBackupPath
         )
+    }
+
+    /** 把 payload 写成 filesDir/auto-backups 下的文件，只保留最近 [AUTO_BACKUP_KEEP] 份。 */
+    private fun writeAutoBackup(context: Context, payload: String): String {
+        val dir = File(context.filesDir, "auto-backups").apply { mkdirs() }
+        val file = File(dir, "backup-before-restore-${System.currentTimeMillis()}.txt")
+        file.writeText(payload, Charsets.UTF_8)
+        dir.listFiles()
+            ?.sortedByDescending { it.lastModified() }
+            ?.drop(AUTO_BACKUP_KEEP)
+            ?.forEach { it.delete() }
+        return file.absolutePath
     }
 }

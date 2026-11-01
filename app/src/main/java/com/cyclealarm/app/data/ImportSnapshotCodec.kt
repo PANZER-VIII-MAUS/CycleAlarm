@@ -18,8 +18,17 @@ object ImportSnapshotCodec {
     private const val HEADER_V1 = "CYCLE_ALARM_SNAPSHOT_V1"
     private const val HEADER_V2 = "CYCLE_ALARM_SNAPSHOT_V2"
 
+    /**
+     * V3：A 记录补上 v10 的四个字段（铃声 / 振动 / 渐强 / 提前提醒）。
+     * 没有它的话，撤销一次导入会把所有闹钟的响铃设置重置回默认值。
+     */
+    private const val HEADER_V3 = "CYCLE_ALARM_SNAPSHOT_V3"
+
+    private const val A_SEGMENTS_V1 = 9
+    private const val A_SEGMENTS_V3 = 13
+
     fun encode(snapshot: AlarmImportWriter.Snapshot): String = buildString {
-        appendLine(HEADER_V2)
+        appendLine(HEADER_V3)
         append("B")
         append('\t').append(snapshot.batchId)
         appendLine()
@@ -43,6 +52,10 @@ object ImportSnapshotCodec {
             append('\t').append(alarm.mutedDuringHoliday.flag())
             append('\t').append(alarm.planGenerated.flag())
             append('\t').append(encodeString(alarm.label))
+            append('\t').append(encodeString(alarm.ringtoneUri.orEmpty()))
+            append('\t').append(alarm.vibrate.flag())
+            append('\t').append(alarm.rampVolume.flag())
+            append('\t').append(alarm.preAlertMinutes)
             appendLine()
         }
         snapshot.dateAlarms.forEach { alarm ->
@@ -80,7 +93,7 @@ object ImportSnapshotCodec {
     fun decode(payload: String): AlarmImportWriter.Snapshot {
         val lines = payload.lineSequence().filter { it.isNotBlank() }.toList()
         val header = lines.firstOrNull()
-        if (header != HEADER_V1 && header != HEADER_V2) {
+        if (header != HEADER_V1 && header != HEADER_V2 && header != HEADER_V3) {
             throw LocalizedFailure(R.string.err_snapshot_unsupported)
         }
         var settings: AppSettingsEntity? = null
@@ -111,7 +124,9 @@ object ImportSnapshotCodec {
                 }
 
                 "A" -> {
-                    if (parts.size != 9) throw LocalizedFailure(R.string.err_snapshot_cycle_alarms)
+                    if (parts.size != A_SEGMENTS_V3 && parts.size != A_SEGMENTS_V1) {
+                        throw LocalizedFailure(R.string.err_snapshot_cycle_alarms)
+                    }
                     alarms += AlarmEntity(
                         id = parts[1].toInt(),
                         dayIndex = parts[2].toInt(),
@@ -119,8 +134,13 @@ object ImportSnapshotCodec {
                         minute = parts[4].toInt(),
                         enabled = parts[5].toBooleanFlag(),
                         mutedDuringHoliday = parts[6].toBooleanFlag(),
+                        planGenerated = parts[7].toBooleanFlag(),
                         label = decodeString(parts[8]),
-                        planGenerated = parts[7].toBooleanFlag()
+                        // V1/V2 快照没有这四个字段 → 用默认值补齐
+                        ringtoneUri = if (parts.size > 9) decodeString(parts[9]).ifBlank { null } else null,
+                        vibrate = if (parts.size > 10) parts[10].toBooleanFlag() else true,
+                        rampVolume = if (parts.size > 11) parts[11].toBooleanFlag() else false,
+                        preAlertMinutes = if (parts.size > 12) parts[12].toInt() else 0
                     )
                 }
 
@@ -160,7 +180,7 @@ object ImportSnapshotCodec {
                     )
                 }
 
-                else -> error(com.cyclealarm.app.R.string.err_snapshot_unknown_record)
+                else -> throw LocalizedFailure(R.string.err_snapshot_unknown_record)
             }
         }
 
@@ -186,6 +206,6 @@ object ImportSnapshotCodec {
     private fun String.toBooleanFlag(): Boolean = when (this) {
         "1" -> true
         "0" -> false
-        else -> error(com.cyclealarm.app.R.string.err_snapshot_bool)
+        else -> throw LocalizedFailure(R.string.err_snapshot_bool)
     }
 }
