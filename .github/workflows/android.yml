@@ -22,11 +22,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required SDK packages
-        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Install Android platform 36
+        run: |
+          SDKMANAGER=sdkmanager
+          command -v sdkmanager >/dev/null 2>&1 || SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -1)"; fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
