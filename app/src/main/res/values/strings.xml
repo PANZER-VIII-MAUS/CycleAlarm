@@ -428,7 +428,7 @@
     <string name="rom_samsung_tip2">设置 → 应用 → 循环闹钟 → 电池 → 不受限制</string>
     <string name="rom_other_tip1">系统设置 → 电池 → 电池优化 → 不优化</string>
     <string name="rom_other_tip2">系统设置 → 应用 → 自启动 / 后台活动 → 允许</string>
-    <string name="vm_db_too_old">数据库版本过旧，请卸载重装</string>
+    <string name="vm_db_too_old">数据库升级失败，数据仍保留在设备上；请重启应用后重试</string>
     <string name="vm_db_init_failed">数据库初始化失败，请重启应用</string>
     <string name="vm_default_class">上课</string>
     <string name="vm_default_study">自习</string>

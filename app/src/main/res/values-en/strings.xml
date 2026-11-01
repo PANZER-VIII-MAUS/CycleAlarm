@@ -428,7 +428,7 @@
     <string name="rom_samsung_tip2">Settings → Apps → CycleAlarm → Battery → Unrestricted</string>
     <string name="rom_other_tip1">System settings → Battery → Battery optimization → Don\'t optimize</string>
     <string name="rom_other_tip2">System settings → Apps → Autostart / background activity → Allow</string>
-    <string name="vm_db_too_old">The database is too old; please uninstall and reinstall</string>
+    <string name="vm_db_too_old">Database upgrade failed; your data is still on the device. Please restart the app and try again</string>
     <string name="vm_db_init_failed">Database initialization failed; please restart the app</string>
     <string name="vm_default_class">Class</string>
     <string name="vm_default_study">Study</string>

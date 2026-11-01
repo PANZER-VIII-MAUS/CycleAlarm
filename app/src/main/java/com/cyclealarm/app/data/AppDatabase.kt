@@ -139,6 +139,15 @@ abstract class AppDatabase : RoomDatabase() {
                 MIGRATION_10_11
             )
 
+        /** 仅供测试：清掉单例，让下次 get() 真的走一遍打开/迁移流程。 */
+        @androidx.annotation.VisibleForTesting
+        fun resetInstanceForTest() {
+            synchronized(this) {
+                runCatching { INSTANCE?.close() }
+                INSTANCE = null
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -146,10 +155,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cycle_alarm.db"
                 )
-                    .addMigrations(
-                        MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
-                        MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
-                    )
+                    // 必须用 ALL_MIGRATIONS：手写列表曾漏掉 10→11，导致 0.6.3 升级后打不开库
+                    .addMigrations(*ALL_MIGRATIONS)
                     .build()
                     .also { INSTANCE = it }
             }
