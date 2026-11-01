@@ -34,7 +34,7 @@ function Read-PlainProperty([string]$path, [string]$key) {
 }
 
 function Write-PlainProperty([string]$path, [hashtable]$values) {
-    $lines = Get-Content -Path $path -Encoding UTF8
+    $lines = [System.IO.File]::ReadAllLines($path, [System.Text.Encoding]::UTF8)
     $out = foreach ($line in $lines) {
         $matched = $false
         foreach ($k in $values.Keys) {
@@ -46,7 +46,10 @@ function Write-PlainProperty([string]$path, [hashtable]$values) {
         }
         if (-not $matched) { $line }
     }
-    Set-Content -Path $path -Value $out -Encoding UTF8
+    # 关键：必须写「不带 BOM」的 UTF-8。PS 5.1 的 Set-Content -Encoding UTF8 会加 BOM，
+    # Gradle 的 Properties 会把首行键读成 "\uFEFFstoreFile"，导致 storeFile 为 null。
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllLines($path, $out, $utf8NoBom)
 }
 
 Write-Host '=== CycleAlarm 签名密码修改 ===' -ForegroundColor Cyan
@@ -111,7 +114,9 @@ Write-PlainProperty $propertiesPath @{
     storePassword = $newPass1
     keyPassword   = $newPass1
 }
-Write-Host '已更新 keystore.properties' -ForegroundColor Green
+$checkStore = Read-PlainProperty $propertiesPath 'storeFile'
+if (-not $checkStore) { throw 'keystore.properties 更新后读不到 storeFile，请用备份还原' }
+Write-Host '已更新 keystore.properties（无 BOM，Gradle 可正常读取）' -ForegroundColor Green
 
 # 6) 校验：能重新打开密钥库
 & $keytool -list -keystore $storeFile -storepass $newPass1 -alias $keyAlias | Out-Null
