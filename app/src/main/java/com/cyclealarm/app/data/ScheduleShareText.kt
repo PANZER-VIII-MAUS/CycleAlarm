@@ -1,45 +1,46 @@
 package com.cyclealarm.app.data
 
+import android.content.Context
+import com.cyclealarm.app.R
+
 /**
  * 「排班分享」的纯文本生成：把当前周期与闹钟排成一段可粘贴的文字。
- * 不依赖 Android，可直接单测。
  */
 object ScheduleShareText {
 
-    /**
-     * @param settings 当前设置（周期天数/方式）
-     * @param alarms 周期闹钟（按 id 排序后输出）
-     * @param dateAlarms 按日期闹钟
-     */
     fun build(
+        context: Context,
         settings: AppSettingsEntity?,
         alarms: List<AlarmEntity>,
         dateAlarms: List<DateAlarmEntity>
     ): String = buildString {
-        appendLine("我的闹钟排班（来自循环闹钟）")
+        appendLine(context.getString(R.string.share_title_line))
         if (settings == null) {
-            appendLine("（还没有任何设置）")
+            appendLine(context.getString(R.string.share_no_settings))
             return@buildString
         }
         val typeLabel = when (settings.cycleType) {
-            CycleTypes.DAILY -> "每天"
-            CycleTypes.WEEKLY -> "每周"
-            else -> "${settings.cycleLength} 天一轮"
+            CycleTypes.DAILY -> context.getString(R.string.cycle_daily)
+            CycleTypes.WEEKLY -> context.getString(R.string.cycle_weekly)
+            else -> context.getString(R.string.share_cycle_days, settings.cycleLength)
         }
-        appendLine("循环：$typeLabel")
+        appendLine(context.getString(R.string.share_cycle_label, typeLabel))
         if (alarms.isEmpty()) {
-            appendLine("周期闹钟：无")
+            appendLine(context.getString(R.string.share_no_cycle_alarms))
         } else {
-            appendLine("周期闹钟：")
+            appendLine(context.getString(R.string.share_cycle_alarms))
             alarms.sortedWith(compareBy({ it.dayIndex }, { it.hour }, { it.minute })).forEach { alarm ->
                 appendLine(
-                    "  第 ${alarm.dayIndex + 1} 天 ${clock(alarm.hour, alarm.minute)}" +
-                        alarm.label.let { if (it.isBlank()) "" else " $it" }
+                    context.getString(
+                        R.string.share_cycle_alarm_line,
+                        alarm.dayIndex + 1,
+                        clock(alarm.hour, alarm.minute)
+                    ) + alarm.label.let { if (it.isBlank()) "" else " $it" }
                 )
             }
         }
         if (dateAlarms.isNotEmpty()) {
-            appendLine("按日期闹钟：")
+            appendLine(context.getString(R.string.share_date_alarms))
             dateAlarms.sortedWith(compareBy({ it.epochDay }, { it.hour }, { it.minute })).forEach { alarm ->
                 appendLine(
                     "  ${day(alarm.epochDay)} ${clock(alarm.hour, alarm.minute)}" +

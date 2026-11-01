@@ -105,9 +105,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             throwable is IllegalStateException &&
             throwable.message?.contains("migration", ignoreCase = true) == true
         ) {
-            "数据库版本过旧，请卸载重装"
+            getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_db_too_old)
         } else {
-            "数据库初始化失败，请重启应用"
+            getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_db_init_failed)
         }
     }
 
@@ -151,7 +151,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             if (freshInstall && PlanSeedPolicy.shouldCreateDefaultPlans(alarmCount, dayPlanCount)) {
                 // 只有全新安装 / 两张表都为空时才建默认计划：第 1..N-1 天上课，第 N 天休息
                 val types = db.activityTypeDao().getAll()
-                val classType = types.firstOrNull { it.name == "上课" }
+                val classType = types.firstOrNull { it.name == getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_class) }
                     ?: types.firstOrNull { it.rings }
                 val restType = types.firstOrNull { !it.rings }
                 // 注入上限 6 天：30 天周期不该一次塞 29 条默认闹钟
@@ -202,9 +202,18 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun insertDefaultTypes() {
         listOf(
-            ActivityTypeEntity(name = "上课", hour = 7, minute = 30, rings = true, sortOrder = 0),
-            ActivityTypeEntity(name = "自习", hour = 8, minute = 30, rings = true, sortOrder = 1),
-            ActivityTypeEntity(name = "休息", hour = 0, minute = 0, rings = false, sortOrder = 2)
+            ActivityTypeEntity(
+                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_class),
+                hour = 7, minute = 30, rings = true, sortOrder = 0
+            ),
+            ActivityTypeEntity(
+                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_study),
+                hour = 8, minute = 30, rings = true, sortOrder = 1
+            ),
+            ActivityTypeEntity(
+                name = getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_default_break),
+                hour = 0, minute = 0, rings = false, sortOrder = 2
+            )
         ).forEach { db.activityTypeDao().upsert(it) }
     }
 
@@ -247,7 +256,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         val settings = db.settingsDao().get()
         val alarms = db.alarmDao().getAll()
         val dateAlarms = db.dateAlarmDao().getAll()
-        return ScheduleShareText.build(settings, alarms, dateAlarms)
+        return ScheduleShareText.build(getApplication(), settings, alarms, dateAlarms)
     }
 
     /** 安排 ↔ 闹钟 一致性同步（幂等，可在任何触发点调用）。 */
@@ -406,13 +415,22 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     /** 删除某天的安排并登记待撤销项。 */
     suspend fun deleteDayPlanWithUndo(dayIndex: Int, label: String) {
         val removed = deleteDayPlan(dayIndex) ?: return
-        _pendingUndo.value = PendingUndo.Plan(removed, "已删除${label}的安排")
+        _pendingUndo.value = PendingUndo.Plan(
+                removed,
+                getApplication<Application>().getString(com.cyclealarm.app.R.string.vm_undo_plan, label)
+            )
     }
 
     /** 删除安排类型并登记待撤销项。 */
     suspend fun deleteActivityTypeWithUndo(id: Int) {
         val snapshot = deleteActivityTypeWithSnapshot(id) ?: return
-        _pendingUndo.value = PendingUndo.Type(snapshot, "已删除安排类型「${snapshot.type.name}」")
+        _pendingUndo.value = PendingUndo.Type(
+                snapshot,
+                getApplication<Application>().getString(
+                    com.cyclealarm.app.R.string.vm_undo_type,
+                    snapshot.type.name
+                )
+            )
     }
 
     fun undoPending() {

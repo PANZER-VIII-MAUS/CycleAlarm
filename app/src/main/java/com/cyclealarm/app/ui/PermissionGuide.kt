@@ -127,11 +127,11 @@ fun PermissionGuideDialog(onDismiss: () -> Unit) {
                     onClick = { PermissionHelper.openAppNotificationSettings(context) }
                 )
                 Text(
-                    text = stringResource(R.string.perm_device, RomHelper.vendor.displayName),
+                    text = stringResource(R.string.perm_device, RomHelper.displayName(context)),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
-                    text = RomHelper.extraTips().joinToString("\n") { "· $it" } +
+                    text = RomHelper.extraTips(context).joinToString("\n") { "· $it" } +
                         "\n" + stringResource(R.string.perm_multitask_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
