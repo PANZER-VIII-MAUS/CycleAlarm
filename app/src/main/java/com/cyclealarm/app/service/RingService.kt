@@ -369,6 +369,23 @@ class RingService : Service() {
                 .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        // 锁屏横幅上的「稍后」：ColorOS 拦跨锁屏窗口，但通知操作不受限，
+        // 所以通知必须自带停止 + 稍后，用户不解锁也能处理（真机验证驱动）
+        val snoozeAction: PendingIntent? = if (previewMode) null else {
+            PendingIntent.getBroadcast(
+                this,
+                schedulerId + AlarmScheduler.SNOOZE_ACTION_REQUEST_OFFSET,
+                Intent(this, AlarmReceiver::class.java)
+                    .setAction(AlarmScheduler.ACTION_SNOOZE_FROM_RING)
+                    .putExtra(AlarmScheduler.EXTRA_ALARM_ID, alarmId)
+                    .putExtra(AlarmScheduler.EXTRA_ALARM_KIND, kind)
+                    .putExtra(AlarmScheduler.EXTRA_DAY_INDEX, dayIndex)
+                    .putExtra(AlarmScheduler.EXTRA_HOUR, hour)
+                    .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
+                    .putExtra(AlarmScheduler.EXTRA_LABEL, label),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
         val notification: Notification = NotificationCompat.Builder(this, NotificationChannels.RING)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(getString(R.string.ring_notification_title, timeText))
@@ -386,8 +403,19 @@ class RingService : Service() {
             .addAction(0, getString(R.string.ring_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            // 锁屏上公开展示内容（读屏/锁屏横幅都能看到）
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
+            .apply {
+                snoozeAction?.let {
+                    addAction(
+                        0,
+                        getString(R.string.ring_snooze_minutes, RingPrefs.snoozeMinutes(this@RingService)),
+                        it
+                    )
+                }
+            }
             .build()
 
         val outcome = RingForegroundGuard.attempt {

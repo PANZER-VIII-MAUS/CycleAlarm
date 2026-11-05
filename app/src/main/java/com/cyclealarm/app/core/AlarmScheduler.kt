@@ -52,6 +52,10 @@ object AlarmScheduler {
     const val EXTRA_RAMP_VOLUME = "extra_ramp_volume"
 
     /** v10：提前提醒（只发通知，不响铃）。 */
+    /** 通知栏「稍后」动作：锁屏上无需解锁即可延后（ColorOS 会拦跨锁屏窗口，但通知操作不受限）。 */
+    const val ACTION_SNOOZE_FROM_RING = "com.cyclealarm.app.action.SNOOZE_FROM_RING"
+    const val SNOOZE_ACTION_REQUEST_OFFSET = 500_000
+
     const val ACTION_PRE_ALERT = "com.cyclealarm.app.action.PRE_ALERT"
     const val EXTRA_PRE_ALERT_MINUTES = "extra_pre_alert_minutes"
     const val PRE_ALERT_REQUEST_OFFSET = 300_000

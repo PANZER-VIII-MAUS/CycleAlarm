@@ -52,6 +52,38 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
             }
 
+            AlarmScheduler.ACTION_SNOOZE_FROM_RING -> {
+                val pendingResult = goAsync()
+                val kind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
+                    ?: AlarmScheduler.KIND_CYCLE
+                val alarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
+                val dayIndex = intent.getIntExtra(AlarmScheduler.EXTRA_DAY_INDEX, 0)
+                val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
+                val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
+                val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val minutes = com.cyclealarm.app.core.RingPrefs.snoozeMinutes(context)
+                        AlarmScheduler.snoozeAt(
+                            context = context,
+                            kind = kind,
+                            alarmId = alarmId,
+                            dayIndex = dayIndex,
+                            hour = hour,
+                            minute = minute,
+                            label = label,
+                            minutes = minutes
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "notification snooze failed", e)
+                    } finally {
+                        // 无论稍后是否排成功都要停掉本次响铃，否则铃声不会停
+                        context.stopService(Intent(context, RingService::class.java))
+                        pendingResult.finish()
+                    }
+                }
+            }
+
             AlarmScheduler.ACTION_PRE_ALERT -> {
                 val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
                 val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
