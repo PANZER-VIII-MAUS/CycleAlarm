@@ -14,7 +14,6 @@ object NotificationChannels {
     const val RING_FALLBACK = "alarm_fallback"
 
     fun createAll(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val nm = context.getSystemService(NotificationManager::class.java)
 
         val guard = NotificationChannel(

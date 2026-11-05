@@ -18,7 +18,7 @@ object NotificationPermissionCheck {
             .getOrDefault(false)
 
     fun isChannelEnabled(context: Context, channelId: String): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
+        // minSdk 26：通知渠道一定存在，不需要再判断版本
         return runCatching {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return false
             val importance = manager.getNotificationChannel(channelId)?.importance

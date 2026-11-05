@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">循环闹钟</string>
     <string name="widget_description">显示下一次响铃时间与倒计时</string>
     <string name="settings_language">语言</string>
@@ -84,8 +84,8 @@
     <string name="row_timezone">时区</string>
     <string name="row_auto_time">自动设置时间</string>
     <string name="row_auto_timezone">自动设置时区</string>
-    <string name="state_on">开</string>
-    <string name="state_off">关</string>
+    <string name="state_on" tools:override="true">开</string>
+    <string name="state_off" tools:override="true">关</string>
     <string name="system_time_hint">App 无法修改系统时间或时区。修改系统时区后，闹钟排期会自动重建，无需手动重排。</string>
     <string name="toast_find_date_settings">请在系统设置里找到日期和时间</string>
     <string name="action_open_date_settings">打开系统日期和时间设置</string>

@@ -43,7 +43,7 @@ object PermissionHelper {
 
     /** 响铃通知渠道是否开启（渠道不存在视为开启）；无法判断返回 null。 */
     fun ringChannelEnabled(context: Context): Boolean? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        // minSdk 26：渠道 API 一定可用
         return runCatching {
             val manager = context.getSystemService(NotificationManager::class.java)
             val channel = manager.getNotificationChannel(NotificationChannels.RING) ?: return true

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">CycleAlarm</string>
     <string name="widget_description">Shows the next alarm time and countdown</string>
     <string name="settings_language">Language</string>
@@ -84,8 +84,8 @@
     <string name="row_timezone">Time zone</string>
     <string name="row_auto_time">Automatic time</string>
     <string name="row_auto_timezone">Automatic time zone</string>
-    <string name="state_on">On</string>
-    <string name="state_off">Off</string>
+    <string name="state_on" tools:override="true">On</string>
+    <string name="state_off" tools:override="true">Off</string>
     <string name="system_time_hint">The app cannot change system time or time zone. After a time-zone change the schedule is rebuilt automatically.</string>
     <string name="toast_find_date_settings">Find date and time in the system settings</string>
     <string name="action_open_date_settings">Open system date and time settings</string>

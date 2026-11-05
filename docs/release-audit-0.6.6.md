@@ -113,6 +113,11 @@
 
 ---
 
+| lint warning 收敛 | 78 → **67**（0 error）：修正 4 处 ObsoleteSdkInt、4 处 PrivateResource 误报、3 处 UnusedAttribute、去掉不再需要的 SDK 判断 | `lintDirectDebug` 报告计数 |
+| Play 包未安装验证 | **已在真机安装验证**：`app-play-release.apk` 覆盖安装成功、启动无崩溃；aapt2 对比两个 APK 的 manifest——Play 包只有 `RingService`，**无 `AlarmGuardService`**；直装包两者都有。验证后已恢复直装包（守护服务组件回归） | aapt2 xmltree + `pm dump` |
+
+---
+
 ## 6. 最终结论
 
 **结论：需修改后复审（非阻断）**
