@@ -60,6 +60,12 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // 每日自动备份：数据只在应用私有目录，卸载/清数据就没了（真机上已发生过一次）。
+        // 设置页「恢复自动备份」可从这里救回最近 5 份。
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { com.cyclealarm.app.data.BackupManager.writeDailyAutoBackup(applicationContext) }
+        }
+
         // 每次回到前台都重建排期，兜底假期/跨天等状态变化
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {

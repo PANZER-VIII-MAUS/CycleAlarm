@@ -28,8 +28,11 @@ object BackupManager {
         val autoBackupPath: String? = null
     )
 
-    /** 自动备份保留的份数。 */
+    /** 恢复前快照保留份数。 */
     private const val AUTO_BACKUP_KEEP = 3
+
+    /** 每日自动备份保留份数（5 天，够覆盖「发现数据不对劲」的时间窗）。 */
+    private const val AUTO_BACKUP_KEEP_DAILY = 5
 
     suspend fun export(context: Context): String {
         val db = AppDatabase.get(context)
@@ -93,6 +96,43 @@ object BackupManager {
             autoBackupPath = autoBackupPath
         )
     }
+
+    /** 自动备份条目（恢复入口用）。 */
+    data class AutoBackupInfo(
+        val file: File,
+        val name: String,
+        val sizeBytes: Long,
+        val savedAt: Long
+    )
+
+    /**
+     * 每天首次打开应用时写一份自动备份（只保留最近 [AUTO_BACKUP_KEEP_DAILY] 份）。
+     * 返回写入的文件路径；今天已经备份过则返回 null。
+     */
+    suspend fun writeDailyAutoBackup(context: Context): String? {
+        val dir = File(context.filesDir, "auto-backups").apply { mkdirs() }
+        val names = dir.listFiles()?.map { it.name } ?: emptyList()
+        if (!AutoBackupPolicy.shouldWriteToday(names, System.currentTimeMillis())) return null
+        val payload = runCatching { export(context) }.getOrNull() ?: return null
+        val target = File(dir, AutoBackupPolicy.fileName(System.currentTimeMillis()))
+        return runCatching {
+            target.writeText(payload, Charsets.UTF_8)
+            AutoBackupPolicy.expired(dir.listFiles()?.map { it.name } ?: emptyList(), AUTO_BACKUP_KEEP_DAILY)
+                .forEach { stale -> File(dir, stale).delete() }
+            target.absolutePath
+        }.onFailure { Log.e(TAG, "daily auto backup failed", it) }.getOrNull()
+    }
+
+    /** 列出可恢复的自动备份（含「恢复前快照」与「每日备份」），最近的在前。 */
+    fun listAutoBackups(context: Context): List<AutoBackupInfo> {
+        val dir = File(context.filesDir, "auto-backups")
+        return (dir.listFiles() ?: emptyArray())
+            .filter { it.isFile }
+            .sortedByDescending { it.lastModified() }
+            .map { AutoBackupInfo(it, it.name, it.length(), it.lastModified()) }
+    }
+
+    fun readAutoBackup(info: AutoBackupInfo): String = info.file.readText(Charsets.UTF_8)
 
     /** 把 payload 写成 filesDir/auto-backups 下的文件，只保留最近 [AUTO_BACKUP_KEEP] 份。 */
     private fun writeAutoBackup(context: Context, payload: String): String {

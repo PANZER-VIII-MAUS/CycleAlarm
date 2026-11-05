@@ -485,4 +485,10 @@
     <string name="ring_diag_overlay">Overlay fallback used</string>
     <string name="ring_diag_notification">Notification only (screen blocked)</string>
     <string name="ring_diag_unknown">No record yet</string>
+    <string name="row_restore_auto_backup">Restore auto backup</string>
+    <string name="restore_auto_empty">No auto backup yet: one is created on the first launch each day</string>
+    <string name="restore_auto_confirm_title">Restore this auto backup?</string>
+    <string name="restore_auto_confirm_text">This replaces all current alarms and settings. A snapshot of the current data is saved first.</string>
+    <string name="restore_auto_item">%1$s · %2$s</string>
+    <string name="toast_restore_auto_ok">Restored from auto backup</string>
 </resources>

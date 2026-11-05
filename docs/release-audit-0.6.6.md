@@ -89,6 +89,15 @@
 
 ---
 
+## 5.5 审核后补充修复（0.6.6 发布后、下个版本前）
+
+| 项 | 内容 | 验证 |
+| --- | --- | --- |
+| 附录 B #4 自动备份无恢复入口 | 新增每日自动备份（`AutoBackupPolicy` + `BackupManager.writeDailyAutoBackup`，保留 5 份）与设置页「恢复自动备份」入口（列出文件 + 二次确认 + 走同一条 `BackupManager.import` 事务链路） | 单测 `AutoBackupPolicyTest`（5 例）+ 真机：设置页出现该入口、对话框正确列出 `11-05 20:24 · 303 B` |
+| 备份大小显示 | 新增 `AutoBackupPolicy.formatSize`，小于 1 KB 显示字节（此前整除成 `0 KB`） | 单测 4 例 + 真机截图确认 `303 B` |
+
+---
+
 ## 6. 最终结论
 
 **结论：需修改后复审（非阻断）**

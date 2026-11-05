@@ -185,6 +185,87 @@ fun SettingsScreen(
         }
     }
 
+    // 自动备份恢复入口：数据只在私有目录，卸载/清数据后靠这里救回来
+    var autoBackups by remember { mutableStateOf<List<com.cyclealarm.app.data.BackupManager.AutoBackupInfo>>(emptyList()) }
+    var showAutoBackupDialog by remember { mutableStateOf(false) }
+    var pendingAutoRestore by remember { mutableStateOf<com.cyclealarm.app.data.BackupManager.AutoBackupInfo?>(null) }
+
+    pendingAutoRestore?.let { info ->
+        AlertDialog(
+            onDismissRequest = { pendingAutoRestore = null },
+            title = { Text(stringResource(R.string.restore_auto_confirm_title)) },
+            text = { Text(stringResource(R.string.restore_auto_confirm_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingAutoRestore = null
+                        showAutoBackupDialog = false
+                        backupScope.launch {
+                            runCatching {
+                                val payload = com.cyclealarm.app.data.BackupManager.readAutoBackup(info)
+                                BackupManager.import(context, payload)
+                            }.onSuccess {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.toast_restore_auto_ok),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }.onFailure {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.toast_import_failed, it.uiMessage(context)),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                ) { Text(stringResource(R.string.backup_confirm_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAutoRestore = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    if (showAutoBackupDialog) {
+        AlertDialog(
+            onDismissRequest = { showAutoBackupDialog = false },
+            title = { Text(stringResource(R.string.row_restore_auto_backup)) },
+            text = {
+                if (autoBackups.isEmpty()) {
+                    Text(stringResource(R.string.restore_auto_empty))
+                } else {
+                    androidx.compose.foundation.layout.Column {
+                        autoBackups.forEach { info ->
+                            val stamp = java.text.SimpleDateFormat(
+                                "MM-dd HH:mm",
+                                java.util.Locale.getDefault()
+                            ).format(java.util.Date(info.savedAt))
+                            TextButton(
+                                onClick = { pendingAutoRestore = info }
+                            ) {
+                                Text(
+                                    context.getString(
+                                        R.string.restore_auto_item,
+                                        stamp,
+                                        com.cyclealarm.app.data.AutoBackupPolicy.formatSize(info.sizeBytes)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAutoBackupDialog = false }) {
+                    Text(stringResource(R.string.action_close))
+                }
+            }
+        )
+    }
+
     pendingImportPayload?.let { payload ->
         AlertDialog(
             onDismissRequest = { pendingImportPayload = null },
@@ -464,6 +545,16 @@ fun SettingsScreen(
                         title = stringResource(R.string.row_import_backup),
                         value = stringResource(R.string.import_backup_value),
                         onClick = { importLauncher.launch(arrayOf("text/plain", "*/*")) }
+                    )
+                    SettingRow(
+                        title = stringResource(R.string.row_restore_auto_backup),
+                        value = " ",
+                        onClick = {
+                            autoBackups = runCatching {
+                                com.cyclealarm.app.data.BackupManager.listAutoBackups(context)
+                            }.getOrDefault(emptyList())
+                            showAutoBackupDialog = true
+                        }
                     )
                     SettingRow(
                         title = stringResource(R.string.row_ring_diagnosis),

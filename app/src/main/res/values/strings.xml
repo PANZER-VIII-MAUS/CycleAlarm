@@ -485,4 +485,10 @@
     <string name="ring_diag_overlay">已用悬浮窗兜底</string>
     <string name="ring_diag_notification">仅通知（界面被系统拦截）</string>
     <string name="ring_diag_unknown">暂无记录</string>
+    <string name="row_restore_auto_backup">恢复自动备份</string>
+    <string name="restore_auto_empty">还没有自动备份：应用每天首次打开时会自动备份一份</string>
+    <string name="restore_auto_confirm_title">恢复这份自动备份？</string>
+    <string name="restore_auto_confirm_text">将用所选备份替换当前全部闹钟与设置。恢复前会自动保存一份当前数据。</string>
+    <string name="restore_auto_item">%1$s · %2$s</string>
+    <string name="toast_restore_auto_ok">已从自动备份恢复</string>
 </resources>
