@@ -472,4 +472,17 @@
     <string name="backup_confirm_ok">Replace and restore</string>
     <string name="toast_backup_auto_saved">Current data was saved to: %1$s</string>
     <string name="import_done_skipped">%1$d weekly rows were skipped because the cycle was not switched to weekly</string>
+    <string name="perm_health_title">Lock-screen alarm may not display</string>
+    <string name="perm_health_missing">%1$d setting(s) missing: %2$s</string>
+    <string name="perm_health_action">Fix</string>
+    <string name="perm_issue_notifications">Notifications</string>
+    <string name="perm_issue_ring_channel">Alarm ringtone channel</string>
+    <string name="perm_issue_fsi">Full-screen notifications</string>
+    <string name="perm_issue_overlay">Display over other apps</string>
+    <string name="perm_issue_battery">Background activity allowance</string>
+    <string name="row_ring_diagnosis">Last ring</string>
+    <string name="ring_diag_activity">Ring screen shown</string>
+    <string name="ring_diag_overlay">Overlay fallback used</string>
+    <string name="ring_diag_notification">Notification only (screen blocked)</string>
+    <string name="ring_diag_unknown">No record yet</string>
 </resources>

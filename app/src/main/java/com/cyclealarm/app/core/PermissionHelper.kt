@@ -66,6 +66,28 @@ object PermissionHelper {
     }
 
     /** 请求加入电池优化白名单（部分 ROM 会直接跳转列表页）。 */
+    /**
+     * 打开系统的「全屏通知」权限管理页（Android 14+ 的全屏意图开关）。
+     * 直达不了就退回应用通知设置页——用户至少能自己找。
+     */
+    fun openFullScreenIntentSettings(context: Context): Boolean {
+        val direct = runCatching {
+            context.startActivity(
+                android.content.Intent()
+                    .setComponent(
+                        android.content.ComponentName(
+                            "com.android.settings",
+                            "com.android.settings.AppManageFullScreenIntent"
+                        )
+                    )
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            true
+        }.getOrDefault(false)
+        if (!direct) openAppNotificationSettings(context)
+        return direct
+    }
+
     fun openBatteryOptimizationSettings(context: Context) {
         val direct = Intent(
             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,

@@ -472,4 +472,17 @@
     <string name="backup_confirm_ok">覆盖并恢复</string>
     <string name="toast_backup_auto_saved">恢复前的数据已自动备份：%1$s</string>
     <string name="import_done_skipped">有 %1$d 条周课表条目被跳过：循环方式没有切换成「每周」</string>
+    <string name="perm_health_title">锁屏闹钟可能无法正常显示</string>
+    <string name="perm_health_missing">缺少 %1$d 项设置：%2$s</string>
+    <string name="perm_health_action">去设置</string>
+    <string name="perm_issue_notifications">通知</string>
+    <string name="perm_issue_ring_channel">闹钟响铃渠道</string>
+    <string name="perm_issue_fsi">全屏通知</string>
+    <string name="perm_issue_overlay">悬浮窗</string>
+    <string name="perm_issue_battery">后台运行白名单</string>
+    <string name="row_ring_diagnosis">上次响铃</string>
+    <string name="ring_diag_activity">全屏界面已显示</string>
+    <string name="ring_diag_overlay">已用悬浮窗兜底</string>
+    <string name="ring_diag_notification">仅通知（界面被系统拦截）</string>
+    <string name="ring_diag_unknown">暂无记录</string>
 </resources>

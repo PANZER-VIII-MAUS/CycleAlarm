@@ -466,6 +466,17 @@ fun SettingsScreen(
                         onClick = { importLauncher.launch(arrayOf("text/plain", "*/*")) }
                     )
                     SettingRow(
+                        title = stringResource(R.string.row_ring_diagnosis),
+                        value = ringDiagnosisLabel(context),
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.diagnosis_hint),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                    SettingRow(
                         title = stringResource(R.string.row_schedule_diagnosis),
                         value = ResyncCheckpoint.lastDiagnosticLabel(context),
                         onClick = {
@@ -852,3 +863,26 @@ private fun themeLabel(mode: String): String = when (mode) {
     ThemeManager.MODE_DARK -> stringResource(R.string.theme_dark)
     else -> stringResource(R.string.theme_system)
 }
+
+/**
+ * 「上次响铃」诊断文案：记录的是响铃界面实际是怎么显示出来的
+ * （标准全屏 / 悬浮窗兜底 / 只有通知）——ColorOS 屏蔽应用日志，只能靠它排障。
+ */
+private fun ringDiagnosisLabel(context: android.content.Context): String {
+    val outcome = com.cyclealarm.app.core.RingDiagnostics.lastOutcome(context)
+        ?: return context.getString(com.cyclealarm.app.R.string.ring_diag_unknown)
+    val text = when (outcome) {
+        com.cyclealarm.app.core.RingDiagnostics.Outcome.ACTIVITY_SHOWN ->
+            context.getString(com.cyclealarm.app.R.string.ring_diag_activity)
+        com.cyclealarm.app.core.RingDiagnostics.Outcome.OVERLAY_FALLBACK ->
+            context.getString(com.cyclealarm.app.R.string.ring_diag_overlay)
+        com.cyclealarm.app.core.RingDiagnostics.Outcome.NOTIFICATION_ONLY ->
+            context.getString(com.cyclealarm.app.R.string.ring_diag_notification)
+    }
+    val at = com.cyclealarm.app.core.RingDiagnostics.lastAt(context)
+    if (at <= 0L) return text
+    val stamp = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+        .format(java.util.Date(at))
+    return "$text · $stamp"
+}
+

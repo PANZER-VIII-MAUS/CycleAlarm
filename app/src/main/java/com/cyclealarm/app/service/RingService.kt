@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import com.cyclealarm.app.core.RingtonePlayer
 import com.cyclealarm.app.core.RingUiFallbackPolicy
 import com.cyclealarm.app.core.RingUiPresence
+import com.cyclealarm.app.core.RingDiagnostics
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.VibratorUtil
@@ -165,6 +166,9 @@ class RingService : Service() {
         val check = Runnable {
             val permitted = RingOverlayController.canDrawOverlays(this)
             val visible = RingUiPresence.isVisible()
+            if (visible) {
+                RingDiagnostics.record(this, RingDiagnostics.Outcome.ACTIVITY_SHOWN)
+            }
             if (RingUiFallbackPolicy.shouldShowOverlay(visible, permitted, preview)) {
                 Log.w(
                     TAG,
@@ -221,7 +225,9 @@ class RingService : Service() {
                 }
                 overlayWatch = watch
                 handler.postDelayed(watch, 1_000L)
+                RingDiagnostics.record(this, RingDiagnostics.Outcome.OVERLAY_FALLBACK)
             } else if (!permitted && !visible) {
+                RingDiagnostics.record(this, RingDiagnostics.Outcome.NOTIFICATION_ONLY)
                 // 没有浮窗权限 → 至少留下可排查的日志（真机上这是「只有铃声没有界面」的根因）
                 Log.w(
                     TAG,

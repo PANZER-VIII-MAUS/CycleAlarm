@@ -334,6 +334,10 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 contentPadding = PaddingValues(horizontal = contentPadding, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 锁屏响铃健康检查：缺权限时这里常驻提示（ColorOS 上会「只有铃声没界面」）
+                item(key = "ring-health") {
+                    RingHealthBanner()
+                }
                 if (shortScreen) {
                     item(key = "next-alarm") {
                         NextAlarmCard(
