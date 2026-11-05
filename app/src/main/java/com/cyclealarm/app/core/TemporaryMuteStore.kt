@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 
 /**
@@ -23,9 +24,7 @@ object TemporaryMuteStore {
             val merged = (skipsFor(context, kind, alarmId) + triggerAt)
                 .sorted()
                 .takeLast(8)
-            prefs(context).edit()
-                .putString(KEY_SKIP_PREFIX + kind + ":" + alarmId, merged.joinToString(","))
-                .apply()
+            prefs(context).edit { putString(KEY_SKIP_PREFIX + kind + ":" + alarmId, merged.joinToString(",")) }
         }
     }
 
@@ -39,9 +38,7 @@ object TemporaryMuteStore {
     fun clearSkip(context: Context, kind: String, alarmId: Int, triggerAt: Long) {
         runCatching {
             val remain = skipsFor(context, kind, alarmId) - triggerAt
-            prefs(context).edit()
-                .putString(KEY_SKIP_PREFIX + kind + ":" + alarmId, remain.joinToString(","))
-                .apply()
+            prefs(context).edit { putString(KEY_SKIP_PREFIX + kind + ":" + alarmId, remain.joinToString(",")) }
         }
     }
 
@@ -50,9 +47,7 @@ object TemporaryMuteStore {
     fun muteDay(context: Context, epochDay: Long) {
         runCatching {
             val merged = (mutedDays(context) + epochDay).sorted().takeLast(7)
-            prefs(context).edit()
-                .putString(KEY_MUTED_DAYS, merged.joinToString(","))
-                .apply()
+            prefs(context).edit { putString(KEY_MUTED_DAYS, merged.joinToString(",")) }
         }
     }
 
@@ -65,7 +60,7 @@ object TemporaryMuteStore {
     fun clearMutedDay(context: Context, epochDay: Long) {
         runCatching {
             val remain = mutedDays(context) - epochDay
-            prefs(context).edit().putString(KEY_MUTED_DAYS, remain.joinToString(",")).apply()
+            prefs(context).edit { putString(KEY_MUTED_DAYS, remain.joinToString(",")) }
         }
     }
 
@@ -73,7 +68,7 @@ object TemporaryMuteStore {
     fun prune(context: Context, todayEpochDay: Long) {
         runCatching {
             val remain = mutedDays(context).filter { it >= todayEpochDay }
-            prefs(context).edit().putString(KEY_MUTED_DAYS, remain.joinToString(",")).apply()
+            prefs(context).edit { putString(KEY_MUTED_DAYS, remain.joinToString(",")) }
         }
     }
 }

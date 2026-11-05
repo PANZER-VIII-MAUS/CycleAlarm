@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import com.cyclealarm.app.R
 import android.content.Context
 import java.util.Locale
@@ -18,7 +19,7 @@ object DisplayPrefs {
     fun is24Hour(c: Context): Boolean = prefs(c).getBoolean(KEY_24H, true)
 
     fun set24Hour(c: Context, value: Boolean) =
-        prefs(c).edit().putBoolean(KEY_24H, value).apply()
+        prefs(c).edit { putBoolean(KEY_24H, value) }
 
     /** 统一的时间格式化：24 小时制 "07:30"；12 小时制 "上午 7:30" / "下午 12:30"。 */
     fun formatTime(c: Context, hour: Int, minute: Int): String {

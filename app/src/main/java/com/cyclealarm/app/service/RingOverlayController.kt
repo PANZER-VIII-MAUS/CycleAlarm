@@ -1,10 +1,10 @@
 package com.cyclealarm.app.service
 
+import androidx.core.graphics.toColorInt
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -60,14 +60,14 @@ class RingOverlayController(private val context: Context) {
         })
         root.addView(TextView(context).apply {
             text = detail
-            setTextColor(Color.parseColor("#B9C2CC"))
+            setTextColor("#B9C2CC".toColorInt())
             textSize = 18f
             gravity = Gravity.CENTER
             setPadding(0, dp(12), 0, dp(48))
         })
         root.addView(TextView(context).apply {
             text = "闹钟正在响铃"
-            setTextColor(Color.parseColor("#B9C2CC"))
+            setTextColor("#B9C2CC".toColorInt())
             textSize = 14f
             gravity = Gravity.CENTER
             setPadding(0, 0, 0, dp(24))
@@ -110,7 +110,7 @@ class RingOverlayController(private val context: Context) {
         textSize = 18f
         isAllCaps = false
         background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(color))
+            setColor(color.toColorInt())
             cornerRadius = dp(28).toFloat()
         }
         val params = LinearLayout.LayoutParams(

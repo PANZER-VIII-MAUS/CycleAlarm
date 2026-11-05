@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 import com.cyclealarm.app.importer.SectionTimeTable
 import java.time.LocalTime
@@ -17,16 +18,14 @@ object ImportPrefs {
         SectionTimeTable.decode(prefs(context).getString(KEY_SECTION_TIMES, null))
 
     fun saveSectionTimes(context: Context, map: Map<Int, LocalTime>) {
-        prefs(context).edit()
-            .putString(KEY_SECTION_TIMES, SectionTimeTable.encode(map))
-            .apply()
+        prefs(context).edit { putString(KEY_SECTION_TIMES, SectionTimeTable.encode(map)) }
     }
 
     fun leadMinutes(context: Context): Int =
         prefs(context).getInt(KEY_LEAD_MINUTES, 20).coerceIn(0, 60)
 
     fun saveLeadMinutes(context: Context, value: Int) {
-        prefs(context).edit().putInt(KEY_LEAD_MINUTES, value.coerceIn(0, 60)).apply()
+        prefs(context).edit { putInt(KEY_LEAD_MINUTES, value.coerceIn(0, 60)) }
     }
 
     private fun prefs(context: Context) =

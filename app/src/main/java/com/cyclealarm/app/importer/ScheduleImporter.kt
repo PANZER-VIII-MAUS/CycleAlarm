@@ -1,6 +1,5 @@
 package com.cyclealarm.app.importer
 
-import java.time.LocalDate
 import java.time.LocalTime
 
 /**

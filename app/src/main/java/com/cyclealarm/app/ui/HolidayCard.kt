@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,7 +56,7 @@ internal fun HolidayCard(
     val context = LocalContext.current
     var expanded by rememberSaveable { mutableStateOf(false) }
     val summary = if (holidayModeEnabled) {
-        stringResource(R.string.holiday_header_on, holidays.size)
+        pluralStringResource(R.plurals.holiday_header_on, holidays.size, holidays.size)
     } else {
         stringResource(R.string.holiday_header_off)
     }

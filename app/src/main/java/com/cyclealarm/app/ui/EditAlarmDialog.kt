@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui
 
+import androidx.core.net.toUri
 import android.app.TimePickerDialog
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -170,7 +171,7 @@ internal fun EditAlarmDialog(
                                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                             )
                             ringtone?.let {
-                                runCatching { Uri.parse(it) }.getOrNull()?.let { uri ->
+                                runCatching { it.toUri() }.getOrNull()?.let { uri ->
                                     putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, uri)
                                 }
                             }

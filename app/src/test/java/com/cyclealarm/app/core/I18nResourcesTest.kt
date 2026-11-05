@@ -47,7 +47,12 @@ class I18nResourcesTest {
         )
         assertEquals(
             "Missed 2 alarms: A, B",
-            en.getString(com.cyclealarm.app.R.string.missed_multi, 2, "A, B")
+            en.resources.getQuantityString(com.cyclealarm.app.R.plurals.missed_multi, 2, 2, "A, B")
+        )
+        // 单复数改造后，1 条文案必须是 "1 alarm" 而不是 "1 alarms"
+        assertEquals(
+            "Missed 1 alarm: A",
+            en.resources.getQuantityString(com.cyclealarm.app.R.plurals.missed_multi, 1, 1, "A")
         )
     }
 
@@ -62,7 +67,11 @@ class I18nResourcesTest {
         assertEquals("Cycle mode", en.getString(com.cyclealarm.app.R.string.row_cycle_mode))
         assertEquals(
             "3 days",
-            en.getString(com.cyclealarm.app.R.string.format_days, 3)
+            en.resources.getQuantityString(com.cyclealarm.app.R.plurals.format_days, 3, 3)
+        )
+        assertEquals(
+            "1 day",
+            en.resources.getQuantityString(com.cyclealarm.app.R.plurals.format_days, 1, 1)
         )
     }
 

@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -75,7 +76,7 @@ fun RingHealthBanner(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Text(
-                text = stringResource(R.string.perm_health_missing, issues.size, names),
+                text = pluralStringResource(R.plurals.perm_health_missing, issues.size, issues.size, names),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(top = 4.dp)

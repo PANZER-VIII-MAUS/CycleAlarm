@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 import android.content.res.Configuration
 import java.util.Locale
@@ -29,9 +30,7 @@ object AppLanguage {
     fun set(context: Context, language: String) {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY, language)
-            .apply()
+            .edit { putString(KEY, language) }
     }
 
     /** 语言代码 → Locale；跟随系统返回 null。 */

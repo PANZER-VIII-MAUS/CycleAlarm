@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.net.toUri
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -28,7 +29,7 @@ object RingtonePlayer {
         // 自定义 URI 失效（文件被删、权限被回收）时必须回退，否则就是「静音响铃」（四轮复审 N5）
         val candidates = buildList {
             RingOptionPolicy.resolveUri(customUri)
-                ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+                ?.let { runCatching { it.toUri() }.getOrNull() }
                 ?.let { add(it) }
             fallback?.let { if (it !in this) add(it) }
         }

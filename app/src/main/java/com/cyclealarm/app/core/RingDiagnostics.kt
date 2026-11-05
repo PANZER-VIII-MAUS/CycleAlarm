@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 
 /**
@@ -30,10 +31,7 @@ object RingDiagnostics {
         runCatching {
             context.applicationContext
                 .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(KEY_OUTCOME, outcome.name)
-                .putLong(KEY_AT, at)
-                .apply()
+                .edit { putString(KEY_OUTCOME, outcome.name); putLong(KEY_AT, at) }
         }
     }
 

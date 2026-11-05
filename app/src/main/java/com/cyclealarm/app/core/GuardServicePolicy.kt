@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 
 /**
@@ -35,8 +36,6 @@ object GuardServicePolicy {
     fun setEnabled(context: Context, enabled: Boolean) {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY, enabled)
-            .apply()
+            .edit { putBoolean(KEY, enabled) }
     }
 }

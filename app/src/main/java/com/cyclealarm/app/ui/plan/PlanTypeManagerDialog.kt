@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.plan
 
+import androidx.compose.ui.res.pluralStringResource
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,13 +23,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,7 +98,11 @@ fun PlanTypeManagerDialog(
                                     } else {
                                         append(stringResource(R.string.ptm_no_ring))
                                     }
-                                    append(stringResource(R.string.ptm_used_days, usage[type.id] ?: 0))
+                                    append(pluralStringResource(
+                                        R.plurals.ptm_used_days,
+                                        usage[type.id] ?: 0,
+                                        usage[type.id] ?: 0
+                                    ))
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -163,8 +166,8 @@ fun PlanTypeManagerDialog(
             title = { Text(stringResource(R.string.ptm_update_title)) },
             text = {
                 Text(
-                    stringResource(R.string.ptm_update_text, days) + "\n\n" +
-                        stringResource(R.string.ptm_update_detail, days)
+                    pluralStringResource(R.plurals.ptm_update_text, days, days) + "\n\n" +
+                        pluralStringResource(R.plurals.ptm_update_detail, days, days)
                 )
             },
             confirmButton = {
@@ -190,7 +193,7 @@ fun PlanTypeManagerDialog(
             text = {
                 Text(
                     if (days > 0) {
-                        stringResource(R.string.ptm_delete_in_use, days)
+                        pluralStringResource(R.plurals.ptm_delete_in_use, days, days)
                     } else {
                         stringResource(R.string.ptm_delete_confirm)
                     }

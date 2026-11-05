@@ -20,7 +20,6 @@ import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.data.RingEventStore
 import com.cyclealarm.app.data.AppDatabase
-import com.cyclealarm.app.data.RingEventEntity
 import com.cyclealarm.app.service.RingService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

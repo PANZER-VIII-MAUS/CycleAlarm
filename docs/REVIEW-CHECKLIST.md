@@ -236,7 +236,7 @@ adb shell pm clear com.cyclealarm.app
 | 10 | instrumentation 从未跑成功 | ✅ 已修（CI API 34/36 各 3 用例通过） |
 | 11 | 迁移护栏 `current = 11` 硬编码 + 缺 `@Before` 重置 | ✅ 已修（schema 推导 + 重置 + 源码断言） |
 | 12 | ColorOS 上 `USE_FULL_SCREEN_INTENT` 被 appop 拒绝，FSI 不可依赖 | 已知；靠悬浮窗兜底（0.6.6） |
-| 16 | lint warning 偏高（78） | ✅ 已收敛到 67（0 error） |
+| 16 | lint warning 偏高（78） | ✅ 已收敛到 **13**（0 error）：含 UseKtx 34 条、Plurals 20 条、未使用 import 18 个 |
 | 17 | Play 包只构建未安装验证 | ✅ 已真机安装 + aapt2 对比：Play 包无 `AlarmGuardService`，直装包有 |
 | 13 | ColorOS 对未进电池白名单的应用拦截跨锁屏窗口 | 已知；健康横幅引导加白名单（0.6.6） |
 | 14 | ColorOS 屏蔽第三方应用 logcat | 已知；诊断落 App 内（设置页「上次响铃」） |

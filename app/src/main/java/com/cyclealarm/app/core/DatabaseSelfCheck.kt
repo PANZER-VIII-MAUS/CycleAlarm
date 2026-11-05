@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 import android.util.Log
 import com.cyclealarm.app.data.AppDatabase
@@ -100,7 +101,7 @@ object DatabaseSelfCheck {
                 ResyncCheckpoint.DiagnosticCode.SELF_CHECK_FAIL + ":" + issues.first()
             )
         }
-        prefs.edit().putInt(KEY_CHECKED_VERSION, versionCode).apply()
+        prefs.edit { putInt(KEY_CHECKED_VERSION, versionCode) }
         return issues
     }
 

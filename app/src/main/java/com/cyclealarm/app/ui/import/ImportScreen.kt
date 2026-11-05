@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.import
 
+import androidx.compose.ui.res.pluralStringResource
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,10 +95,10 @@ fun ImportScreen(
             title = { Text(stringResource(R.string.import_undo_confirm_title)) },
             text = {
                 Text(
-                    stringResource(R.string.import_undo_new_alarms, preview.extraAlarms) +
-                        (if (preview.extraDateAlarms > 0) stringResource(R.string.import_undo_new_date_alarms, preview.extraDateAlarms) else "") +
-                        (if (preview.extraTypes > 0) stringResource(R.string.import_undo_new_types, preview.extraTypes) else "") +
-                        (if (preview.extraPlans > 0) stringResource(R.string.import_undo_new_plans, preview.extraPlans) else "") +
+                    pluralStringResource(R.plurals.import_undo_new_alarms, preview.extraAlarms, preview.extraAlarms) +
+                        (if (preview.extraDateAlarms > 0) pluralStringResource(R.plurals.import_undo_new_date_alarms, preview.extraDateAlarms, preview.extraDateAlarms) else "") +
+                        (if (preview.extraTypes > 0) pluralStringResource(R.plurals.import_undo_new_types, preview.extraTypes, preview.extraTypes) else "") +
+                        (if (preview.extraPlans > 0) pluralStringResource(R.plurals.import_undo_new_plans, preview.extraPlans, preview.extraPlans) else "") +
                         stringResource(R.string.import_undo_continue)
                 )
             },
@@ -214,7 +215,7 @@ fun ImportScreen(
         AlertDialog(
             onDismissRequest = { showOverwrite = false },
             title = { Text(stringResource(R.string.import_overwrite_title)) },
-            text = { Text(stringResource(R.string.import_overwrite_text, alarmCount)) },
+            text = { Text(pluralStringResource(R.plurals.import_overwrite_text, alarmCount, alarmCount)) },
             confirmButton = {
                 TextButton(onClick = {
                     showOverwrite = false
@@ -318,8 +319,13 @@ private fun PreviewContent(
     val requiresWeeklySwitch = ImportWeeklyPolicy.requiresWeeklySwitch(selectedEntries)
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
-            stringResource(R.string.import_recognized, state.entries.size, state.selected.size) +
-                if (needsConfirm > 0) stringResource(R.string.import_needs_confirm, needsConfirm) else "",
+            pluralStringResource(
+                R.plurals.import_recognized,
+                state.entries.size,
+                state.entries.size,
+                state.selected.size
+            ) +
+                if (needsConfirm > 0) pluralStringResource(R.plurals.import_needs_confirm, needsConfirm, needsConfirm) else "",
             style = MaterialTheme.typography.titleMedium
         )
         Text(
@@ -415,7 +421,7 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(stringResource(R.string.import_warnings, warnings.size), style = MaterialTheme.typography.titleSmall)
+            Text(pluralStringResource(R.plurals.import_warnings, warnings.size, warnings.size), style = MaterialTheme.typography.titleSmall)
             warnings.take(6).forEach { warning ->
                 Text(
                     "· ${warning.message}" + if (warning.sourceRef.isNotBlank()) "（${warning.sourceRef}）" else "",
@@ -425,7 +431,7 @@ private fun WarningsCard(warnings: List<ImportWarning>) {
             }
             if (warnings.size > 6) {
                 Text(
-                    stringResource(R.string.import_warnings_more, warnings.size - 6),
+                    pluralStringResource(R.plurals.import_warnings_more, warnings.size - 6, warnings.size - 6),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -446,9 +452,18 @@ private fun DoneContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(stringResource(R.string.import_done_total, state.cycleCount + state.dateCount), style = MaterialTheme.typography.titleMedium)
+        Text(pluralStringResource(
+            R.plurals.import_done_total,
+            state.cycleCount + state.dateCount,
+            state.cycleCount + state.dateCount
+        ), style = MaterialTheme.typography.titleMedium)
         Text(
-            stringResource(R.string.import_done_detail, state.cycleCount, state.dateCount),
+            pluralStringResource(
+                R.plurals.import_done_detail,
+                state.cycleCount,
+                state.cycleCount,
+                state.dateCount
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -462,7 +477,11 @@ private fun DoneContent(
         if (state.skippedWeeklyCount > 0) {
             // 之前这里静默丢弃周课表条目，用户只看到「已导入 0 条」
             Text(
-                stringResource(R.string.import_done_skipped, state.skippedWeeklyCount),
+                pluralStringResource(
+                    R.plurals.import_done_skipped,
+                    state.skippedWeeklyCount,
+                    state.skippedWeeklyCount
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )

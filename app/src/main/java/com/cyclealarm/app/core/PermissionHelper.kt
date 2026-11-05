@@ -1,11 +1,11 @@
 package com.cyclealarm.app.core
 
+import androidx.core.net.toUri
 import android.app.AlarmManager
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
@@ -58,7 +58,7 @@ object PermissionHelper {
                 context.startActivity(
                     Intent(
                         Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                        Uri.parse("package:${context.packageName}")
+                        "package:${context.packageName}".toUri()
                     )
                 )
             }
@@ -91,7 +91,7 @@ object PermissionHelper {
     fun openBatteryOptimizationSettings(context: Context) {
         val direct = Intent(
             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-            Uri.parse("package:${context.packageName}")
+            "package:${context.packageName}".toUri()
         )
         if (!runCatching { context.startActivity(direct) }.isSuccess) {
             runCatching {
@@ -105,7 +105,7 @@ object PermissionHelper {
             context.startActivity(
                 Intent(
                     Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:${context.packageName}")
+                    "package:${context.packageName}".toUri()
                 )
             )
         }
@@ -150,7 +150,7 @@ object PermissionHelper {
             context.startActivity(
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:${context.packageName}")
+                    "package:${context.packageName}".toUri()
                 )
             )
         }

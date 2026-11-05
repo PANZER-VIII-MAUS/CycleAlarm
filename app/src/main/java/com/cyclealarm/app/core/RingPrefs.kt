@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 import com.cyclealarm.app.R
 
@@ -18,13 +19,13 @@ object RingPrefs {
     fun durationSeconds(c: Context): Int = prefs(c).getInt(KEY_DURATION, 120)
 
     fun setDurationSeconds(c: Context, value: Int) =
-        prefs(c).edit().putInt(KEY_DURATION, value).apply()
+        prefs(c).edit { putInt(KEY_DURATION, value) }
 
     /** 默认 10 分钟（保持现在的行为）。 */
     fun snoozeMinutes(c: Context): Int = prefs(c).getInt(KEY_SNOOZE, 10)
 
     fun setSnoozeMinutes(c: Context, value: Int) =
-        prefs(c).edit().putInt(KEY_SNOOZE, value).apply()
+        prefs(c).edit { putInt(KEY_SNOOZE, value) }
 
     /** 响铃时长可选值（秒），0 = 一直响。 */
     val DURATION_OPTIONS = listOf(30, 60, 120, 180, 300, 600, 0)

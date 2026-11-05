@@ -31,7 +31,12 @@ object MissedAlarmNotifier {
             val text = if (missed.size == 1) {
                 context.getString(R.string.missed_single, names)
             } else {
-                context.getString(R.string.missed_multi, missed.size, names)
+                context.resources.getQuantityString(
+                    R.plurals.missed_multi,
+                    missed.size,
+                    missed.size,
+                    names
+                )
             }
             val contentIntent = PendingIntent.getActivity(
                 context,

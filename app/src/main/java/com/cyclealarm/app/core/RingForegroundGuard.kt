@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 
 /**
@@ -30,10 +31,7 @@ object RingForegroundGuard {
     /** 记录失败时间与原因（SharedPreferences，不动 Room schema）。 */
     fun recordFailure(context: Context, error: Throwable) {
         runCatching {
-            prefs(context).edit()
-                .putLong(KEY_LAST_FAILURE_AT, System.currentTimeMillis())
-                .putString(KEY_LAST_FAILURE_REASON, error.javaClass.simpleName)
-                .apply()
+            prefs(context).edit { putLong(KEY_LAST_FAILURE_AT, System.currentTimeMillis()); putString(KEY_LAST_FAILURE_REASON, error.javaClass.simpleName) }
         }
     }
 
@@ -48,10 +46,7 @@ object RingForegroundGuard {
 
     fun clearFailure(context: Context) {
         runCatching {
-            prefs(context).edit()
-                .remove(KEY_LAST_FAILURE_AT)
-                .remove(KEY_LAST_FAILURE_REASON)
-                .apply()
+            prefs(context).edit { remove(KEY_LAST_FAILURE_AT); remove(KEY_LAST_FAILURE_REASON) }
         }
     }
 

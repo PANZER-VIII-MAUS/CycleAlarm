@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 
 /**
@@ -20,7 +21,7 @@ object InstallMarker {
             val now = System.currentTimeMillis()
             val current = prefs(context).getLong(KEY_MARKER, 0L)
             if (current <= 0L) {
-                prefs(context).edit().putLong(KEY_MARKER, now).apply()
+                prefs(context).edit { putLong(KEY_MARKER, now) }
             }
         }
     }

@@ -21,7 +21,6 @@
     <string name="missed_title">错过闹钟</string>
     <string name="missed_label_fallback">闹钟</string>
     <string name="missed_single">错过一次闹钟：%1$s</string>
-    <string name="missed_multi">错过 %1$d 次闹钟：%2$s</string>
     <string name="list_separator">、</string>
     <string name="guard_title">循环闹钟正在运行</string>
     <string name="guard_text">闹钟守护服务运行中，请在系统设置中允许后台运行</string>
@@ -41,7 +40,6 @@
     <string name="row_cycle_mode">循环方式</string>
     <string name="row_cycle_length">周期天数</string>
     <string name="row_align_today">今天对齐</string>
-    <string name="format_days">%1$d 天</string>
     <string name="format_today_is_day">今天 = 第 %1$d 天</string>
     <string name="section_display">显示</string>
     <string name="row_theme">主题</string>
@@ -140,7 +138,6 @@
     <string name="db_error_ok">知道了</string>
     <string name="plan_time_title">%1$s 的安排时间</string>
     <string name="day_picker_today">今天</string>
-    <string name="holiday_header_on">假期模式 · %1$d 段假期</string>
     <string name="holiday_header_off">假期模式 · 已关闭</string>
     <string name="state_expanded">已展开</string>
     <string name="state_collapsed">已折叠</string>
@@ -242,10 +239,6 @@
     <string name="date_alarm_enable_desc">这条按日期闹钟是否生效</string>
     <string name="date_alarm_mute_desc">开启后落在假期里的这一天不响</string>
     <string name="import_undo_confirm_title">撤销会丢弃导入后的改动</string>
-    <string name="import_undo_new_alarms">导入之后新增了 %1$d 条闹钟</string>
-    <string name="import_undo_new_date_alarms">、%1$d 条日期闹钟</string>
-    <string name="import_undo_new_types">、%1$d 个安排类型</string>
-    <string name="import_undo_new_plans">、%1$d 天安排</string>
     <string name="import_undo_continue">。继续撤销会把这些改动一并回滚。</string>
     <string name="import_undo_confirm">继续撤销</string>
     <string name="import_title">从课表导入</string>
@@ -253,7 +246,6 @@
     <string name="import_parsing">正在解析表格…</string>
     <string name="import_writing">正在写入闹钟…</string>
     <string name="import_overwrite_title">覆盖导入</string>
-    <string name="import_overwrite_text">将删除现有 %1$d 条闹钟，确定覆盖导入？</string>
     <string name="import_overwrite_confirm">确定覆盖</string>
     <string name="import_pick_title">选择课表 / 排班表</string>
     <string name="import_pick_desc">支持 Excel(.xlsx) 与 CSV。周课表会切换为「每周」循环；带具体日期的排班表会生成为一次性闹钟。</string>
@@ -262,8 +254,6 @@
     <string name="import_undo_last">撤销上次导入（24 小时内）</string>
     <string name="import_empty_hint">先用 Excel / CSV 导入，或用底部「添加闹钟」手动加</string>
     <string name="import_pick_sheet">请选择要导入的工作表</string>
-    <string name="import_recognized">识别到 %1$d 条，%2$d 条已选中</string>
-    <string name="import_needs_confirm">，%1$d 条需确认</string>
     <string name="import_sheet">工作表：%1$s</string>
     <string name="import_weekly_desc">该文件按周组织，导入将把循环方式改为每周（周一至周日）；第 8 天以后的安排会保留但不生效</string>
     <string name="import_weekly_confirm">仍然导入</string>
@@ -276,10 +266,6 @@
     <string name="import_options">选项</string>
     <string name="import_confirm_weekly">仍然导入并切换每周（%1$d）</string>
     <string name="import_confirm">确认导入（%1$d）</string>
-    <string name="import_warnings">需确认 %1$d 条</string>
-    <string name="import_warnings_more">…… 还有 %1$d 条</string>
-    <string name="import_done_total">已导入 %1$d 条闹钟</string>
-    <string name="import_done_detail">周期闹钟 %1$d 条，按日期闹钟 %2$d 条</string>
     <string name="import_done_weekly">循环方式已切换为每周（周一至周日）</string>
     <string name="import_undo_this">撤销本次导入（24 小时内）</string>
     <string name="action_done">完成</string>
@@ -306,16 +292,12 @@
     <string name="ptm_empty">还没有安排类型</string>
     <string name="ptm_ring_at">%1$s 响铃</string>
     <string name="ptm_no_ring">不响铃</string>
-    <string name="ptm_used_days"> · 使用 %1$d 天</string>
     <string name="action_move_up">上移</string>
     <string name="action_move_down">下移</string>
     <string name="action_edit">编辑</string>
     <string name="ptm_add">＋ 新增安排类型</string>
     <string name="ptm_update_title">更新已安排的日子？</string>
-    <string name="ptm_update_text">该安排有 %1$d 天正在使用，改时间会一起更新，确定吗？</string>
-    <string name="ptm_update_detail">确定：这 %1$d 天一起改成新时间。取消：只改类型默认值，已安排的日子保持原时间。</string>
     <string name="ptm_delete_title">删除「%1$s」</string>
-    <string name="ptm_delete_in_use">%1$d 天正在使用，删除后这些天变为未安排。</string>
     <string name="ptm_delete_confirm">确定删除该安排类型？</string>
     <string name="ptm_add_title">新增安排类型</string>
     <string name="ptm_edit_title">编辑安排类型</string>
@@ -471,9 +453,7 @@
     <string name="backup_confirm_text">当前全部闹钟、安排、假期与设置都会被备份内容替换，且「撤销上次导入」记录会失效。\n\n恢复前会自动保存一份当前数据的备份。确定继续吗？</string>
     <string name="backup_confirm_ok">覆盖并恢复</string>
     <string name="toast_backup_auto_saved">恢复前的数据已自动备份：%1$s</string>
-    <string name="import_done_skipped">有 %1$d 条周课表条目被跳过：循环方式没有切换成「每周」</string>
     <string name="perm_health_title">锁屏闹钟可能无法正常显示</string>
-    <string name="perm_health_missing">缺少 %1$d 项设置：%2$s</string>
     <string name="perm_health_action">去设置</string>
     <string name="perm_issue_notifications">通知</string>
     <string name="perm_issue_ring_channel">闹钟响铃渠道</string>
@@ -492,4 +472,64 @@
     <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">已从自动备份恢复</string>
     <string name="backup_confirm_text_legacy">这是旧版（V1）备份，没有校验和，文件若被截断也能“恢复”出一半数据。确定要用它替换当前数据吗？</string>
+    <plurals name="missed_multi">
+        <item quantity="other">错过了 %1$d 个闹钟：%2$s</item>
+    </plurals>
+    <plurals name="format_days">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
+    <plurals name="holiday_header_on">
+        <item quantity="other">假期模式 · %1$d 段假期</item>
+    </plurals>
+    <plurals name="import_undo_new_alarms">
+        <item quantity="other">导入后新增了 %1$d 个闹钟</item>
+    </plurals>
+    <plurals name="import_undo_new_date_alarms">
+        <item quantity="other">，新增 %1$d 个按日期闹钟</item>
+    </plurals>
+    <plurals name="import_undo_new_types">
+        <item quantity="other">，新增 %1$d 个安排类型</item>
+    </plurals>
+    <plurals name="import_undo_new_plans">
+        <item quantity="other">，新增 %1$d 天安排</item>
+    </plurals>
+    <plurals name="import_overwrite_text">
+        <item quantity="other">这会删除已有的 %1$d 个闹钟，确定继续吗？</item>
+    </plurals>
+    <plurals name="import_recognized">
+        <item quantity="other">识别到 %1$d 行，已选 %2$d 行</item>
+    </plurals>
+    <plurals name="import_needs_confirm">
+        <item quantity="other">，%1$d 行需要确认</item>
+    </plurals>
+    <plurals name="import_warnings">
+        <item quantity="other">%1$d 行需要确认</item>
+    </plurals>
+    <plurals name="import_warnings_more">
+        <item quantity="other">… 还有 %1$d 行</item>
+    </plurals>
+    <plurals name="import_done_total">
+        <item quantity="other">已导入 %1$d 个闹钟</item>
+    </plurals>
+    <plurals name="import_done_detail">
+        <item quantity="other">%1$d 个周期闹钟，%2$d 个按日期闹钟</item>
+    </plurals>
+    <plurals name="ptm_used_days">
+        <item quantity="other"> · 已用于 %1$d 天</item>
+    </plurals>
+    <plurals name="ptm_update_text">
+        <item quantity="other">%1$d 天正在使用该安排，改时间会一起更新，确定继续吗？</item>
+    </plurals>
+    <plurals name="ptm_update_detail">
+        <item quantity="other">确定会更新这 %1$d 天；取消只改默认值，已排期的那几天保持不变。</item>
+    </plurals>
+    <plurals name="ptm_delete_in_use">
+        <item quantity="other">%1$d 天正在使用该安排，删除后会变成未安排。</item>
+    </plurals>
+    <plurals name="import_done_skipped">
+        <item quantity="other">有 %1$d 条周课表条目被跳过（没有切到每周）</item>
+    </plurals>
+    <plurals name="perm_health_missing">
+        <item quantity="other">缺少 %1$d 项设置：%2$s</item>
+    </plurals>
 </resources>

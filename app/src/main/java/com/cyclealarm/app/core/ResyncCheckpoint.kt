@@ -1,5 +1,6 @@
 package com.cyclealarm.app.core
 
+import androidx.core.content.edit
 import android.content.Context
 import com.cyclealarm.app.R
 
@@ -33,16 +34,13 @@ object ResyncCheckpoint {
 
     fun markChecked(context: Context, now: Long) {
         runCatching {
-            prefs(context).edit().putLong(KEY_LAST_CHECK, now).apply()
+            prefs(context).edit { putLong(KEY_LAST_CHECK, now) }
         }
     }
 
     fun recordMissed(context: Context, now: Long, count: Int) {
         runCatching {
-            prefs(context).edit()
-                .putLong(KEY_LAST_MISSED_AT, now)
-                .putInt(KEY_LAST_MISSED_COUNT, count)
-                .apply()
+            prefs(context).edit { putLong(KEY_LAST_MISSED_AT, now); putInt(KEY_LAST_MISSED_COUNT, count) }
         }
     }
 
@@ -56,9 +54,7 @@ object ResyncCheckpoint {
         runCatching {
             val keep = recentFires(context, at)
             val merged = (keep + at).distinct().sorted().takeLast(MAX_RECENT_FIRES)
-            prefs(context).edit()
-                .putString(KEY_RECENT_FIRES, merged.joinToString(","))
-                .apply()
+            prefs(context).edit { putString(KEY_RECENT_FIRES, merged.joinToString(",")) }
         }
     }
 
@@ -77,7 +73,7 @@ object ResyncCheckpoint {
 
     /** 本 App 刚改过系统排期：短时间内的 NEXT_ALARM_CLOCK_CHANGED 是自己触发的，不必再对账。 */
     fun markSelfWrite(context: Context, now: Long) {
-        runCatching { prefs(context).edit().putLong(KEY_SELF_WRITE_AT, now).apply() }
+        runCatching { prefs(context).edit { putLong(KEY_SELF_WRITE_AT, now) } }
     }
 
     fun lastSelfWriteAt(context: Context): Long =
@@ -86,10 +82,7 @@ object ResyncCheckpoint {
     /** 记录一次排期对账的诊断结果（只保留最近一次，供设置页展示）。 */
     fun recordDiagnostic(context: Context, at: Long, reason: String) {
         runCatching {
-            prefs(context).edit()
-                .putLong(KEY_DIAG_AT, at)
-                .putString(KEY_DIAG_REASON, reason)
-                .apply()
+            prefs(context).edit { putLong(KEY_DIAG_AT, at); putString(KEY_DIAG_REASON, reason) }
         }
     }
 

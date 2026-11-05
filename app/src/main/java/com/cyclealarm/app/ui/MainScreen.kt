@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui
 
+import androidx.core.content.edit
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -234,7 +235,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     }
 
     fun finishOnboarding() {
-        prefs.edit().putBoolean("onboarding_done", true).apply()
+        prefs.edit { putBoolean("onboarding_done", true) }
         showPermissionGuide = false
     }
 

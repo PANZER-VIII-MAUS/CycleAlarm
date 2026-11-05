@@ -21,7 +21,6 @@
     <string name="missed_title">Missed alarm</string>
     <string name="missed_label_fallback">Alarm</string>
     <string name="missed_single">Missed one alarm: %1$s</string>
-    <string name="missed_multi">Missed %1$d alarms: %2$s</string>
     <string name="list_separator">, </string>
     <string name="guard_title">CycleAlarm is running</string>
     <string name="guard_text">Guard service is running; allow background activity in system settings</string>
@@ -41,7 +40,6 @@
     <string name="row_cycle_mode">Cycle mode</string>
     <string name="row_cycle_length">Cycle length</string>
     <string name="row_align_today">Align today</string>
-    <string name="format_days">%1$d days</string>
     <string name="format_today_is_day">Today = day %1$d</string>
     <string name="section_display">Display</string>
     <string name="row_theme">Theme</string>
@@ -140,7 +138,6 @@
     <string name="db_error_ok">Got it</string>
     <string name="plan_time_title">%1$s plan time</string>
     <string name="day_picker_today">Today</string>
-    <string name="holiday_header_on">Holiday mode · %1$d periods</string>
     <string name="holiday_header_off">Holiday mode · off</string>
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>
@@ -242,10 +239,6 @@
     <string name="date_alarm_enable_desc">Whether this date alarm is active</string>
     <string name="date_alarm_mute_desc">When on, this date stays silent during holidays</string>
     <string name="import_undo_confirm_title">Undo discards changes made after the import</string>
-    <string name="import_undo_new_alarms">%1$d alarms were added after the import</string>
-    <string name="import_undo_new_date_alarms">, %1$d date alarms</string>
-    <string name="import_undo_new_types">, %1$d plan types</string>
-    <string name="import_undo_new_plans">, %1$d planned days</string>
     <string name="import_undo_continue">. Continuing rolls those changes back too.</string>
     <string name="import_undo_confirm">Undo anyway</string>
     <string name="import_title">Import timetable</string>
@@ -253,7 +246,6 @@
     <string name="import_parsing">Parsing the sheet…</string>
     <string name="import_writing">Writing alarms…</string>
     <string name="import_overwrite_title">Import and replace</string>
-    <string name="import_overwrite_text">This deletes the %1$d existing alarms. Continue?</string>
     <string name="import_overwrite_confirm">Replace</string>
     <string name="import_pick_title">Choose a timetable or shift sheet</string>
     <string name="import_pick_desc">Excel (.xlsx) and CSV are supported. Weekly timetables switch the cycle to weekly; dated shift sheets become one-off alarms.</string>
@@ -262,8 +254,6 @@
     <string name="import_undo_last">Undo the last import (within 24 h)</string>
     <string name="import_empty_hint">Import an Excel / CSV file, or add alarms manually with the button below</string>
     <string name="import_pick_sheet">Choose a sheet to import</string>
-    <string name="import_recognized">Recognized %1$d rows, %2$d selected</string>
-    <string name="import_needs_confirm">, %1$d need review</string>
     <string name="import_sheet">Sheet: %1$s</string>
     <string name="import_weekly_desc">This file is weekly. Importing switches the cycle to weekly (Mon–Sun); plans after day 8 are kept but inactive.</string>
     <string name="import_weekly_confirm">Import anyway</string>
@@ -276,10 +266,6 @@
     <string name="import_options">Options</string>
     <string name="import_confirm_weekly">Import and switch to weekly (%1$d)</string>
     <string name="import_confirm">Import (%1$d)</string>
-    <string name="import_warnings">%1$d need review</string>
-    <string name="import_warnings_more">… %1$d more</string>
-    <string name="import_done_total">Imported %1$d alarms</string>
-    <string name="import_done_detail">%1$d cycle alarms, %2$d date alarms</string>
     <string name="import_done_weekly">Cycle switched to weekly (Mon–Sun)</string>
     <string name="import_undo_this">Undo this import (within 24 h)</string>
     <string name="action_done">Done</string>
@@ -306,16 +292,12 @@
     <string name="ptm_empty">No plan types yet</string>
     <string name="ptm_ring_at">Rings at %1$s</string>
     <string name="ptm_no_ring">No ring</string>
-    <string name="ptm_used_days"> · used %1$d days</string>
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
     <string name="action_edit">Edit</string>
     <string name="ptm_add">+ New plan type</string>
     <string name="ptm_update_title">Update scheduled days?</string>
-    <string name="ptm_update_text">%1$d days use this plan; changing the time updates them too. Continue?</string>
-    <string name="ptm_update_detail">OK updates those %1$d days. Cancel only changes the default and keeps scheduled days as they are.</string>
     <string name="ptm_delete_title">Delete "%1$s"</string>
-    <string name="ptm_delete_in_use">%1$d days use this plan; they become unplanned after deleting.</string>
     <string name="ptm_delete_confirm">Delete this plan type?</string>
     <string name="ptm_add_title">New plan type</string>
     <string name="ptm_edit_title">Edit plan type</string>
@@ -471,9 +453,7 @@
     <string name="backup_confirm_text">All current alarms, plans, holidays and settings will be replaced, and the "undo last import" record becomes invalid.\n\nA backup of the current data is saved automatically before restoring. Continue?</string>
     <string name="backup_confirm_ok">Replace and restore</string>
     <string name="toast_backup_auto_saved">Current data was saved to: %1$s</string>
-    <string name="import_done_skipped">%1$d weekly rows were skipped because the cycle was not switched to weekly</string>
     <string name="perm_health_title">Lock-screen alarm may not display</string>
-    <string name="perm_health_missing">%1$d setting(s) missing: %2$s</string>
     <string name="perm_health_action">Fix</string>
     <string name="perm_issue_notifications">Notifications</string>
     <string name="perm_issue_ring_channel">Alarm ringtone channel</string>
@@ -492,4 +472,84 @@
     <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">Restored from auto backup</string>
     <string name="backup_confirm_text_legacy">This is a legacy (V1) backup without a checksum: a truncated file can still “restore” partially. Replace current data with it?</string>
+    <plurals name="missed_multi">
+        <item quantity="one">Missed %1$d alarm: %2$s</item>
+        <item quantity="other">Missed %1$d alarms: %2$s</item>
+    </plurals>
+    <plurals name="format_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="holiday_header_on">
+        <item quantity="one">Holiday mode · %1$d period</item>
+        <item quantity="other">Holiday mode · %1$d periods</item>
+    </plurals>
+    <plurals name="import_undo_new_alarms">
+        <item quantity="one">%1$d alarm was added after the import</item>
+        <item quantity="other">%1$d alarms were added after the import</item>
+    </plurals>
+    <plurals name="import_undo_new_date_alarms">
+        <item quantity="one">, %1$d date alarm</item>
+        <item quantity="other">, %1$d date alarms</item>
+    </plurals>
+    <plurals name="import_undo_new_types">
+        <item quantity="one">, %1$d plan type</item>
+        <item quantity="other">, %1$d plan types</item>
+    </plurals>
+    <plurals name="import_undo_new_plans">
+        <item quantity="one">, %1$d planned day</item>
+        <item quantity="other">, %1$d planned days</item>
+    </plurals>
+    <plurals name="import_overwrite_text">
+        <item quantity="one">This deletes the %1$d existing alarm. Continue?</item>
+        <item quantity="other">This deletes the %1$d existing alarms. Continue?</item>
+    </plurals>
+    <plurals name="import_recognized">
+        <item quantity="one">Recognized %1$d row, %2$d selected</item>
+        <item quantity="other">Recognized %1$d rows, %2$d selected</item>
+    </plurals>
+    <plurals name="import_needs_confirm">
+        <item quantity="one">, %1$d needs review</item>
+        <item quantity="other">, %1$d need review</item>
+    </plurals>
+    <plurals name="import_warnings">
+        <item quantity="one">%1$d needs review</item>
+        <item quantity="other">%1$d need review</item>
+    </plurals>
+    <plurals name="import_warnings_more">
+        <item quantity="one">… %1$d more</item>
+        <item quantity="other">… %1$d more</item>
+    </plurals>
+    <plurals name="import_done_total">
+        <item quantity="one">Imported %1$d alarm</item>
+        <item quantity="other">Imported %1$d alarms</item>
+    </plurals>
+    <plurals name="import_done_detail">
+        <item quantity="one">%1$d cycle alarm, %2$d date alarms</item>
+        <item quantity="other">%1$d cycle alarms, %2$d date alarms</item>
+    </plurals>
+    <plurals name="ptm_used_days">
+        <item quantity="one"> · used %1$d day</item>
+        <item quantity="other"> · used %1$d days</item>
+    </plurals>
+    <plurals name="ptm_update_text">
+        <item quantity="one">%1$d day uses this plan; changing the time updates it too. Continue?</item>
+        <item quantity="other">%1$d days use this plan; changing the time updates them too. Continue?</item>
+    </plurals>
+    <plurals name="ptm_update_detail">
+        <item quantity="one">OK updates that %1$d day. Cancel only changes the default and keeps scheduled days as they are.</item>
+        <item quantity="other">OK updates those %1$d days. Cancel only changes the default and keeps scheduled days as they are.</item>
+    </plurals>
+    <plurals name="ptm_delete_in_use">
+        <item quantity="one">%1$d day uses this plan; it becomes unplanned after deleting.</item>
+        <item quantity="other">%1$d days use this plan; they become unplanned after deleting.</item>
+    </plurals>
+    <plurals name="import_done_skipped">
+        <item quantity="one">%1$d weekly row was skipped because the cycle was not switched to weekly</item>
+        <item quantity="other">%1$d weekly rows were skipped because the cycle was not switched to weekly</item>
+    </plurals>
+    <plurals name="perm_health_missing">
+        <item quantity="one">%1$d setting missing: %2$s</item>
+        <item quantity="other">%1$d settings missing: %2$s</item>
+    </plurals>
 </resources>

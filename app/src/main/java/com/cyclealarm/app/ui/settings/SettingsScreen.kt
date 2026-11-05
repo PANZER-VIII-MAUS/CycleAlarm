@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.settings
 
+import androidx.compose.ui.res.pluralStringResource
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
@@ -399,7 +400,7 @@ fun SettingsScreen(
                     if (isCustom) {
                         SettingRow(
                             title = stringResource(R.string.row_cycle_length),
-                            value = stringResource(R.string.format_days, cycleLength),
+                            value = pluralStringResource(R.plurals.format_days, cycleLength, cycleLength),
                             onClick = { dialog = SettingsDialog.CYCLE_LENGTH }
                         )
                         SettingRow(
@@ -659,7 +660,7 @@ fun SettingsScreen(
             title = stringResource(R.string.row_cycle_length),
             initial = cycleLength,
             range = 1..30,
-            format = { context.getString(R.string.format_days, it) },
+            format = { context.resources.getQuantityString(R.plurals.format_days, it, it) },
             onConfirm = { newLength ->
                 if (newLength < cycleLength) {
                     pendingLength = newLength

@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.theme
 
+import androidx.core.content.edit
 import android.app.Activity
 import android.content.Context
 import com.cyclealarm.app.R
@@ -57,9 +58,7 @@ object ThemeManager {
     fun set(context: Context, mode: String) {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY, mode)
-            .apply()
+            .edit { putString(KEY, mode) }
         _mode.value = mode
     }
 
