@@ -60,10 +60,27 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // 旧版本迁移写死的中文默认类型名（上课/自习/休息）按当前应用语言改写一次；
+        // 只匹配恰好等于旧默认名的行，用户自己改过的不动（五轮复审 §4.8）
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                val db = com.cyclealarm.app.data.AppDatabase.get(applicationContext)
+                com.cyclealarm.app.core.DefaultTypeLocalizer.applyIfNeeded(
+                    context = applicationContext,
+                    loadTypes = { db.activityTypeDao().getAll() },
+                    rename = { id, name -> db.activityTypeDao().rename(id, name) }
+                )
+            }
+        }
+
         // 每日自动备份：数据只在应用私有目录，卸载/清数据就没了（真机上已发生过一次）。
         // 设置页「恢复自动备份」可从这里救回最近 5 份。
         lifecycleScope.launch(Dispatchers.IO) {
-            runCatching { com.cyclealarm.app.data.BackupManager.writeDailyAutoBackup(applicationContext) }
+            runCatching {
+                com.cyclealarm.app.data.BackupManager.writeDailyAutoBackup(applicationContext)
+                // 私有备份今天已存在时也要补写「下载」副本（换机/卸载后能拿回文件）
+                com.cyclealarm.app.data.BackupManager.syncDailyDownloadBackup(applicationContext)
+            }
         }
 
         // 每次回到前台都重建排期，兜底假期/跨天等状态变化

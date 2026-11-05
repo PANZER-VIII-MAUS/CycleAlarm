@@ -114,13 +114,38 @@ object BackupManager {
         val names = dir.listFiles()?.map { it.name } ?: emptyList()
         if (!AutoBackupPolicy.shouldWriteToday(names, System.currentTimeMillis())) return null
         val payload = runCatching { export(context) }.getOrNull() ?: return null
-        val target = File(dir, AutoBackupPolicy.fileName(System.currentTimeMillis()))
+        val now = System.currentTimeMillis()
+        val target = File(dir, AutoBackupPolicy.fileName(now))
+        // 同步写一份到系统「下载」目录：私有目录随卸载消失，公开目录用户换机后还能拿回
+        runCatching {
+            DownloadBackupWriter.writeIfAbsent(
+                context,
+                AutoBackupPolicy.downloadFileName(now),
+                payload
+            )
+        }
         return runCatching {
             target.writeText(payload, Charsets.UTF_8)
             AutoBackupPolicy.expired(dir.listFiles()?.map { it.name } ?: emptyList(), AUTO_BACKUP_KEEP_DAILY)
                 .forEach { stale -> File(dir, stale).delete() }
             target.absolutePath
         }.onFailure { Log.e(TAG, "daily auto backup failed", it) }.getOrNull()
+    }
+
+    /**
+     * 同步「今天的下载副本」：即使私有备份今天已存在（例如刚升级到本版本），
+     * 只要 Download/CycleAlarm 里还没有今天的文件，就补写一份。
+     */
+    suspend fun syncDailyDownloadBackup(context: Context): Boolean {
+        if (!DownloadBackupWriter.isSupported()) return false
+        val payload = runCatching { export(context) }.getOrNull() ?: return false
+        return runCatching {
+            DownloadBackupWriter.writeIfAbsent(
+                context,
+                AutoBackupPolicy.downloadFileName(System.currentTimeMillis()),
+                payload
+            )
+        }.getOrDefault(false)
     }
 
     /** 列出可恢复的自动备份（含「恢复前快照」与「每日备份」），最近的在前。 */

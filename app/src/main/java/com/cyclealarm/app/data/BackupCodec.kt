@@ -155,6 +155,9 @@ object BackupCodec {
         return first == HEADER_V1
     }
 
+    /** 当前解析器支持的数据版本上限；高于它的备份一律拒绝。 */
+    fun supportsSchemaVersion(version: Int): Boolean = version in 1..SCHEMA_VERSION
+
     fun decode(payload: String): Backup {
         val allLines = payload.lineSequence().filter { it.isNotBlank() }.toList()
         val header = allLines.firstOrNull() ?: throw LocalizedFailure(R.string.err_not_backup)
@@ -199,6 +202,15 @@ object BackupCodec {
                     if (parts.size < 2) throw LocalizedFailure(R.string.err_backup_head)
                     exportedAt = parts[1].toLongOrNull()
                         ?: throw LocalizedFailure(R.string.err_backup_head)
+                    // V2 起 M 行第 3 段是数据 schema 版本：比当前新说明备份来自更新版本，
+                    // 直接拒绝，避免用旧解析器读出半截数据（五轮复审待办）
+                    if (parts.size >= 3) {
+                        val version = parts[2].toIntOrNull()
+                            ?: throw LocalizedFailure(R.string.err_backup_head)
+                        if (!supportsSchemaVersion(version)) {
+                            throw LocalizedFailure(R.string.err_backup_newer_version)
+                        }
+                    }
                 }
 
                 "S" -> {

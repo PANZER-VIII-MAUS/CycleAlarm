@@ -1,5 +1,6 @@
 package com.cyclealarm.app.service
 
+import com.cyclealarm.app.core.AppLanguage
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
@@ -40,8 +41,8 @@ class AlarmGuardService : Service() {
         )
         val notification: Notification = NotificationCompat.Builder(this, NotificationChannels.GUARD)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.guard_title))
-            .setContentText(getString(R.string.guard_text))
+            .setContentTitle(AppLanguage.appString(this, R.string.guard_title))
+            .setContentText(AppLanguage.appString(this, R.string.guard_text))
             .setOngoing(true)
             .setContentIntent(contentIntent)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

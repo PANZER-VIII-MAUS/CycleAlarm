@@ -50,6 +50,14 @@ object AppLanguage {
      * 给 ViewModel / 后台组件取字符串用：套应用内语言但**不改全局 Locale**。
      * 否则「应用内英文 + 系统中文」时，撤销提示、导入错误仍会是中文。
      */
+    /**
+     * 服务 / 通知 / 广播里的取文案入口：按**应用内语言**取，
+     * 避免「应用内英文 + 系统中文」时通知仍是中文（五轮复审 §4.8）。
+     */
+    fun appString(context: Context, resId: Int, vararg args: Any): String =
+        runCatching { localizedContext(context).getString(resId, *args) }
+            .getOrElse { context.getString(resId, *args) }
+
     fun localizedContext(base: Context): Context {
         val locale = localeFor(get(base)) ?: return base
         return createLocalizedContext(base, locale)

@@ -78,8 +78,10 @@ internal fun DayPlanCard(
     val fontScale = LocalDensity.current.fontScale
     val largeFont = fontScale > 1.25f
     val timeStyle = if (showTime) {
+        // 大字号时不能把主时间调小（五轮复审 §4.7）：compact 布局已经给时间整行宽度，
+        // 这里用 headlineSmall（比 headlineMedium 略大）才能让「系统字号变大 → 时间也变大」
         if (largeFont) {
-            MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+            MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
         } else {
             MaterialTheme.typography.headlineMedium
         }

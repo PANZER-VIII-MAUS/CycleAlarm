@@ -1,5 +1,6 @@
 package com.cyclealarm.app.service
 
+import com.cyclealarm.app.core.AppLanguage
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
@@ -180,9 +181,9 @@ class RingService : Service() {
                     timeText = RingOverlayController.formatTime(this, hour, minute),
                     detail = label.ifBlank {
                         if (kind == AlarmScheduler.KIND_DATE) {
-                            getString(R.string.ring_kind_date)
+                            AppLanguage.appString(this, R.string.ring_kind_date)
                         } else {
-                            getString(R.string.ring_day_format, dayIndex + 1)
+                            AppLanguage.appString(this, R.string.ring_day_format, dayIndex + 1)
                         }
                     },
                     showSnooze = !preview,
@@ -394,19 +395,19 @@ class RingService : Service() {
         }
         val notification: Notification = NotificationCompat.Builder(this, NotificationChannels.RING)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.ring_notification_title, timeText))
+            .setContentTitle(AppLanguage.appString(this, R.string.ring_notification_title, timeText))
             .setContentText(
                 label.ifBlank {
                     if (kind == AlarmScheduler.KIND_DATE) {
-                        getString(R.string.ring_kind_date)
+                        AppLanguage.appString(this, R.string.ring_kind_date)
                     } else {
-                        getString(R.string.ring_day_format, dayIndex + 1)
+                        AppLanguage.appString(this, R.string.ring_day_format, dayIndex + 1)
                     }
                 }
             )
             .setContentIntent(fullScreenIntent)
             .setFullScreenIntent(fullScreenIntent, true)
-            .addAction(0, getString(R.string.ring_stop), stopIntent)
+            .addAction(0, AppLanguage.appString(this, R.string.ring_stop), stopIntent)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             // 锁屏上公开展示内容（读屏/锁屏横幅都能看到）
@@ -417,7 +418,7 @@ class RingService : Service() {
                 snoozeAction?.let {
                     addAction(
                         0,
-                        getString(R.string.ring_snooze_minutes, RingPrefs.snoozeMinutes(this@RingService)),
+                        AppLanguage.appString(this@RingService, R.string.ring_snooze_minutes, RingPrefs.snoozeMinutes(this@RingService)),
                         it
                     )
                 }
@@ -482,8 +483,8 @@ class RingService : Service() {
         runCatching {
             val fallback = NotificationCompat.Builder(this, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(getString(R.string.svc_fallback_title))
-                .setContentText(getString(R.string.svc_fallback_text))
+                .setContentTitle(AppLanguage.appString(this, R.string.svc_fallback_title))
+                .setContentText(AppLanguage.appString(this, R.string.svc_fallback_text))
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -514,8 +515,8 @@ class RingService : Service() {
             val notification = NotificationCompat
                 .Builder(this, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(getString(R.string.svc_unhandled_title))
-                .setContentText(getString(R.string.svc_unhandled_text))
+                .setContentTitle(AppLanguage.appString(this, R.string.svc_unhandled_title))
+                .setContentText(AppLanguage.appString(this, R.string.svc_unhandled_text))
                 .setContentIntent(contentIntent)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

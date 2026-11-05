@@ -532,4 +532,5 @@
     <plurals name="perm_health_missing">
         <item quantity="other">缺少 %1$d 项设置：%2$s</item>
     </plurals>
+    <string name="err_backup_newer_version">这个备份来自更新版本的 App，请先升级应用再恢复</string>
 </resources>

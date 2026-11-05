@@ -83,6 +83,10 @@ interface ActivityTypeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(type: ActivityTypeEntity)
 
+    /** 只改名字（旧迁移写死的中文默认名本地化用）。 */
+    @Query("UPDATE activity_types SET name = :name WHERE id = :id")
+    suspend fun rename(id: Int, name: String)
+
     @Query("DELETE FROM activity_types WHERE id = :id")
     suspend fun deleteById(id: Int)
 

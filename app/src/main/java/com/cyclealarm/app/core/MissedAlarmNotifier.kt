@@ -25,11 +25,11 @@ object MissedAlarmNotifier {
                 return
             }
             NotificationChannels.createAll(context)
-            val separator = context.getString(R.string.list_separator)
-            val fallback = context.getString(R.string.missed_label_fallback)
+            val separator = AppLanguage.appString(context, R.string.list_separator)
+            val fallback = AppLanguage.appString(context, R.string.missed_label_fallback)
             val names = missed.take(3).joinToString(separator) { it.label.ifBlank { fallback } }
             val text = if (missed.size == 1) {
-                context.getString(R.string.missed_single, names)
+                AppLanguage.appString(context, R.string.missed_single, names)
             } else {
                 context.resources.getQuantityString(
                     R.plurals.missed_multi,
@@ -48,7 +48,7 @@ object MissedAlarmNotifier {
             )
             val notification = NotificationCompat.Builder(context, NotificationChannels.RING_FALLBACK)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(context.getString(R.string.missed_title))
+                .setContentTitle(AppLanguage.appString(context, R.string.missed_title))
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(contentIntent)

@@ -34,6 +34,12 @@ object AutoBackupPolicy {
         else -> "$bytes B"
     }
 
+    /** 导出到系统「下载」目录的文件名（用户可在文件管理器里直接取回）。 */
+    fun downloadFileName(now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
+        val date = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        return "CycleAlarm-auto-backup-$date.txt"
+    }
+
     /** 保留最近 [keep] 份（按文件名里的日期倒序），返回应删除的文件名。 */
     fun expired(existingNames: List<String>, keep: Int = 5): List<String> {
         val dated = existingNames.mapNotNull { name -> dateOf(name)?.let { name to it } }

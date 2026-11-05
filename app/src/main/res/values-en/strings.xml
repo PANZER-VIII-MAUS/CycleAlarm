@@ -552,4 +552,5 @@
         <item quantity="one">%1$d setting missing: %2$s</item>
         <item quantity="other">%1$d settings missing: %2$s</item>
     </plurals>
+    <string name="err_backup_newer_version">This backup comes from a newer app version. Update the app before restoring.</string>
 </resources>

@@ -63,4 +63,11 @@ class AutoBackupPolicyTest {
         assertEquals("1.5 KB", AutoBackupPolicy.formatSize(1536))
         assertEquals("2.0 MB", AutoBackupPolicy.formatSize(2L * 1024 * 1024))
     }
+    @Test
+    fun `download file name is dated and readable`() {
+        assertEquals(
+            "CycleAlarm-auto-backup-2026-11-05.txt",
+            AutoBackupPolicy.downloadFileName(at(2026, 11, 5), zone)
+        )
+    }
 }
