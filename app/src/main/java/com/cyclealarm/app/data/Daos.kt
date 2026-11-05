@@ -229,6 +229,10 @@ interface RingEventDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(event: RingEventEntity): Long
 
+    /** 补齐事件备注（重复登记时旧行 label 可能为空）。 */
+    @Query("UPDATE ring_events SET label = :label WHERE id = :id")
+    suspend fun updateLabel(id: Long, label: String)
+
     /** 记录「真的响了」。 */
     @Query("UPDATE ring_events SET rungAt = :rungAt WHERE id = :id")
     suspend fun markRung(id: Long, rungAt: Long)

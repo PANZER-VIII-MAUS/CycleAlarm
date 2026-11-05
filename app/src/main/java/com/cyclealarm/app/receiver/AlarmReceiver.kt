@@ -18,6 +18,7 @@ import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.NotificationChannels
 import com.cyclealarm.app.core.NotificationPermissionCheck
 import com.cyclealarm.app.core.ResyncCheckpoint
+import com.cyclealarm.app.data.RingEventStore
 import com.cyclealarm.app.data.AppDatabase
 import com.cyclealarm.app.data.RingEventEntity
 import com.cyclealarm.app.service.RingService
@@ -168,16 +169,15 @@ class AlarmReceiver : BroadcastReceiver() {
                         } else {
                             AlarmScheduler.expectedMillisOfToday(hour, minute, firedNow)
                         }
-                        val ringEventId = runCatching {
-                            AppDatabase.get(context).ringEventDao().insert(
-                                RingEventEntity(
-                                    alarmKind = kind,
-                                    alarmId = alarmId,
-                                    label = label,
-                                    expectedAt = expectedAt
-                                )
-                            )
-                        }.getOrDefault(-1L)
+                        // 幂等登记：同一触发点重复触发（如 snooze 再响）必须拿到已有行 id，
+                        // 否则 markRung 写不进去，这次响铃会被误判成「漏响」（五轮复审 B#2）
+                        val ringEventId = RingEventStore.register(
+                            dao = AppDatabase.get(context).ringEventDao(),
+                            alarmKind = kind,
+                            alarmId = alarmId,
+                            label = label,
+                            expectedAt = expectedAt
+                        )
 
                         // 兼容旧检查点：旧版本升级上来的第一轮仍按时间戳豁免，避免误报
                         ResyncCheckpoint.markFired(context, expectedAt)

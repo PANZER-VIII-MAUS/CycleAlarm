@@ -105,6 +105,14 @@
 
 ---
 
+| 附录 B #1 迁移去重丢 rung/acked | `Migration10To11Sql` 增加 `MERGE_DUPLICATE_MARKS`：删重复前把组内最早 `rungAt`/`ackedAt` 合并进保留行 | `Migration10To11RobolectricTest` 断言合并结果（111/222） |
+| 附录 B #2 重复触发补不上 rungAt | 新增 `RingEventStore.register`：插入冲突时查回已有行并返回其 id（顺带补 label），接收器改用它 | `RingEventStoreRobolectricTest` 3 例（同 id / markRung 生效 / label 回填） |
+
+> 说明：DB 版本仍为 v11（无 schema 变化）。已经升到 v11 的设备，历史上被旧去重删掉的 `rungAt`
+> 无法回溯修复；本次修复针对「尚未升级的老库」与「今后所有重复登记」。
+
+---
+
 ## 6. 最终结论
 
 **结论：需修改后复审（非阻断）**

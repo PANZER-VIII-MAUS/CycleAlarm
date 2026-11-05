@@ -224,8 +224,8 @@ adb shell pm clear com.cyclealarm.app
 
 | # | 项 | 状态 |
 | --- | --- | --- |
-| 1 | v11 迁移去重只留 `MIN(id)`、不合并 `rungAt/ackedAt` | 仍存在 |
-| 2 | 唯一索引 + `IGNORE` → 重复触发补不上 `rungAt` | 仍存在（影响面小） |
+| 1 | v11 迁移去重只留 `MIN(id)`、不合并 `rungAt/ackedAt` | ✅ 已修（迁移先去重前合并 rung/acked；已升到 v11 的设备历史无法回溯） |
+| 2 | 唯一索引 + `IGNORE` → 重复触发补不上 `rungAt` | ✅ 已修（`RingEventStore.register` 幂等返回已有行 id） |
 | 3 | V1 老备份无校验和 | ✅ 已修（恢复旧版备份时明确提示「无校验和」） |
 | 4 | 自动备份写在私有目录、无恢复入口 | ✅ 已修（每日自动备份 + 设置页「恢复自动备份」，真机验证） |
 | 5 | 完成页 `skippedWeeklyCount` 未接线 | ✅ 0.6.5 已修 |
