@@ -3,6 +3,8 @@ name: Android CI
 on:
   push:
     branches: ["**"]
+    # tag 也要跑一次 CI：发版清单要求「tag 上的 CI 重跑过一次」，不能只靠 main 的绿灯
+    tags: ["v*"]
   pull_request:
 
 permissions:

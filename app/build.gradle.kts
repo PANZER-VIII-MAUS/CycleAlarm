@@ -19,6 +19,9 @@ if (keystorePropertiesFile.exists()) {
 // 这样可以把密码从工作区明文文件里挪走，properties 只留 storeFile / keyAlias。
 fun signingSecret(envName: String, propertyName: String): String? =
     System.getenv(envName)?.takeIf { it.isNotBlank() }
+        // 其次读用户级 ~/.gradle/gradle.properties（仓库外，避免明文口令进入工作区）
+        ?: (project.findProperty("cyclealarm.$propertyName") as String?)?.takeIf { it.isNotBlank() }
+        // 最后才回退到 keystore.properties（仅供本地临时使用，禁止提交口令）
         ?: keystoreProperties.getProperty(propertyName)
 
 // 直装包与上架包拆成两个 flavor：
