@@ -57,7 +57,13 @@ object ResyncAuditPolicy {
         /** 生效触发点解析器；不传则按原始触发点算（纯逻辑测试用）。 */
         cycleNext: ((AlarmEntity, Long) -> Long?)? = null,
         /** 被「今天临时静音」的日期集合（由调用方从 SharedPreferences 读一次）。 */
-        mutedDays: Set<Long> = emptySet()
+        mutedDays: Set<Long> = emptySet(),
+        /**
+         * 某条触发点是否被用户「跳过下一次」。
+         * 周期闹钟由 [cycleNext] 解析器内部跳过；按日期闹钟是一次性的，
+         * 这里直接判定，避免「用户明确跳过却被报漏响」（五轮复审附录 B#6）。
+         */
+        isSkipped: ((kind: String, alarmId: Int, triggerAt: Long) -> Boolean)? = null
     ): List<MissedAlarm> {
         if (settings == null || !shouldAudit(lastCheckAt, now)) return emptyList()
         val missed = mutableListOf<MissedAlarm>()
@@ -73,7 +79,9 @@ object ResyncAuditPolicy {
                     now = cursor
                 ) ?: break
                 if (next > now) break
-                missed += MissedAlarm(alarm.label, next, AlarmScheduler.KIND_CYCLE, alarm.id)
+                if (isSkipped?.invoke(AlarmScheduler.KIND_CYCLE, alarm.id, next) != true) {
+                    missed += MissedAlarm(alarm.label, next, AlarmScheduler.KIND_CYCLE, alarm.id)
+                }
                 cursor = next + 1
                 hits++
             }
@@ -93,6 +101,7 @@ object ResyncAuditPolicy {
             if (expected <= lastCheckAt || expected > now) return@forEach
             // 被「今天临时静音」覆盖的日期不算漏响
             if (mutedDays.isNotEmpty() && SkipPolicy.epochDayOf(expected) in mutedDays) return@forEach
+            if (isSkipped?.invoke(AlarmScheduler.KIND_DATE, alarm.id, expected) == true) return@forEach
             val mutedByHoliday = alarm.mutedDuringHoliday &&
                 settings.holidayModeEnabled &&
                 holidays.any { it.enabled && alarm.epochDay in it.startEpochDay..it.endEpochDay }

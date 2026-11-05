@@ -108,6 +108,8 @@ object AlarmResyncHelper {
     ) {
         val lastCheck = ResyncCheckpoint.lastCheckAt(context)
         // 计算式判定：覆盖「设备关机，事件压根没登记」的情况
+        // 跳过列表按 (kind, alarmId) 缓存：审计循环里不重复读 SharedPreferences
+        val skipsCache = HashMap<Pair<String, Int>, Set<Long>>()
         val computed = ResyncAuditPolicy.findMissed(
             now = now,
             lastCheckAt = lastCheck,
@@ -117,7 +119,12 @@ object AlarmResyncHelper {
             holidays = holidays,
             firedAts = ResyncCheckpoint.recentFires(context, now),
             cycleNext = EffectiveTriggerPolicy.cycleTriggerResolver(context, settings, holidays),
-            mutedDays = TemporaryMuteStore.mutedDays(context)
+            mutedDays = TemporaryMuteStore.mutedDays(context),
+            isSkipped = { kind, alarmId, triggerAt ->
+                skipsCache.getOrPut(kind to alarmId) {
+                    TemporaryMuteStore.skipsFor(context, kind, alarmId)
+                }.contains(triggerAt)
+            }
         )
         // 事件式判定：覆盖「登记了但没真的响」（响铃服务启动失败）
         val fromEvents = runCatching {

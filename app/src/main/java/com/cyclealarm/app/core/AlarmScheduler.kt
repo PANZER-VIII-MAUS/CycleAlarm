@@ -97,9 +97,16 @@ object AlarmScheduler {
      * 23:55 的闹钟 00:05 触发），说明原时间属于前一天，回退一天（四轮复审 N5）。
      */
     fun expectedMillisOfOriginal(hour: Int, minute: Int, now: Long): Long {
-        val today = expectedMillisOfToday(hour, minute, now)
-        val dayMs = 24L * 60 * 60 * 1000
-        return if (today > now) today - dayMs else today
+        val zone = java.time.ZoneId.systemDefault()
+        val firedDate = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val todayAt = firedDate.atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+        // 不能用「减 24 小时」：夏令时切换日会差一小时（例：2026-03-08 美东春季跳变）。
+        // 正确做法是按本地日期减一天再取目标时刻。
+        return if (todayAt > now) {
+            firedDate.minusDays(1).atTime(hour, minute).atZone(zone).toInstant().toEpochMilli()
+        } else {
+            todayAt
+        }
     }
 
     fun expectedMillisOfToday(hour: Int, minute: Int, now: Long): Long {
@@ -219,6 +226,9 @@ object AlarmScheduler {
             rampVolume = alarm.rampVolume
         )
         setAlarmClock(am, triggerAt, operation, showPendingIntent(context, requestCode))
+        // 先取消这条闹钟可能已存在的提前提醒：用户把「提前提醒」从 10 分钟改成关闭时，
+        // 旧的那条仍然挂在系统里，会在关闭后依旧弹一次（五轮复审附录 B#8）
+        cancelPreAlert(context, alarm.id, KIND_CYCLE, alarm.preAlertMinutes)
         schedulePreAlert(
             context = context,
             requestCode = requestCode,

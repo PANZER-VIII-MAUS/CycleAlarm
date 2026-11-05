@@ -143,6 +143,18 @@ object BackupCodec {
         }
     }
 
+    /**
+     * V1 备份没有尾记录的条数/校验和，无法发现截断或篡改。
+     * 恢复前用它提示用户（V2 起才有校验）。
+     */
+    fun isLegacyUnverified(payload: String): Boolean {
+        // 首行可能是纯 header，也可能 header 后直接跟 tab + 记录（老文件写法不一致）
+        val first = payload.trimStart().lineSequence().firstOrNull().orEmpty()
+            .trim()
+            .substringBefore('\t')
+        return first == HEADER_V1
+    }
+
     fun decode(payload: String): Backup {
         val allLines = payload.lineSequence().filter { it.isNotBlank() }.toList()
         val header = allLines.firstOrNull() ?: throw LocalizedFailure(R.string.err_not_backup)

@@ -491,4 +491,5 @@
     <string name="restore_auto_confirm_text">将用所选备份替换当前全部闹钟与设置。恢复前会自动保存一份当前数据。</string>
     <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">已从自动备份恢复</string>
+    <string name="backup_confirm_text_legacy">这是旧版（V1）备份，没有校验和，文件若被截断也能“恢复”出一半数据。确定要用它替换当前数据吗？</string>
 </resources>

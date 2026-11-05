@@ -98,6 +98,13 @@
 
 ---
 
+| 附录 B #3 V1 备份无校验 | `BackupCodec.isLegacyUnverified` + 恢复确认文案改为「无校验和，可能只恢复一半」 | 单测（V1/V2 各一例） |
+| 附录 B #6 跳过日期闹钟仍报漏响 | `ResyncAuditPolicy.findMissed` 增加 `isSkipped` 判定，周期/日期闹钟都覆盖；调用方缓存跳过列表避免重复读 prefs | 单测 2 例（日期/周期各一） |
+| 附录 B #7 跨夏令时算错 | `expectedMillisOfOriginal` 改为「本地日期减一天」而不是减 24 小时 | 单测：美东 2026-03-08 春季跳变 |
+| 附录 B #8 关闭提前提醒后仍弹一次 | `scheduleAlarm` 排新的提前提醒前先 `cancelPreAlert` 清掉旧的 | 由排期代码路径覆盖（无独立单测，记入未验证项） |
+
+---
+
 ## 6. 最终结论
 
 **结论：需修改后复审（非阻断）**

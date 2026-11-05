@@ -491,4 +491,5 @@
     <string name="restore_auto_confirm_text">This replaces all current alarms and settings. A snapshot of the current data is saved first.</string>
     <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">Restored from auto backup</string>
+    <string name="backup_confirm_text_legacy">This is a legacy (V1) backup without a checksum: a truncated file can still “restore” partially. Replace current data with it?</string>
 </resources>

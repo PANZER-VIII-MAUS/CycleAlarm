@@ -270,7 +270,13 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { pendingImportPayload = null },
             title = { Text(stringResource(R.string.backup_confirm_title)) },
-            text = { Text(stringResource(R.string.backup_confirm_text)) },
+            text = {
+                if (com.cyclealarm.app.data.BackupCodec.isLegacyUnverified(payload)) {
+                    Text(stringResource(R.string.backup_confirm_text_legacy))
+                } else {
+                    Text(stringResource(R.string.backup_confirm_text))
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
