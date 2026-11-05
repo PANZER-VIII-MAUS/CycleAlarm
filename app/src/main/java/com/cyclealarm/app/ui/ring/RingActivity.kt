@@ -231,6 +231,17 @@ class RingActivity : ComponentActivity() {
         )
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 服务侧靠这个标记判断界面是否真的显示出来（BAL 被拦时 startActivity 不抛异常）
+        com.cyclealarm.app.core.RingUiPresence.onActivityResumed()
+    }
+
+    override fun onPause() {
+        com.cyclealarm.app.core.RingUiPresence.onActivityPaused()
+        super.onPause()
+    }
+
     private fun finishRing() {
         stopService(Intent(this, RingService::class.java))
         finish()

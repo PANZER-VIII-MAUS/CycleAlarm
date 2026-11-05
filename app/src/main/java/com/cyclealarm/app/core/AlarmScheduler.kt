@@ -140,12 +140,14 @@ object AlarmScheduler {
     ): Long? {
         if (!alarm.enabled) return null
         val cycleLen = (settings?.cycleLength ?: 6).coerceAtLeast(1)
-        val anchor = settings?.cycleStartEpochDay ?: LocalDate.now().toEpochDay()
         val holidayMode = settings?.holidayModeEnabled ?: true
         val zone = ZoneId.systemDefault()
         // 注意：LocalDate.ofInstant 是 Java 9 新增，Android 直到 API 36 才有，
         // 用 atZone(...).toLocalDate() 保证 API 26+ 可用
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate().toEpochDay()
+        // 没有 settings（首启/数据缺失）时锚点必须由传入的 now 推导：
+        // 之前用 LocalDate.now() 会读墙钟，导致这个「纯函数」结果依赖真实日期（测试在跨天后才失败）
+        val anchor = settings?.cycleStartEpochDay ?: today
 
         for (offset in 0L until 4000L) {
             val candidateEpochDay = today + offset

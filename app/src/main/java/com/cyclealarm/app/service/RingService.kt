@@ -28,6 +28,8 @@ import com.cyclealarm.app.core.RingForegroundGuard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.cyclealarm.app.core.RingtonePlayer
+import com.cyclealarm.app.core.RingUiFallbackPolicy
+import com.cyclealarm.app.core.RingUiPresence
 import com.cyclealarm.app.core.RingPrefs
 import com.cyclealarm.app.core.DisplayPrefs
 import com.cyclealarm.app.core.VibratorUtil
@@ -58,6 +60,10 @@ class RingService : Service() {
     private var ringEventId: Long = 0L
     private var snoozeId: Long = 0L
     private var snoozedStart: Boolean = false
+    // 浮窗兜底：系统拦掉 Activity 时保证用户仍有「停止/稍后」可点
+    private var overlay: RingOverlayController? = null
+    private var overlayCheck: Runnable? = null
+    private var overlayWatch: Runnable? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -108,6 +114,9 @@ class RingService : Service() {
         launchRingActivity(
             kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute, preview
         )
+        scheduleOverlayFallback(
+            kind, alarmId, dayIndex, hour, minute, label, originalHour, originalMinute, preview
+        )
         acquireWakeLock()
         // v10：用闹钟自己的铃声与渐强设置（自定义为空则回退全局默认）
         runCatching { RingtonePlayer.play(this, customRingtoneUri, rampEnabled) }
@@ -136,7 +145,104 @@ class RingService : Service() {
         return START_STICKY
     }
 
+    /**
+     * 延迟检查响铃界面是否真的显示出来；没显示且用户授予了悬浮窗权限，就画一层兜底界面。
+     *
+     * 背景（ColorOS 真机日志）：alarm 触发后 startActivity(RingActivity) 会返回 BAL_BLOCK，
+     * 且不抛异常；FSI 也可能被系统拒绝。此时用户听到铃声却没有任何可操作界面。
+     */
+    private fun scheduleOverlayFallback(
+        kind: String,
+        alarmId: Int,
+        dayIndex: Int,
+        hour: Int,
+        minute: Int,
+        label: String,
+        originalHour: Int?,
+        originalMinute: Int?
+    , preview: Boolean) {
+        overlayCheck?.let { handler.removeCallbacks(it) }
+        val check = Runnable {
+            val permitted = RingOverlayController.canDrawOverlays(this)
+            val visible = RingUiPresence.isVisible()
+            if (RingUiFallbackPolicy.shouldShowOverlay(visible, permitted, preview)) {
+                Log.w(
+                    TAG,
+                    "ring UI not visible (activityBalBlocked=$visible, overlayPermitted=$permitted) → show overlay fallback"
+                )
+                val controller = overlay ?: RingOverlayController(this).also { overlay = it }
+                val snoozeMinutes = RingPrefs.snoozeMinutes(this)
+                controller.show(
+                    timeText = RingOverlayController.formatTime(this, hour, minute),
+                    detail = label.ifBlank {
+                        if (kind == AlarmScheduler.KIND_DATE) {
+                            getString(R.string.ring_kind_date)
+                        } else {
+                            getString(R.string.ring_day_format, dayIndex + 1)
+                        }
+                    },
+                    showSnooze = !preview,
+                    snoozeMinutes = snoozeMinutes,
+                    onStop = {
+                        releaseOverlay()
+                        AlarmScheduler.clearSnoozeForAlarm(this, kind, alarmId)
+                        stopRing()
+                    },
+                    onSnooze = {
+                        releaseOverlay()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            runCatching {
+                                AlarmScheduler.snoozeAt(
+                                    context = this@RingService,
+                                    kind = kind,
+                                    alarmId = alarmId,
+                                    dayIndex = dayIndex,
+                                    hour = hour,
+                                    minute = minute,
+                                    label = label,
+                                    minutes = snoozeMinutes,
+                                    originalHour = originalHour ?: hour,
+                                    originalMinute = originalMinute ?: minute
+                                )
+                            }.onFailure { Log.e(TAG, "overlay snooze failed", it) }
+                            handler.post { stopRing() }
+                        }
+                    }
+                )
+                // Activity 之后又被系统放行显示时，把浮窗撤掉，避免盖住真界面
+                val watch = object : Runnable {
+                    override fun run() {
+                        if (RingUiPresence.isVisible()) {
+                            releaseOverlay()
+                        } else if (overlay?.isShowing() == true) {
+                            handler.postDelayed(this, 1_000L)
+                        }
+                    }
+                }
+                overlayWatch = watch
+                handler.postDelayed(watch, 1_000L)
+            } else if (!permitted && !visible) {
+                // 没有浮窗权限 → 至少留下可排查的日志（真机上这是「只有铃声没有界面」的根因）
+                Log.w(
+                    TAG,
+                    "ring UI not visible and overlay permission missing; notification-only fallback (FSI rejected?)"
+                )
+            }
+        }
+        overlayCheck = check
+        handler.postDelayed(check, RingUiFallbackPolicy.OVERLAY_DELAY_MS)
+    }
+
+    private fun releaseOverlay() {
+        overlayWatch?.let { handler.removeCallbacks(it) }
+        overlayWatch = null
+        overlay?.hide()
+    }
+
     private fun stopRing() {
+        overlayCheck?.let { handler.removeCallbacks(it) }
+        overlayCheck = null
+        releaseOverlay()
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
         releaseWakeLock()
@@ -202,6 +308,9 @@ class RingService : Service() {
     }
 
     override fun onDestroy() {
+        overlayCheck?.let { handler.removeCallbacks(it) }
+        overlayCheck = null
+        releaseOverlay()
         timeout?.let { handler.removeCallbacks(it) }
         timeout = null
         _isRinging.value = false
