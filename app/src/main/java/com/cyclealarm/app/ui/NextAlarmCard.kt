@@ -37,6 +37,7 @@ internal fun NextAlarmCard(
     now: Long,
     settings: AppSettingsEntity?,
     modifier: Modifier = Modifier,
+    expiresHint: Boolean = false,
     onSkipNext: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -48,7 +49,9 @@ internal fun NextAlarmCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = stringResource(R.string.main_no_alarm_hint),
+                text = stringResource(
+                    if (expiresHint) R.string.main_no_alarm_expired_hint else R.string.main_no_alarm_hint
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)

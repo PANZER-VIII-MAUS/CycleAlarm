@@ -1,5 +1,7 @@
 package com.cyclealarm.app.ui.settings
 
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.res.pluralStringResource
@@ -150,7 +152,8 @@ fun SettingsScreen(
         if (uri != null) {
             backupScope.launch {
                 runCatching {
-                    val payload = BackupManager.export(context)
+                    // 导出要读整库并编码，不能放在主线程
+                    val payload = withContext(Dispatchers.IO) { BackupManager.export(context) }
                     context.contentResolver.openOutputStream(uri)?.use { stream ->
                         stream.write(payload.toByteArray(Charsets.UTF_8))
                     } ?: error(context.getString(R.string.error_write_file))
@@ -392,7 +395,12 @@ fun SettingsScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            // 宽屏（平板/横屏）限制内容宽度并居中：六轮复审 §5
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .widthIn(max = 640.dp)
+                .wrapContentWidth(Alignment.CenterHorizontally),
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {

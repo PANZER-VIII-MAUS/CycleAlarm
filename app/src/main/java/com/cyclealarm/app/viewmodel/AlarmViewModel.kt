@@ -291,6 +291,17 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         syncPlans()
     }
 
+    /** 删除周期闹钟并登记待撤销（六轮复审 §5：三类删除原先不在撤销体系里）。 */
+    suspend fun deleteAlarmWithUndo(id: Int) {
+        val snapshot = db.alarmDao().getById(id) ?: return
+        deleteAlarm(id)
+        _pendingUndo.value = PendingUndo.Alarm(
+            snapshot,
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())
+                .getString(com.cyclealarm.app.R.string.vm_undo_alarm, snapshot.label.ifBlank { "#$id" })
+        )
+    }
+
     fun restoreAlarm(snapshot: AlarmEntity) = viewModelScope.launch {
         db.alarmDao().upsert(DeleteUndoPolicy.alarmForRestore(snapshot))
         syncPlans()
@@ -407,6 +418,10 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
             val snapshot: ActivityTypeDeleteSnapshot,
             val message: String
         ) : PendingUndo
+
+        data class Alarm(val snapshot: com.cyclealarm.app.data.AlarmEntity, val message: String) : PendingUndo
+        data class DateAlarm(val snapshot: com.cyclealarm.app.data.DateAlarmEntity, val message: String) : PendingUndo
+        data class Holiday(val snapshot: com.cyclealarm.app.data.HolidayEntity, val message: String) : PendingUndo
     }
 
     private val _pendingUndo = MutableStateFlow<PendingUndo?>(null)
@@ -437,6 +452,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         when (val pending = _pendingUndo.value) {
             is PendingUndo.Plan -> restoreDayPlan(pending.plan)
             is PendingUndo.Type -> restoreActivityType(pending.snapshot)
+            is PendingUndo.Alarm -> restoreAlarm(pending.snapshot)
+            is PendingUndo.DateAlarm -> restoreDateAlarm(pending.snapshot)
+            is PendingUndo.Holiday -> restoreHoliday(pending.snapshot)
             null -> return
         }
         _pendingUndo.value = null
@@ -566,6 +584,17 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         reschedule()
     }
 
+    /** 删除假期并登记待撤销。 */
+    suspend fun deleteHolidayWithUndo(id: Int) {
+        val snapshot = db.holidayDao().getById(id) ?: return
+        deleteHoliday(id)
+        _pendingUndo.value = PendingUndo.Holiday(
+            snapshot,
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())
+                .getString(com.cyclealarm.app.R.string.vm_undo_holiday, snapshot.label.ifBlank { "#$id" })
+        )
+    }
+
     fun restoreHoliday(snapshot: HolidayEntity) = viewModelScope.launch {
         db.holidayDao().upsert(DeleteUndoPolicy.holidayForRestore(snapshot))
         reschedule()
@@ -595,6 +624,17 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         db.dateAlarmDao().getById(id)?.let { AlarmScheduler.cancelDateAlarm(getApplication(), it) }
         db.dateAlarmDao().deleteById(id)
         reschedule()
+    }
+
+    /** 删除按日期闹钟并登记待撤销。 */
+    suspend fun deleteDateAlarmWithUndo(id: Int) {
+        val snapshot = db.dateAlarmDao().getById(id) ?: return
+        deleteDateAlarm(id)
+        _pendingUndo.value = PendingUndo.DateAlarm(
+            snapshot,
+            com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())
+                .getString(com.cyclealarm.app.R.string.vm_undo_date_alarm, snapshot.label.ifBlank { "#$id" })
+        )
     }
 
     fun restoreDateAlarm(snapshot: DateAlarmEntity) = viewModelScope.launch {

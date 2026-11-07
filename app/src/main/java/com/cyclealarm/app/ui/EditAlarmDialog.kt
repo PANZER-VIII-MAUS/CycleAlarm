@@ -1,5 +1,8 @@
 package com.cyclealarm.app.ui
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.core.net.toUri
 import android.app.TimePickerDialog
 import android.content.Intent
@@ -73,7 +76,12 @@ internal fun EditAlarmDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_alarm_title, dayLabel)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },

@@ -542,4 +542,9 @@
     <string name="err_backup_too_large">备份文件超过 2 MB，可能已损坏</string>
     <string name="ring_overlay_title">闹钟正在响铃</string>
     <string name="perm_battery_note">电池未加入白名单：锁屏响铃界面可能被系统拦截</string>
+    <string name="vm_undo_alarm">已删除闹钟「%1$s」</string>
+    <string name="vm_undo_date_alarm">已删除按日期闹钟「%1$s」</string>
+    <string name="vm_undo_holiday">已删除假期「%1$s」</string>
+    <string name="main_no_alarm_expired">暂无开启的闹钟</string>
+    <string name="main_no_alarm_expired_hint">有按日期闹钟已过期，需要重新添加；也可以直接打开下面任意一天</string>
 </resources>

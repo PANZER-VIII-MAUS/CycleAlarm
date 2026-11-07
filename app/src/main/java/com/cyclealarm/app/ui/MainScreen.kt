@@ -161,12 +161,20 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
     }
 
     // 待撤销状态放在 ViewModel：转屏/页面重建后 Snackbar 会重新出现，不会丢撤销机会
+    val expiredDateAlarmCount = remember(dateAlarms) {
+        val today = java.time.LocalDate.now().toEpochDay()
+        dateAlarms.count { it.enabled && it.epochDay < today }
+    }
+
     val pendingUndo by viewModel.pendingUndo.collectAsStateWithLifecycle()
     LaunchedEffect(pendingUndo) {
         val pending = pendingUndo ?: return@LaunchedEffect
         val message = when (pending) {
             is AlarmViewModel.PendingUndo.Plan -> pending.message
             is AlarmViewModel.PendingUndo.Type -> pending.message
+            is AlarmViewModel.PendingUndo.Alarm -> pending.message
+            is AlarmViewModel.PendingUndo.DateAlarm -> pending.message
+            is AlarmViewModel.PendingUndo.Holiday -> pending.message
         }
         // 不能在弹 Snackbar 之前就清空：那样用户还没来得及点「撤销」，待撤销状态就没了
         showUndoSnackbar(
@@ -317,6 +325,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                     now = now,
                     settings = settings,
                     modifier = Modifier.padding(start = contentPadding, end = contentPadding, top = 12.dp),
+                    // 空态不再自相矛盾：只有在「确实有过期的按日期闹钟」时才提过期
+                    expiresHint = expiredDateAlarmCount > 0,
                     onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
                 )
                 // 固定标题区：滚动列表时保持不动
@@ -346,6 +356,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                             now = now,
                             settings = settings,
                             modifier = Modifier.padding(horizontal = 0.dp),
+                            expiresHint = expiredDateAlarmCount > 0,
                             onSkipNext = { nextAlarm?.let { viewModel.skipNextAlarm(it) } }
                         )
                     }
@@ -378,7 +389,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onToggle = { alarm, enabled -> viewModel.setDateAlarmEnabled(alarm, enabled) },
                         onSave = { viewModel.saveDateAlarm(it) },
                         onDelete = { alarm ->
-                            viewModel.deleteDateAlarm(alarm.id)
+                            uiScope.launch { viewModel.deleteDateAlarmWithUndo(alarm.id) }
                             showUndoSnackbar(context.getString(R.string.snack_deleted_date_alarm)) {
                                 viewModel.restoreDateAlarm(alarm)
                             }
@@ -411,7 +422,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onEditManual = { editingAlarm = it },
                         onToggleManual = { alarm, enabled -> viewModel.setEnabled(alarm, enabled) },
                         onDeleteManual = { alarm ->
-                            viewModel.deleteAlarm(alarm.id)
+                            uiScope.launch { viewModel.deleteAlarmWithUndo(alarm.id) }
                             showUndoSnackbar(context.getString(R.string.snack_deleted_alarm)) {
                                 viewModel.restoreAlarm(alarm)
                             }
@@ -439,7 +450,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         },
                         onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
                         onDeleteHoliday = { holiday ->
-                            viewModel.deleteHoliday(holiday.id)
+                            uiScope.launch { viewModel.deleteHolidayWithUndo(holiday.id) }
                             showUndoSnackbar(context.getString(R.string.snack_deleted_holiday)) {
                                 viewModel.restoreHoliday(holiday)
                             }
@@ -484,10 +495,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                 editingAlarm = null
             },
             onDelete = {
-                viewModel.deleteAlarm(alarm.id)
-                showUndoSnackbar(context.getString(R.string.snack_deleted_alarm)) {
-                    viewModel.restoreAlarm(alarm)
-                }
+                // 统一走 ViewModel 撤销（转屏不丢、与首页其他删除同一套 Snackbar）
+                uiScope.launch { viewModel.deleteAlarmWithUndo(alarm.id) }
                 editingAlarm = null
             }
         )

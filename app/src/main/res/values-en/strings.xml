@@ -562,4 +562,9 @@
     <string name="err_backup_too_large">Backup file is larger than 2 MB and may be corrupted</string>
     <string name="ring_overlay_title">Alarm is ringing</string>
     <string name="perm_battery_note">Battery optimization is on: the lock-screen ring screen may be blocked by the system</string>
+    <string name="vm_undo_alarm">Alarm \"%1$s\" deleted</string>
+    <string name="vm_undo_date_alarm">Date alarm \"%1$s\" deleted</string>
+    <string name="vm_undo_holiday">Holiday \"%1$s\" deleted</string>
+    <string name="main_no_alarm_expired">No active alarms</string>
+    <string name="main_no_alarm_expired_hint">Some date alarms have expired — add them again, or turn on any day below</string>
 </resources>

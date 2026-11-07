@@ -24,7 +24,8 @@ fun CycleSwitch(
     colors: SwitchColors? = null
 ) {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val uncheckedTrack = if (dark) Color(0xFF5A6270) else Color(0xFF8A93A0)
+    // 浅色主题下白色滑块 vs 轨道要 ≥3:1（3.11 → 4.8），与日卡开关保持一致
+    val uncheckedTrack = if (dark) Color(0xFF5A6270) else Color(0xFF6B7280)
     val effectiveColors = colors ?: SwitchDefaults.colors(
         checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
         checkedTrackColor = MaterialTheme.colorScheme.primary,

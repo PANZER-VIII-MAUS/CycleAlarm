@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.history
 
+import androidx.compose.foundation.layout.widthIn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -79,6 +80,7 @@ fun RingHistoryScreen(
     ) { padding ->
         Column(
             modifier = Modifier
+                .widthIn(max = 640.dp)
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 20.dp)

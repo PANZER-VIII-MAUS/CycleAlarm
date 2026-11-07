@@ -21,7 +21,7 @@
 | --- | --- | --- |
 | 需求与验收条件 | 通过 | ①`expiredByPrefix` 分前缀测试 ②日卡改 `displaySmall`(36sp > 30sp) ③设置页开关 + 默认关 ④`clearPendingUndo(expected)` ⑤`show()` 返回 Boolean 且按结果记账 |
 | 构建与 CI | 通过 | direct/play 各 **315** 单测 0 失败；lint 0 error / 13 warning；`assembleDirectRelease` / `assemblePlayRelease` / **`bundlePlayRelease`** 成功（AAB 3.97 MB）；CI 已加 AAB 与 play 产物归档 |
-| Android 设备验证 | 部分通过 | 0.6.9 安装启动正常；**未复测锁屏三态与字号视觉**（见未验证项） |
+| Android 设备验证 | 部分通过 | 本地构建/测试全绿；**装机冒烟待手机连接后补做**（见未验证项） |
 | 代码目标与回归审核 | 通过 | 新增/扩展：分前缀保留 2 例、电池非阻断 2 例、`clearAll` 1 例、v11 schema 2 例、plurals key 一致性 |
 | 安全审核 | 通过 | 下载副本改为**默认关闭**并在 README 隐私段声明；密钥/口令未入库；PendingIntent 全 IMMUTABLE |
 | 发布清单与冷静期 | 缺失 | 直接 latest（单人自用期例外） |
@@ -33,6 +33,7 @@
 | 检查 | 结果 |
 | --- | --- |
 | direct / play 单测 | 315 / 315，0 失败 |
+| AAB | `bundlePlayRelease` 产出 3.97 MB |
 | lint | 0 error / 13 warning（`AppBundleLocaleChanges` 已被 language split 关闭消除） |
 | 产物 | direct APK、play APK、play AAB（3,976,650 B） |
 | versionCode 一致性 | build.gradle = 37 |
@@ -51,6 +52,7 @@
 2. **130% 字号视觉未复核**：只有字号层级推演（36sp × 1.3 = 46.8sp > 30sp），未真机截图比对。
 3. **AAB 未做 Play 上传验证**：只有 `bundlePlayRelease` 构建产物。
 4. **下载副本开关未真机验证**（默认关，需手动开启后观察 `Download/CycleAlarm/`）。
+5. **UI 债改动未做 130%/200% 字号与宽屏截图比对**（布局改动只有编译与 lint 保证）。
 
 ## 5. 安全明细
 

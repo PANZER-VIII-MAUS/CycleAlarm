@@ -118,7 +118,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 }
             } catch (e: Exception) {
                 _state.value = ImportUiState.Error(
-                    e.uiMessage(getApplication())
+                    e.uiMessage(com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication()))
                 )
             }
         }
@@ -198,7 +198,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             lastPreview = preview
             _state.value = preview
         } catch (e: Exception) {
-            _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
+            _state.value = ImportUiState.Error(e.uiMessage(com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())))
         }
     }
 
@@ -294,7 +294,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     result.skippedWeeklyCount
                 )
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
+                _state.value = ImportUiState.Error(e.uiMessage(com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())))
             }
         }
     }
@@ -313,7 +313,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 performUndo()
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
+                _state.value = ImportUiState.Error(e.uiMessage(com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())))
             }
         }
     }
@@ -324,7 +324,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 performUndo()
             } catch (e: Exception) {
-                _state.value = ImportUiState.Error(e.uiMessage(getApplication()))
+                _state.value = ImportUiState.Error(e.uiMessage(com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())))
             }
         }
     }

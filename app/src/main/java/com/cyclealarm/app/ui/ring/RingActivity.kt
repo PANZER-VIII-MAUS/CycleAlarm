@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui.ring
 
+import androidx.activity.enableEdgeToEdge
 import android.content.Intent
 import android.os.Bundle
 import android.view.WindowManager
@@ -9,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.Arrangement
@@ -81,6 +83,8 @@ class RingActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // targetSdk 36 强制边到边：显式声明，保证安全区计算与系统一致
+        enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // 返回键 = 停止（含二次确认的替代：直接停止并关闭服务，符合闹钟的使用直觉）
@@ -280,15 +284,21 @@ private fun RingScreen(
     // targetSdk 36 强制边到边：不加安全区的话底部「停止/稍后」会被导航栏挡住
     val largeFont = LocalDensity.current.fontScale > 1.25f
     Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
-        Column(
+        // Box + contentAlignment 才能真的垂直居中：Column 里同时用 verticalScroll 会让
+        // Arrangement.Center 失效（内容贴顶）——六轮复审 §5
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                // 大字号时减小左右留白，给「07:30」更多横向空间
-                .padding(horizontal = if (largeFont) 16.dp else 32.dp, vertical = 32.dp)
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            contentAlignment = Alignment.Center
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                // 大字号时减小左右留白，给「07:30」更多横向空间
+                .padding(horizontal = if (largeFont) 16.dp else 32.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(stringResource(R.string.ring_title), color = Color.White, style = MaterialTheme.typography.titleLarge)
             Text(
@@ -365,6 +375,7 @@ private fun RingScreen(
                 }
             }
             }
+        }
         }
     }
 }

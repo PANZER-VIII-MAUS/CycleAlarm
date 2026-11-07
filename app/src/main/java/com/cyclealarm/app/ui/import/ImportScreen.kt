@@ -1,5 +1,7 @@
 package com.cyclealarm.app.ui.import
 
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.res.pluralStringResource
 import android.app.TimePickerDialog
 import androidx.activity.compose.BackHandler
@@ -241,7 +243,11 @@ private fun IdleContent(
     onUndo: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .widthIn(max = 640.dp)
+            .wrapContentWidth(Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(stringResource(R.string.import_pick_title), style = MaterialTheme.typography.titleMedium)
