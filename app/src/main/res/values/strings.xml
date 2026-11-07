@@ -533,4 +533,13 @@
         <item quantity="other">缺少 %1$d 项设置：%2$s</item>
     </plurals>
     <string name="err_backup_newer_version">这个备份来自更新版本的 App，请先升级应用再恢复</string>
+    <string name="row_backup_to_downloads">备份到系统下载目录</string>
+    <string name="backup_to_downloads_on">已开启（每天一份，保留 7 份）</string>
+    <string name="backup_to_downloads_off">已关闭</string>
+    <string name="backup_to_downloads_toast">已开启：每天首次打开会往「下载/CycleAlarm」写一份明文备份</string>
+    <string name="ring_diag_hint">记录上一次响铃界面是「全屏 / 悬浮窗兜底 / 仅通知」——系统屏蔽了应用日志，只能靠它排查</string>
+    <string name="restore_auto_row_value">每日备份 + 恢复前快照</string>
+    <string name="err_backup_too_large">备份文件超过 2 MB，可能已损坏</string>
+    <string name="ring_overlay_title">闹钟正在响铃</string>
+    <string name="perm_battery_note">电池未加入白名单：锁屏响铃界面可能被系统拦截</string>
 </resources>

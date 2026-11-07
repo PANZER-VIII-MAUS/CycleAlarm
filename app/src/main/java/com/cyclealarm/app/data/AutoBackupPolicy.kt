@@ -40,6 +40,27 @@ object AutoBackupPolicy {
         return "CycleAlarm-auto-backup-$date.txt"
     }
 
+    /** 每日备份文件前缀。 */
+    const val DAILY_PREFIX = "daily-"
+
+    /** 恢复前快照前缀（0.6.9 起单独目录 + 单独保留策略）。 */
+    const val RESTORE_PREFIX = "restore-"
+
+    /** 旧版恢复前快照前缀（历史文件迁移用）。 */
+    const val LEGACY_RESTORE_PREFIX = "backup-before-restore-"
+
+    /** 恢复前快照文件名。 */
+    fun restoreFileName(now: Long): String = "$RESTORE_PREFIX$now.txt"
+
+    /**
+     * 按前缀分别淘汰：只在一批同前缀文件里保留最近 [keep] 份。
+     * （修复六轮复审 §4.1：以前恢复前快照会把同目录的每日备份一起计入并删掉）
+     */
+    fun expiredByPrefix(names: List<String>, prefix: String, keep: Int): List<String> {
+        val matched = names.filter { it.startsWith(prefix) }.sortedDescending()
+        return matched.drop(keep.coerceAtLeast(1))
+    }
+
     /** 保留最近 [keep] 份（按文件名里的日期倒序），返回应删除的文件名。 */
     fun expired(existingNames: List<String>, keep: Int = 5): List<String> {
         val dated = existingNames.mapNotNull { name -> dateOf(name)?.let { name to it } }

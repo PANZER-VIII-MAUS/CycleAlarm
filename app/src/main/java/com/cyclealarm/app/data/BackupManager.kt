@@ -17,6 +17,9 @@ import java.io.File
 object BackupManager {
     private const val TAG = "BackupManager"
 
+    /** 备份文件大小上限：超过视为损坏，避免把超大文件读进内存。 */
+    private const val MAX_BACKUP_BYTES = 2L * 1024 * 1024
+
     data class BackupSummary(
         val alarms: Int,
         val dateAlarms: Int,
@@ -62,6 +65,8 @@ object BackupManager {
         // 恢复前先把「当前数据」落一份自动备份，误导入时还能救回来
         val autoBackupPath = runCatching { writeAutoBackup(context, export(context)) }.getOrNull()
 
+        // 恢复 = 回到备份时刻：瞬时状态（跳过下一次 / 今天静音）必须一起作废
+        com.cyclealarm.app.core.TemporaryMuteStore.clearAll(context)
         val db = AppDatabase.get(context)
         db.withTransaction {
             db.alarmDao().deleteAll()
@@ -110,14 +115,16 @@ object BackupManager {
      * 返回写入的文件路径；今天已经备份过则返回 null。
      */
     suspend fun writeDailyAutoBackup(context: Context): String? {
-        val dir = File(context.filesDir, "auto-backups").apply { mkdirs() }
+        val dir = dailyDir(context).apply { mkdirs() }
+        migrateLegacyAutoBackups(context)
         val names = dir.listFiles()?.map { it.name } ?: emptyList()
         if (!AutoBackupPolicy.shouldWriteToday(names, System.currentTimeMillis())) return null
         val payload = runCatching { export(context) }.getOrNull() ?: return null
         val now = System.currentTimeMillis()
         val target = File(dir, AutoBackupPolicy.fileName(now))
-        // 同步写一份到系统「下载」目录：私有目录随卸载消失，公开目录用户换机后还能拿回
+        // 同步写一份到系统「下载」目录（可选功能，默认关：公共目录 = 明文暴露）
         runCatching {
+            if (!com.cyclealarm.app.core.BackupPrefs.downloadCopyEnabled(context)) return@runCatching
             DownloadBackupWriter.writeIfAbsent(
                 context,
                 AutoBackupPolicy.downloadFileName(now),
@@ -126,8 +133,11 @@ object BackupManager {
         }
         return runCatching {
             target.writeText(payload, Charsets.UTF_8)
-            AutoBackupPolicy.expired(dir.listFiles()?.map { it.name } ?: emptyList(), AUTO_BACKUP_KEEP_DAILY)
-                .forEach { stale -> File(dir, stale).delete() }
+            AutoBackupPolicy.expiredByPrefix(
+                dir.listFiles()?.map { it.name } ?: emptyList(),
+                AutoBackupPolicy.DAILY_PREFIX,
+                AUTO_BACKUP_KEEP_DAILY
+            ).forEach { stale -> File(dir, stale).delete() }
             target.absolutePath
         }.onFailure { Log.e(TAG, "daily auto backup failed", it) }.getOrNull()
     }
@@ -138,6 +148,7 @@ object BackupManager {
      */
     suspend fun syncDailyDownloadBackup(context: Context): Boolean {
         if (!DownloadBackupWriter.isSupported()) return false
+        if (!com.cyclealarm.app.core.BackupPrefs.downloadCopyEnabled(context)) return false
         val payload = runCatching { export(context) }.getOrNull() ?: return false
         return runCatching {
             DownloadBackupWriter.writeIfAbsent(
@@ -148,26 +159,61 @@ object BackupManager {
         }.getOrDefault(false)
     }
 
-    /** 列出可恢复的自动备份（含「恢复前快照」与「每日备份」），最近的在前。 */
+    /** 列出可恢复的自动备份（每日备份 + 恢复前快照），最近的在前。 */
     fun listAutoBackups(context: Context): List<AutoBackupInfo> {
-        val dir = File(context.filesDir, "auto-backups")
-        return (dir.listFiles() ?: emptyArray())
-            .filter { it.isFile }
+        migrateLegacyAutoBackups(context)
+        val dirs = listOf(dailyDir(context), restoreDir(context))
+        return dirs.flatMap { dir -> (dir.listFiles() ?: emptyArray()).filter { it.isFile }.toList() }
             .sortedByDescending { it.lastModified() }
             .map { AutoBackupInfo(it, it.name, it.length(), it.lastModified()) }
     }
 
-    fun readAutoBackup(info: AutoBackupInfo): String = info.file.readText(Charsets.UTF_8)
+    /** 每日备份目录。 */
+    fun dailyDir(context: Context): File = File(autoBackupRoot(context), "daily")
 
-    /** 把 payload 写成 filesDir/auto-backups 下的文件，只保留最近 [AUTO_BACKUP_KEEP] 份。 */
+    /** 恢复前快照目录。 */
+    fun restoreDir(context: Context): File = File(autoBackupRoot(context), "restore")
+
+    private fun autoBackupRoot(context: Context): File =
+        File(context.filesDir, "auto-backups").apply { mkdirs() }
+
+    /** 把 0.6.8 及以前留在根目录的自动备份挪进对应子目录（只做一次，失败忽略）。 */
+    private fun migrateLegacyAutoBackups(context: Context) {
+        val root = autoBackupRoot(context)
+        val legacy = (root.listFiles() ?: return).filter { it.isFile }
+        if (legacy.isEmpty()) return
+        legacy.forEach { file ->
+            val target = when {
+                file.name.startsWith(AutoBackupPolicy.DAILY_PREFIX) ->
+                    File(dailyDir(context).apply { mkdirs() }, file.name)
+                file.name.startsWith(AutoBackupPolicy.LEGACY_RESTORE_PREFIX) ->
+                    File(restoreDir(context).apply { mkdirs() }, file.name)
+                else -> null
+            }
+            if (target != null) runCatching { file.renameTo(target) }
+        }
+    }
+
+    fun readAutoBackup(info: AutoBackupInfo): String {
+        if (info.sizeBytes > MAX_BACKUP_BYTES) {
+            throw com.cyclealarm.app.core.LocalizedFailure(com.cyclealarm.app.R.string.err_backup_too_large)
+        }
+        return info.file.readText(Charsets.UTF_8)
+    }
+
+    /**
+     * 恢复前快照：写入独立目录，只淘汰同前缀文件。
+     * 六轮复审 §4.1：以前按 lastModified 对**整目录** drop(3)，会把每日备份一起裁掉。
+     */
     private fun writeAutoBackup(context: Context, payload: String): String {
-        val dir = File(context.filesDir, "auto-backups").apply { mkdirs() }
-        val file = File(dir, "backup-before-restore-${System.currentTimeMillis()}.txt")
+        val dir = restoreDir(context).apply { mkdirs() }
+        val file = File(dir, AutoBackupPolicy.restoreFileName(System.currentTimeMillis()))
         file.writeText(payload, Charsets.UTF_8)
-        dir.listFiles()
-            ?.sortedByDescending { it.lastModified() }
-            ?.drop(AUTO_BACKUP_KEEP)
-            ?.forEach { it.delete() }
+        AutoBackupPolicy.expiredByPrefix(
+            dir.listFiles()?.map { it.name } ?: emptyList(),
+            AutoBackupPolicy.RESTORE_PREFIX,
+            AUTO_BACKUP_KEEP
+        ).forEach { stale -> File(dir, stale).delete() }
         return file.absolutePath
     }
 }

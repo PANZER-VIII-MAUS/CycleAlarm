@@ -46,10 +46,10 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Test, lint and build (both flavors)
+      - name: Test, lint and build (both flavors + AAB)
         run: |
           ./gradlew "$DIRECT_TEST" "$DIRECT_LINT" testPlayDebugUnitTest \
-            assembleDirectDebug assembleDirectRelease assemblePlayRelease
+            assembleDirectDebug assembleDirectRelease assemblePlayRelease bundlePlayRelease
 
       # 上架包必须在 manifest 层面真的没有常驻守护服务（不只是 BuildConfig 默认值）
       - name: Assert play flavor drops the guard service
@@ -87,7 +87,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cyclealarm-r8-mapping
-          path: app/build/outputs/mapping/directRelease/mapping.txt
+          path: |
+            app/build/outputs/mapping/directRelease/mapping.txt
+            app/build/outputs/mapping/playRelease/mapping.txt
+          if-no-files-found: error
+
+      # 上架物：AAB 与 play APK（play flavor 删掉了常驻守护服务）
+      - name: Upload play bundle (AAB) and play APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclealarm-play-upload
+          path: |
+            app/build/outputs/bundle/playRelease/app-play-release.aab
+            app/build/outputs/apk/play/release/app-play-release.apk
           if-no-files-found: error
 
       - name: Upload unit test + lint reports

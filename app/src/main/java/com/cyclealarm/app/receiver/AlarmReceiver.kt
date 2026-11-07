@@ -61,6 +61,16 @@ class AlarmReceiver : BroadcastReceiver() {
                 val hour = intent.getIntExtra(AlarmScheduler.EXTRA_HOUR, 8)
                 val minute = intent.getIntExtra(AlarmScheduler.EXTRA_MINUTE, 0)
                 val label = intent.getStringExtra(AlarmScheduler.EXTRA_LABEL).orEmpty()
+                val originalHour = if (intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR)) {
+                    intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, hour)
+                } else {
+                    hour
+                }
+                val originalMinute = if (intent.hasExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE)) {
+                    intent.getIntExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, minute)
+                } else {
+                    minute
+                }
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val minutes = com.cyclealarm.app.core.RingPrefs.snoozeMinutes(context)
@@ -72,7 +82,9 @@ class AlarmReceiver : BroadcastReceiver() {
                             hour = hour,
                             minute = minute,
                             label = label,
-                            minutes = minutes
+                            minutes = minutes,
+                            originalHour = originalHour,
+                            originalMinute = originalMinute
                         )
                     } catch (e: Exception) {
                         Log.e(TAG, "notification snooze failed", e)

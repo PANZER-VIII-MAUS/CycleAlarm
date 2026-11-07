@@ -1,5 +1,6 @@
 package com.cyclealarm.app.service
 
+import android.util.Log
 import androidx.core.graphics.toColorInt
 import android.content.Context
 import android.graphics.Color
@@ -39,9 +40,9 @@ class RingOverlayController(private val context: Context) {
         snoozeMinutes: Int,
         onStop: () -> Unit,
         onSnooze: () -> Unit
-    ) {
-        if (view != null) return
-        val wm = windowManager ?: return
+    ): Boolean {
+        if (view != null) return true
+        val wm = windowManager ?: return false
         val density = context.resources.displayMetrics.density
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -66,7 +67,7 @@ class RingOverlayController(private val context: Context) {
             setPadding(0, dp(12), 0, dp(48))
         })
         root.addView(TextView(context).apply {
-            text = "闹钟正在响铃"
+            text = com.cyclealarm.app.core.AppLanguage.appString(context, com.cyclealarm.app.R.string.ring_overlay_title)
             setTextColor("#B9C2CC".toColorInt())
             textSize = 14f
             gravity = Gravity.CENTER
@@ -74,16 +75,33 @@ class RingOverlayController(private val context: Context) {
         })
 
         if (showSnooze) {
-            root.addView(solidButton("稍后 $snoozeMinutes 分钟", "#2A2F36", density) { onSnooze() })
+            root.addView(
+                solidButton(
+                    com.cyclealarm.app.core.AppLanguage.appString(
+                        context,
+                        com.cyclealarm.app.R.string.ring_snooze_minutes,
+                        snoozeMinutes
+                    ),
+                    "#2A2F36",
+                    density
+                ) { onSnooze() }
+            )
         }
-        root.addView(solidButton("停止", "#C84239", density) { onStop() })
+        root.addView(
+            solidButton(
+                com.cyclealarm.app.core.AppLanguage.appString(context, com.cyclealarm.app.R.string.ring_stop),
+                "#C84239",
+                density
+            ) { onStop() }
+        )
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             // minSdk 26：TYPE_APPLICATION_OVERLAY 一定可用（TYPE_SYSTEM_ALERT 已废弃）
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -95,7 +113,10 @@ class RingOverlayController(private val context: Context) {
         val added = runCatching { wm.addView(root, params) }.isSuccess
         if (added) {
             view = root
+        } else {
+            Log.e("RingOverlay", "addView failed (permission/policy)")
         }
+        return added
     }
 
     private fun solidButton(

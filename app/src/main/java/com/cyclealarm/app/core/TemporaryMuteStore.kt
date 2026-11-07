@@ -44,6 +44,11 @@ object TemporaryMuteStore {
 
     // ---------- 今天临时静音 ----------
 
+    /** 清空全部跳过记录与临时静音日期（恢复备份后：瞬时状态应对应备份时刻，而不是现在）。 */
+    fun clearAll(context: Context) {
+        runCatching { prefs(context).edit { clear() } }
+    }
+
     fun muteDay(context: Context, epochDay: Long) {
         runCatching {
             val merged = (mutedDays(context) + epochDay).sorted().takeLast(7)

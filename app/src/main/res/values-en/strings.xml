@@ -553,4 +553,13 @@
         <item quantity="other">%1$d settings missing: %2$s</item>
     </plurals>
     <string name="err_backup_newer_version">This backup comes from a newer app version. Update the app before restoring.</string>
+    <string name="row_backup_to_downloads">Back up to Downloads</string>
+    <string name="backup_to_downloads_on">On (one per day, keep 7)</string>
+    <string name="backup_to_downloads_off">Off</string>
+    <string name="backup_to_downloads_toast">Enabled: a plain-text backup is written to Download/CycleAlarm each day</string>
+    <string name="ring_diag_hint">Shows how the last ring screen appeared (full screen / overlay fallback / notification only); app logs are blocked by the system</string>
+    <string name="restore_auto_row_value">Daily backups + pre-restore snapshots</string>
+    <string name="err_backup_too_large">Backup file is larger than 2 MB and may be corrupted</string>
+    <string name="ring_overlay_title">Alarm is ringing</string>
+    <string name="perm_battery_note">Battery optimization is on: the lock-screen ring screen may be blocked by the system</string>
 </resources>

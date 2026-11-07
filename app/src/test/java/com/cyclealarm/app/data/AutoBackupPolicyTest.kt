@@ -70,4 +70,29 @@ class AutoBackupPolicyTest {
             AutoBackupPolicy.downloadFileName(at(2026, 11, 5), zone)
         )
     }
+    @Test
+    fun `per-prefix retention keeps daily and restore independent`() {
+        val names = listOf(
+            "daily-2026-11-01.txt", "daily-2026-11-02.txt", "daily-2026-11-03.txt",
+            "daily-2026-11-04.txt", "daily-2026-11-05.txt", "daily-2026-11-06.txt",
+            "restore-100.txt", "restore-200.txt", "restore-300.txt", "restore-400.txt"
+        )
+        // 每日保留 5 → 删最旧 1 个；恢复快照保留 3 → 删最旧 1 个
+        assertEquals(
+            listOf("daily-2026-11-01.txt"),
+            AutoBackupPolicy.expiredByPrefix(names, AutoBackupPolicy.DAILY_PREFIX, 5)
+        )
+        assertEquals(
+            listOf("restore-100.txt"),
+            AutoBackupPolicy.expiredByPrefix(names, AutoBackupPolicy.RESTORE_PREFIX, 3)
+        )
+    }
+
+    @Test
+    fun `restore snapshot prefix never touches daily files`() {
+        val names = listOf("daily-2026-11-05.txt", "restore-1.txt")
+        assertTrue(
+            AutoBackupPolicy.expiredByPrefix(names, AutoBackupPolicy.RESTORE_PREFIX, 5).isEmpty()
+        )
+    }
 }

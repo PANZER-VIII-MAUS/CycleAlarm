@@ -8,7 +8,7 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
-// 读取 keystore.properties（不存在时 release 回退到 debug 签名，方便先跑通）
+// 读取 keystore.properties（只含 storeFile/keyAlias；口令走 env 或 ~/.gradle/gradle.properties）
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -37,8 +37,8 @@ android {
         applicationId = "com.cyclealarm.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 36
-        versionName = "0.6.8"
+        versionCode = 37
+        versionName = "0.6.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -69,6 +69,14 @@ android {
             dimension = "distribution"
             // 上架包不含常驻保活服务，默认也不启动
             buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", "false")
+        }
+    }
+
+    bundle {
+        language {
+            // 应用内自带语言切换（AppLanguage）依赖完整的资源表；
+            // Play 的语言拆分会让下载包只含系统语言，切英文就失效（lint: AppBundleLocaleChanges）
+            enableSplit = false
         }
     }
 

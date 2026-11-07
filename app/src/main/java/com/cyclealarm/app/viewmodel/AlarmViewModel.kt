@@ -446,6 +446,17 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         _pendingUndo.value = null
     }
 
+    /**
+     * 只清掉 [expected] 这一条待撤销项。
+     * 六轮复审 §5：连删两条时，第一条的 Snackbar 关闭回调会把第二条的 pending 清掉，
+     * 导致第二条「撤销」静默失效——所以关闭回调必须带上自己的引用做比较。
+     */
+    fun clearPendingUndo(expected: PendingUndo) {
+        if (_pendingUndo.value == expected) {
+            _pendingUndo.value = null
+        }
+    }
+
     /** 删除某天的安排，并返回被删除的行（供撤销恢复）。 */
     suspend fun deleteDayPlan(dayIndex: Int): DayPlanEntity? {
         val existing = db.dayPlanDao().getByDay(dayIndex) ?: return null

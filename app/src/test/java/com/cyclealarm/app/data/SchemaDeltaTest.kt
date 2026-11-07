@@ -112,4 +112,30 @@ class SchemaDeltaTest {
             assertTrue("alarms 缺少列 $column", alarms.contains(column))
         }
     }
+    @Test
+    fun `v11 does not drop any v10 table`() {
+        val v10 = tables(schemaJson(10))
+        val v11 = tables(schemaJson(11))
+
+        assertTrue("v11 缺少 v10 的表：${v10 - v11}", v11.containsAll(v10))
+    }
+
+    @Test
+    fun `v11 changes only the ring events table`() {
+        val v10Json = schemaJson(10)
+        val v11Json = schemaJson(11)
+
+        tables(v10Json).forEach { table ->
+            if (table == "ring_events") return@forEach
+            assertEquals(
+                "表 $table 不应该在 v11 变动",
+                entityBlock(v10Json, table),
+                entityBlock(v11Json, table)
+            )
+        }
+        assertTrue(
+            "ring_events 应当新增唯一索引",
+            entityBlock(v11Json, "ring_events").contains("alarmKind")
+        )
+    }
 }

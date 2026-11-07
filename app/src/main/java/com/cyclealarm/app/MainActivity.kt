@@ -23,6 +23,32 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    /**
+     * 旧版本迁移写死的中文默认类型名（上课/自习/休息）按当前应用语言改写。
+     * 只匹配恰好等于旧默认名的行，用户自己改过的不动；幂等，可在 onResume 反复调用。
+     */
+    private fun localizeLegacyTypeNames() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching {
+                val db = com.cyclealarm.app.data.AppDatabase.get(applicationContext)
+                com.cyclealarm.app.core.DefaultTypeLocalizer.applyIfNeeded(
+                    context = applicationContext,
+                    loadTypes = { db.activityTypeDao().getAll() },
+                    rename = { id, name -> db.activityTypeDao().rename(id, name) }
+                )
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 设置页切语言后回到前台：再本地化一次（幂等）
+        localizeLegacyTypeNames()
+        // 通知渠道名按「应用内语言」重建（渠道只在创建时定名）
+        runCatching { com.cyclealarm.app.core.NotificationChannels.createAll(applicationContext) }
+    }
+
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(com.cyclealarm.app.core.AppLanguage.wrap(newBase))
     }
@@ -60,18 +86,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // 旧版本迁移写死的中文默认类型名（上课/自习/休息）按当前应用语言改写一次；
-        // 只匹配恰好等于旧默认名的行，用户自己改过的不动（五轮复审 §4.8）
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                val db = com.cyclealarm.app.data.AppDatabase.get(applicationContext)
-                com.cyclealarm.app.core.DefaultTypeLocalizer.applyIfNeeded(
-                    context = applicationContext,
-                    loadTypes = { db.activityTypeDao().getAll() },
-                    rename = { id, name -> db.activityTypeDao().rename(id, name) }
-                )
-            }
-        }
+        localizeLegacyTypeNames()
 
         // 每日自动备份：数据只在应用私有目录，卸载/清数据就没了（真机上已发生过一次）。
         // 设置页「恢复自动备份」可从这里救回最近 5 份。

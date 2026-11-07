@@ -79,4 +79,12 @@ class StorePreferencesRobolectricTest {
         TemporaryMuteStore.clearMutedDay(context, 20_000L)
         assertNull(TemporaryMuteStore.mutedDays(context).firstOrNull())
     }
+    @Test
+    fun `clearAll removes skip and muted days`() {
+        TemporaryMuteStore.skipNext(context, AlarmScheduler.KIND_CYCLE, 1, 1_000L)
+        TemporaryMuteStore.muteDay(context, 20_000L)
+        TemporaryMuteStore.clearAll(context)
+        assertTrue(TemporaryMuteStore.skipsFor(context, AlarmScheduler.KIND_CYCLE, 1).isEmpty())
+        assertTrue(TemporaryMuteStore.mutedDays(context).isEmpty())
+    }
 }

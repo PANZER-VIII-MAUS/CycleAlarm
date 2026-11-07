@@ -1,5 +1,7 @@
 package com.cyclealarm.app.ui.settings
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.res.pluralStringResource
 import android.content.Intent
 import android.provider.Settings
@@ -171,9 +173,13 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) {
             runCatching {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.readBytes().toString(Charsets.UTF_8)
+                val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.readBytes()
                 } ?: error(context.getString(R.string.error_read_file))
+                if (bytes.size > MAX_BACKUP_BYTES) {
+                    throw com.cyclealarm.app.core.LocalizedFailure(R.string.err_backup_too_large)
+                }
+                bytes.toString(Charsets.UTF_8)
             }.onSuccess { text ->
                 pendingImportPayload = text
             }.onFailure {
@@ -203,8 +209,10 @@ fun SettingsScreen(
                         showAutoBackupDialog = false
                         backupScope.launch {
                             runCatching {
-                                val payload = com.cyclealarm.app.data.BackupManager.readAutoBackup(info)
-                                BackupManager.import(context, payload)
+                                val payload = withContext(Dispatchers.IO) {
+                                    com.cyclealarm.app.data.BackupManager.readAutoBackup(info)
+                                }
+                                withContext(Dispatchers.IO) { BackupManager.import(context, payload) }
                             }.onSuccess {
                                 Toast.makeText(
                                     context,
@@ -283,7 +291,7 @@ fun SettingsScreen(
                     onClick = {
                         pendingImportPayload = null
                         backupScope.launch {
-                            runCatching { BackupManager.import(context, payload) }
+                            runCatching { withContext(Dispatchers.IO) { BackupManager.import(context, payload) } }
                                 .onSuccess { summary ->
                                     Toast.makeText(
                                         context,
@@ -537,6 +545,28 @@ fun SettingsScreen(
                             }
                         }
                     )
+                    var downloadCopyOn by remember {
+                        mutableStateOf(com.cyclealarm.app.core.BackupPrefs.downloadCopyEnabled(context))
+                    }
+                    SettingRow(
+                        title = stringResource(R.string.row_backup_to_downloads),
+                        value = stringResource(
+                            if (downloadCopyOn) R.string.backup_to_downloads_on
+                            else R.string.backup_to_downloads_off
+                        ),
+                        onClick = {
+                            val next = !downloadCopyOn
+                            com.cyclealarm.app.core.BackupPrefs.setDownloadCopyEnabled(context, next)
+                            downloadCopyOn = next
+                            if (next) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.backup_to_downloads_toast),
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    )
                     SettingRow(
                         title = stringResource(R.string.row_export_backup),
                         value = stringResource(R.string.export_backup_value),
@@ -555,7 +585,7 @@ fun SettingsScreen(
                     )
                     SettingRow(
                         title = stringResource(R.string.row_restore_auto_backup),
-                        value = " ",
+                        value = stringResource(R.string.restore_auto_row_value),
                         onClick = {
                             autoBackups = runCatching {
                                 com.cyclealarm.app.data.BackupManager.listAutoBackups(context)
@@ -569,7 +599,7 @@ fun SettingsScreen(
                         onClick = {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.diagnosis_hint),
+                                context.getString(R.string.ring_diag_hint),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -961,6 +991,9 @@ private fun themeLabel(mode: String): String = when (mode) {
     ThemeManager.MODE_DARK -> stringResource(R.string.theme_dark)
     else -> stringResource(R.string.theme_system)
 }
+
+/** 备份文件大小上限（超过视为损坏）。 */
+private const val MAX_BACKUP_BYTES = 2L * 1024 * 1024
 
 /**
  * 「上次响铃」诊断文案：记录的是响铃界面实际是怎么显示出来的

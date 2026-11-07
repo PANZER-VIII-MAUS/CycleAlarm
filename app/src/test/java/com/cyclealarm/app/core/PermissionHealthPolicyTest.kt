@@ -53,4 +53,20 @@ class PermissionHealthPolicyTest {
     fun `unknown battery state does not raise an issue`() {
         assertTrue(PermissionHealthPolicy.issues(health(batteryExempt = null)).isEmpty())
     }
+    @Test
+    fun `battery missing is informational, not blocking`() {
+        val health = health(batteryExempt = false)
+        assertTrue(PermissionHealthPolicy.issues(health).contains(PermissionHealth.Issue.BATTERY))
+        assertTrue("电池项不应出现在阻断列表", PermissionHealthPolicy.blockingIssues(health).isEmpty())
+        assertEquals(
+            listOf(PermissionHealth.Issue.BATTERY),
+            PermissionHealthPolicy.informationalIssues(health)
+        )
+    }
+
+    @Test
+    fun `notification missing is still blocking`() {
+        val health = health(notifications = false)
+        assertTrue(PermissionHealth.Issue.NOTIFICATIONS in PermissionHealthPolicy.blockingIssues(health))
+    }
 }

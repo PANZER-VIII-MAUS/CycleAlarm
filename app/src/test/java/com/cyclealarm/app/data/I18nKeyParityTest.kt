@@ -17,6 +17,14 @@ class I18nKeyParityTest {
     private val values = File("src/main/res/values/strings.xml")
     private val valuesEn = File("src/main/res/values-en/strings.xml")
 
+    private fun pluralKeys(file: File): Set<String> {
+        val text = file.readText()
+        val matcher = Pattern.compile("<plurals name=\"([^\"]+)\"").matcher(text)
+        val result = mutableSetOf<String>()
+        while (matcher.find()) result += matcher.group(1)
+        return result
+    }
+
     private fun keys(file: File): Set<String> {
         val text = file.readText()
         val matcher = Pattern.compile("<string name=\"([^\"]+)\"").matcher(text)
@@ -32,6 +40,12 @@ class I18nKeyParityTest {
 
         val zh = keys(values)
         val en = keys(valuesEn)
+
+        // <plurals> 也必须中英一一对应（六轮复审 §6.2：新资源不能漏）
+        val zhPlurals = pluralKeys(values)
+        val enPlurals = pluralKeys(valuesEn)
+        assertTrue("中文 plurals 数应 > 0", zhPlurals.isNotEmpty())
+        assertEquals("中英 plurals 集合必须一致", zhPlurals, enPlurals)
 
         val onlyZh = (zh - en).sorted()
         val onlyEn = (en - zh).sorted()

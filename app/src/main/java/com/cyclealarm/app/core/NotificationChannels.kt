@@ -17,18 +17,18 @@ object NotificationChannels {
 
         val guard = NotificationChannel(
             GUARD,
-            context.getString(R.string.channel_guard_name),
+            AppLanguage.appString(context, R.string.channel_guard_name),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = context.getString(R.string.channel_guard_desc)
+            description = AppLanguage.appString(context, R.string.channel_guard_desc)
             setShowBadge(false)
         }
         val ring = NotificationChannel(
             RING,
-            context.getString(R.string.channel_ring_name),
+            AppLanguage.appString(context, R.string.channel_ring_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = context.getString(R.string.channel_ring_desc)
+            description = AppLanguage.appString(context, R.string.channel_ring_desc)
             setShowBadge(true)
             enableVibration(true)
             // 铃声由播放器自行处理，避免双重声音
@@ -36,10 +36,10 @@ object NotificationChannels {
         }
         val fallback = NotificationChannel(
             RING_FALLBACK,
-            context.getString(R.string.channel_fallback_name),
+            AppLanguage.appString(context, R.string.channel_fallback_name),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = context.getString(R.string.channel_fallback_desc)
+            description = AppLanguage.appString(context, R.string.channel_fallback_desc)
             setShowBadge(true)
             enableVibration(false)
             setSound(null, null)

@@ -57,34 +57,59 @@ fun RingHealthBanner(modifier: Modifier = Modifier) {
             batteryExempt = PermissionHelper.isIgnoringBatteryOptimizations(context)
         )
     }
-    val issues = PermissionHealthPolicy.issues(health)
-    if (issues.isEmpty()) return
+    val issues = PermissionHealthPolicy.blockingIssues(health)
+    val infoIssues = PermissionHealthPolicy.informationalIssues(health)
+    if (issues.isEmpty() && infoIssues.isEmpty()) return
 
-    // 注意：joinToString 的 lambda 不是 @Composable，必须用 context.getString 取文案
-    val issueNames = issues.map { issue -> context.getString(issueNameRes(issue)) }
-    val names = issueNames.joinToString("、")
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(
-                text = stringResource(R.string.perm_health_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+    if (issues.isNotEmpty()) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer
             )
-            Text(
-                text = pluralStringResource(R.plurals.perm_health_missing, issues.size, issues.size, names),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.padding(top = 4.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(
+                    text = stringResource(R.string.perm_health_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                // 每个缺失项一行一个按钮：只跳第一条会让 5 项全缺时来回点（六轮复审 §4.4）
+                issues.forEach { issue ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = context.getString(issueNameRes(issue)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { openSettingsFor(context, issue) }) {
+                            Text(stringResource(R.string.perm_health_action))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (infoIssues.isNotEmpty()) {
+        Card(
+            modifier = modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(
-                    onClick = { openSettingsFor(context, issues.first()) }
-                ) {
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.perm_battery_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { openSettingsFor(context, PermissionHealth.Issue.BATTERY) }) {
                     Text(stringResource(R.string.perm_health_action))
                 }
             }

@@ -76,6 +76,8 @@ class RingService : Service() {
             return START_NOT_STICKY
         }
         lastStartId = startId
+        // 新的响铃开始前先撤掉上一轮可能残留的浮窗/轮询（六轮复审 §4.4：跨闹钟残留）
+        releaseOverlay()
         previewMode = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)
         customRingtoneUri = intent.getStringExtra(AlarmScheduler.EXTRA_RINGTONE_URI)
         vibrateEnabled = intent.getBooleanExtra(AlarmScheduler.EXTRA_VIBRATE, true)
@@ -177,7 +179,7 @@ class RingService : Service() {
                 )
                 val controller = overlay ?: RingOverlayController(this).also { overlay = it }
                 val snoozeMinutes = RingPrefs.snoozeMinutes(this)
-                controller.show(
+                val controllerShown = controller.show(
                     timeText = RingOverlayController.formatTime(this, hour, minute),
                     detail = label.ifBlank {
                         if (kind == AlarmScheduler.KIND_DATE) {
@@ -226,7 +228,12 @@ class RingService : Service() {
                 }
                 overlayWatch = watch
                 handler.postDelayed(watch, 1_000L)
-                RingDiagnostics.record(this, RingDiagnostics.Outcome.OVERLAY_FALLBACK)
+                if (controllerShown) {
+                    RingDiagnostics.record(this, RingDiagnostics.Outcome.OVERLAY_FALLBACK)
+                } else {
+                    // addView 失败（权限/策略）时不能记「兜底成功」，否则掩盖根因
+                    RingDiagnostics.record(this, RingDiagnostics.Outcome.NOTIFICATION_ONLY)
+                }
             } else if (!permitted && !visible) {
                 RingDiagnostics.record(this, RingDiagnostics.Outcome.NOTIFICATION_ONLY)
                 // 没有浮窗权限 → 至少留下可排查的日志（真机上这是「只有铃声没有界面」的根因）
@@ -389,7 +396,14 @@ class RingService : Service() {
                     .putExtra(AlarmScheduler.EXTRA_DAY_INDEX, dayIndex)
                     .putExtra(AlarmScheduler.EXTRA_HOUR, hour)
                     .putExtra(AlarmScheduler.EXTRA_MINUTE, minute)
-                    .putExtra(AlarmScheduler.EXTRA_LABEL, label),
+                    .putExtra(AlarmScheduler.EXTRA_LABEL, label)
+                    .apply {
+                        // 连续「稍后」时原定时间不能逐次漂移（六轮复审 §4.4）
+                        if (originalHour != null && originalMinute != null) {
+                            putExtra(AlarmScheduler.EXTRA_ORIGINAL_HOUR, originalHour)
+                            putExtra(AlarmScheduler.EXTRA_ORIGINAL_MINUTE, originalMinute)
+                        }
+                    },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         }

@@ -31,4 +31,16 @@ object PermissionHealthPolicy {
     }
 
     fun isHealthy(health: PermissionHealth): Boolean = issues(health).isEmpty()
+
+    /**
+     * 「阻断级」缺失项：缺了会让锁屏响铃界面直接没有。
+     * 电池白名单不在此列——它是「可能被系统拦」，用单独一行提示而不是红色阻断横幅
+     * （六轮复审 §4.4：电池默认未豁免会让横幅几乎常驻首屏，用户脱敏）。
+     */
+    fun blockingIssues(health: PermissionHealth): List<PermissionHealth.Issue> =
+        issues(health).filter { it != PermissionHealth.Issue.BATTERY }
+
+    /** 非阻断提示项（目前只有电池白名单）。 */
+    fun informationalIssues(health: PermissionHealth): List<PermissionHealth.Issue> =
+        issues(health).filter { it == PermissionHealth.Issue.BATTERY }
 }

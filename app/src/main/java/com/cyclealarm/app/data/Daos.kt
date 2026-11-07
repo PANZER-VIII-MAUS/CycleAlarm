@@ -238,7 +238,7 @@ interface RingEventDao {
     suspend fun updateLabel(id: Long, label: String)
 
     /** 记录「真的响了」。 */
-    @Query("UPDATE ring_events SET rungAt = :rungAt WHERE id = :id")
+    @Query("UPDATE ring_events SET rungAt = :rungAt WHERE id = :id AND rungAt IS NULL")
     suspend fun markRung(id: Long, rungAt: Long)
 
     /** 标记该闹钟最近一条已响事件的用户处理时间（停止 / 稍后 / 关闭）。 */

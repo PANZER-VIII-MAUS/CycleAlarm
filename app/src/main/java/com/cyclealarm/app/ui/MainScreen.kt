@@ -172,7 +172,7 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
         showUndoSnackbar(
             message = message,
             onUndo = { viewModel.undoPending() },
-            onClosed = { viewModel.clearPendingUndo() }
+            onClosed = { viewModel.clearPendingUndo(pending) }
         )
     }
 

@@ -33,9 +33,13 @@ object DefaultTypeLocalizer {
             if (target == type.name) null else Rename(type.id, type.name, target)
         }
 
-    /** 当前语言下的默认类型名。 */
+    /**
+     * 当前**应用内语言**下的默认类型名。
+     * 六轮复审 §3.3：必须用 [AppLanguage.localizedContext]，否则「系统中文 + 应用内英文」
+     * 时目标名仍是中文，等于没改。
+     */
     fun localizedDefaults(context: Context): Map<Int, String> =
-        LEGACY_NAMES.values.associateWith { context.getString(it) }
+        LEGACY_NAMES.values.associateWith { AppLanguage.appString(context, it) }
 
     /** 应用改名（在 IO 线程调用）。 */
     suspend fun applyIfNeeded(

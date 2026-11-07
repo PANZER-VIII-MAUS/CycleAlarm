@@ -37,13 +37,16 @@
 
 ## 下载安装
 
-当前最新版本：**0.6.1**（versionCode 29，targetSdk 36）。
+当前最新版本：**0.6.9**（versionCode 37，targetSdk 36）。
 
 正式 APK 请从项目的 **GitHub Releases** 页面下载并侧载安装。覆盖安装新版本时，必须使用与原安装包相同的签名；签名不一致时，Android 会拒绝覆盖安装，只能卸载旧版，卸载会清除应用数据。
 
 ## 隐私
 
 本应用不申请 `INTERNET` 权限、不联网、不收集任何数据，也不包含任何第三方统计 SDK。闹钟、循环安排、假期和导入结果均保存在设备本地。
+
+> 可选功能：设置页开启「备份到系统下载目录」后，应用会每天把明文备份写入
+> `Download/CycleAlarm/`（保留最近 7 份），用于换机/卸载后恢复；默认关闭，可随时关掉。
 
 ## 权限说明
 
@@ -64,6 +67,27 @@
 ---
 
 ## 更新日志
+
+### 0.6.9（2026-11-07）
+
+六轮复审「修复的修复」——上一版有三条声称是「动作做对了、方向做反了」，这版把它们真正修好：
+
+- **备份目录拆分**：每日备份 `daily/`（留 5）与恢复前快照 `restore/`（留 3）分目录、按前缀淘汰。
+  修掉「恢复一次备份会把每日备份从 5 份裁到 2 份」的互相踩踏
+- **恢复备份后清瞬时状态**：跳过下一次 / 今天临时静音随恢复一起作废（回到备份时刻的语义）
+- **大字号真的变大**：日卡时间改用 `displaySmall`（36sp，原 `headlineSmall` 只有 20sp 比默认 30sp 还小）；
+  响铃页不再手动降级，随系统字号单调放大
+- **类型名本地化用应用内语言**：`DefaultTypeLocalizer` 改用 `AppLanguage.appString`，
+  并在 `onResume` 重跑（切语言后回来即可生效）
+- **浮窗兜底不再「假装成功」**：`addView` 失败不记「兜底成功」，改为记录「仅通知」；
+  新一次响铃前先释放上一次的浮窗（修掉跨闹钟残留）
+- **通知「稍后」携带原定时间**：连续稍后不再让「原定时间」逐次漂移
+- **撤销加 token**：连删两条时，第一条的关闭回调不会清掉第二条的待撤销项
+- **下载副本改为可选**（默认关）：设置页开关 + 首次开启提示 + 保留最近 7 份 +
+  查重过滤 `IS_PENDING=0`，避免静默把明文备份写进公共目录
+- **健康横幅重做**：电池白名单降为非阻断提示；每个缺失项各自一个「去设置」按钮
+- **备份读取上限 2 MB** + 导入/恢复走 IO 线程
+- **AAB 支持**：`bundle { language { enableSplit = false } }`（应用内语言切换不因 Play 语言拆分失效）
 
 ### 0.6.8（2026-11-05）
 
@@ -420,7 +444,7 @@
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
 > 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
-> 单元测试 253 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error。
+> 单元测试 313 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 13 warning。
 
 ## 工程结构
 
@@ -499,8 +523,8 @@ CycleAlarm/
 命令行验证与构建：
 
 ```powershell
-.\gradlew.bat :app:compileDebugKotlin
-.\gradlew.bat testDirectDebugUnitTest   # 278 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat :app:compileDirectDebugKotlin
+.\gradlew.bat testDirectDebugUnitTest   # 313 个 JVM/Robolectric 单测（直装包变体）
 .\gradlew.bat lintDirectDebug          # 应为 0 error
 .\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 
@@ -518,8 +542,8 @@ Release 签名与正式 APK 的生成方式见下方「打包发布（正式签�
 
 ## 快速开始
 
-1. Android Studio（Hedgehog 2023.1.1 及以上）→ Open → 选择本目录
-2. 首次同步会自动下载 Gradle 8.2 与依赖（国内镜像，需要网络）
+1. Android Studio（Ladybug 2024.2.1 及以上）→ Open → 选择本目录
+2. 首次同步会自动下载 Gradle 8.11.1 与依赖（国内镜像，需要网络）
 3. 直接 Run 到手机（Debug 即可，Release 签名见下文）
 
 如果系统提示 Gradle Wrapper 缺失，直接选择使用现有 `gradle/wrapper/` 即可；也可在命令行 `gradlew.bat assembleDebug` 构建。
@@ -709,8 +733,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\change-signing-password.ps1
 - 「图片识别」暂不支持：为避免引入联网与 API Key，课表 / 排班表请用 Excel(.xlsx) 或 CSV 导入
 - `allowBackup=true`：闹钟与设置会随系统 / Google 备份上云；由于周期锚点是绝对日期，
   换机恢复后「今天是第几天」可能错位，必要时在设置里重新「今天对齐」
-- 数据库当前为 v10（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
-  / `snoozes` / `import_snapshots` / `ring_events`）；已提供 4→5→6→7→8→9→10 迁移链，从 v4 起升级不会清空数据；
+- 数据库当前为 v11（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
+  / `snoozes` / `import_snapshots` / `ring_events`）；已提供 4→5→6→7→8→9→10→11 迁移链，从 v4 起升级不会清空数据；
 - **迁移链策略**：不提供 v1~v3 的自动迁移（那是早期内部构建）。若你从极老版本升级，
   请先升级到 0.2.x 再升级到 0.3.x；任何情况下都可以用设置页的「导出/导入备份」把数据带走；
   低于 v4 的极旧测试版缺迁移，会直接报错而不是静默清空

@@ -284,7 +284,8 @@ private fun RingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .padding(32.dp)
+                // 大字号时减小左右留白，给「07:30」更多横向空间
+                .padding(horizontal = if (largeFont) 16.dp else 32.dp, vertical = 32.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -293,12 +294,9 @@ private fun RingScreen(
             Text(
                 DisplayPrefs.formatTime(context, hour, minute),
                 color = Color.White,
-                // 大字号时降一级，200% 字号下不会把时间撑出屏幕
-                style = if (largeFont) {
-                    MaterialTheme.typography.headlineLarge
-                } else {
-                    MaterialTheme.typography.displayMedium
-                }
+                // 六轮复审 §3.1：不要再手动降级——降级会让「130% 字号」比 100% 还小。
+                // 统一用 displayMedium，字号随 fontScale 单调放大；大字号时靠减 padding + 滚动兜底。
+                style = MaterialTheme.typography.displayMedium
             )
             Text(
                 detail,
