@@ -105,6 +105,7 @@ jobs:
   # ——targetSdk 36 的运行时行为（边到边、FGS、通知权限）由此得到真实验证
   instrumentation:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -144,8 +145,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # 必须用 flavor 明确的任务名（flavor 拆分后 connectedDebugAndroidTest 是模糊任务）
-      - name: Run instrumentation tests on emulator
+      # 必须用 flavor 明确的任务名（flavor 拆分后 connectedDebugAndroidTest 是模糊任务）。
+      # 模拟器镜像下载/启动偶发失败（Error reading Zip / port 5554 refused），失败后自动重试一次。
+      - name: Run instrumentation tests on emulator (attempt 1)
+        id: emu1
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api-level }}
@@ -153,8 +157,31 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: ./gradlew connectedDirectDebugAndroidTest
+
+      - name: Run instrumentation tests on emulator (attempt 2, retry on infra flake)
+        id: emu2
+        if: steps.emu1.outcome == 'failure'
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: ./gradlew connectedDirectDebugAndroidTest
+
+      # 两次都失败才算这个 job 失败（第一次失败属基础设施抖动时不应阻塞合并）
+      - name: Fail if both attempts failed
+        if: steps.emu1.outcome == 'failure' && steps.emu2.outcome == 'failure'
+        run: |
+          echo '::error::instrumentation 两次尝试都失败（非单纯基础设施抖动时请查看报告）'
+          exit 1
 
       - name: Upload instrumentation report
         if: always()
@@ -165,5 +192,5 @@ jobs:
           path: |
             app/build/reports/androidTests
             app/build/outputs/androidTest-results
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
