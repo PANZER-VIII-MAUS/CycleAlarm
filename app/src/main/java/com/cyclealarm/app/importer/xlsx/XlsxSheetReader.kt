@@ -15,7 +15,12 @@ import javax.xml.parsers.SAXParserFactory
  * 零依赖 xlsx 解析：把 xlsx 当成 zip，逐个读取需要用到的 XML，
  * 用 JDK 自带的 SAX 解析（可跑纯 JVM 单测，不用 Apache POI）。
  */
-class XlsxSheetReader : SheetReader {
+class XlsxSheetReader(
+    /** 工作表数量上限（默认 [MAX_WORKSHEETS]；测试用小值验证拒绝逻辑）。 */
+    private val maxWorksheets: Int = MAX_WORKSHEETS,
+    /** 全局单元格预算（默认 [MAX_TOTAL_CELLS]）。 */
+    private val maxTotalCells: Int = MAX_TOTAL_CELLS
+) : SheetReader {
 
     private companion object {
         const val MAX_ENTRY_BYTES = 16 * 1024 * 1024
@@ -71,10 +76,10 @@ class XlsxSheetReader : SheetReader {
             }
             val sheets = mutableListOf<Sheet>()
             var totalCells = 0
-            for ((name, path) in selected.take(MAX_WORKSHEETS)) {
+            for ((name, path) in selected.take(maxWorksheets)) {
                 val sheet = parseSheet(name, entries.getValue(path), sharedStrings, timeStyles)
                 totalCells += sheet.rows.sumOf { row -> row.size }
-                if (totalCells > MAX_TOTAL_CELLS) {
+                if (totalCells > maxTotalCells) {
                     throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_large)
                 }
                 sheets += sheet
@@ -106,7 +111,7 @@ class XlsxSheetReader : SheetReader {
                 val isWorksheet = name.startsWith("xl/worksheets/") && name.endsWith(".xml")
                 if (isWorksheet) {
                     worksheetCount++
-                    if (worksheetCount > MAX_WORKSHEETS) {
+                    if (worksheetCount > maxWorksheets) {
                         throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_many_sheets)
                     }
                 }
@@ -160,7 +165,7 @@ class XlsxSheetReader : SheetReader {
         parseXml(bytes, object : DefaultHandler() {
             override fun startElement(uri: String?, localName: String?, qName: String?, attributes: Attributes) {
                 if (qName == "sheet" || localName == "sheet") {
-                    if (result.size >= MAX_WORKSHEETS) {
+                    if (result.size >= maxWorksheets) {
                         throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_many_sheets)
                     }
                     val name = attributes.getValue("name") ?: return

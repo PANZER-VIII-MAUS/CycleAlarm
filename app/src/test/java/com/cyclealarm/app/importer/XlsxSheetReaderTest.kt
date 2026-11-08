@@ -175,4 +175,13 @@ class XlsxSheetReaderTest {
     private companion object {
         const val EMPTY_SHEET = "<?xml version=\"1.0\"?><worksheet><sheetData/></worksheet>"
     }
+    @Test
+    fun `total cell budget is enforced`() {
+        // 预算设 0：只要解析出任何单元格就应拒绝（用小预算验证全局预算逻辑本身）
+        val reader = XlsxSheetReader(maxTotalCells = 0)
+        val error = runCatching {
+            reader.read(ByteArrayInputStream(buildXlsx(sheetXml = sheetWithSharedAndNumeric())), null)
+        }.exceptionOrNull()
+        assertTrue("应因全局单元格预算超限被拒绝", error is SheetReadException)
+    }
 }

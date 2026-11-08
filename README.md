@@ -88,7 +88,7 @@
   `DAILY/WEEKLY` 与周期长度自洽、`preAlertMinutes` 必须在允许选项内
 - **XLSX 上限统一**：去掉硬编码的 20 张表上限（统一用 `MAX_WORKSHEETS=30`），并增加
   全局单元格预算 `MAX_TOTAL_CELLS=500000`
-- 测试 **331 → 337**（备份校验 6 例新增；pre-alert 测试改为先落父闹钟并等待异步校验）
+- 测试 **331 → 342**（备份校验 6 例、排期失败注入 2 例、XLSX 预算 1 例、守护状态 2 例；pre-alert 测试改为先落父闹钟并等待异步校验）
 
 ### 0.6.11（2026-11-08）
 
@@ -505,7 +505,7 @@
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
 > 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
-> 单元测试 337 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error（direct + play 双 flavor）。
+> 单元测试 342 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error（direct + play 双 flavor）。
 
 ## 工程结构
 
@@ -585,7 +585,7 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDirectDebugKotlin
-.\gradlew.bat testDirectDebugUnitTest   # 337 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat testDirectDebugUnitTest   # 342 个 JVM/Robolectric 单测（直装包变体）
 .\gradlew.bat lintDirectDebug          # 应为 0 error
 .\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 
