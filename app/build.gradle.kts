@@ -37,8 +37,8 @@ android {
         applicationId = "com.cyclealarm.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 38
-        versionName = "0.6.10"
+        versionCode = 39
+        versionName = "0.6.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -64,11 +64,13 @@ android {
         create("direct") {
             dimension = "distribution"
             buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", "true")
+            buildConfigField("boolean", "GUARD_SERVICE_AVAILABLE", "true")
         }
         create("play") {
             dimension = "distribution"
             // 上架包不含常驻保活服务，默认也不启动
             buildConfigField("boolean", "GUARD_SERVICE_DEFAULT_ON", "false")
+            buildConfigField("boolean", "GUARD_SERVICE_AVAILABLE", "false")
         }
     }
 

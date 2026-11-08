@@ -178,12 +178,12 @@ fun SettingsScreen(
             backupScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        readBounded(stream, MAX_BACKUP_BYTES)
-                    } ?: error(context.getString(R.string.error_read_file))
-                    if (bytes == null) {
-                        throw com.cyclealarm.app.core.LocalizedFailure(R.string.err_backup_too_large)
-                    }
+                    // 注意：openInputStream 失败与「超过上限」必须分开判断，
+                    // 否则 readBounded 返回 null 会被 Elvis 当成「读取文件失败」
+                    val input = context.contentResolver.openInputStream(uri)
+                        ?: error(context.getString(R.string.error_read_file))
+                    val bytes = input.use { readBounded(it, MAX_BACKUP_BYTES) }
+                        ?: throw com.cyclealarm.app.core.LocalizedFailure(R.string.err_backup_too_large)
                     bytes.toString(Charsets.UTF_8)
                 }
             }.onSuccess { text ->
@@ -220,12 +220,19 @@ fun SettingsScreen(
                                     com.cyclealarm.app.data.BackupManager.readAutoBackup(info)
                                 }
                                 withContext(Dispatchers.IO) { BackupManager.import(context, payload) }
-                            }.onSuccess {
+                            }.onSuccess { summary ->
                                 Toast.makeText(
                                     context,
                                     context.getString(R.string.toast_restore_auto_ok),
                                     Toast.LENGTH_SHORT
                                 ).show()
+                                if (summary.rescheduleFailed) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.err_restore_reschedule_failed),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             }.onFailure {
                                 Toast.makeText(
                                     context,
@@ -312,6 +319,13 @@ fun SettingsScreen(
                                         context.getString(R.string.toast_backup_restored),
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                    if (summary.rescheduleFailed) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.err_restore_reschedule_failed),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                     summary.autoBackupPath?.let { path ->
                                         Toast.makeText(
                                             context,
@@ -506,7 +520,8 @@ fun SettingsScreen(
                             }
                         }
                     )
-                    SettingRow(
+                    // play 包没有 AlarmGuardService：开关必须隐藏，否则会显示一个「已开启但无效」的承诺
+                    if (GuardServicePolicy.isAvailable) SettingRow(
                         title = stringResource(R.string.row_guard_service),
                         value = if (GuardServicePolicy.isEnabled(context)) {
                             stringResource(R.string.guard_on)
@@ -518,7 +533,18 @@ fun SettingsScreen(
                             GuardServicePolicy.setEnabled(context, enabled)
                             val intent = Intent(context, com.cyclealarm.app.service.AlarmGuardService::class.java)
                             if (enabled) {
-                                androidx.core.content.ContextCompat.startForegroundService(context, intent)
+                                // 部分 ROM 会拒绝前台服务：失败要回滚开关状态，不能界面显示「已开启」实际没跑
+                                val started = runCatching {
+                                    androidx.core.content.ContextCompat.startForegroundService(context, intent)
+                                }.isSuccess
+                                if (!started) {
+                                    GuardServicePolicy.setEnabled(context, false)
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.toast_guard_failed),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
                             } else {
                                 context.stopService(intent)
                             }

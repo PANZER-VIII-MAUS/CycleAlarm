@@ -562,4 +562,16 @@
     <string name="restore_kind_snapshot">Pre-restore</string>
     <string name="backup_downloads_cleared">Removed backup copies from Downloads</string>
     <string name="ringtone_unavailable">This ringtone is not accessible (maybe deleted); please pick another</string>
+    <string name="toast_guard_failed">The system refused the guard service; the switch was turned off</string>
+    <string name="err_restore_reschedule_failed">Data restored, but rescheduling alarms failed; reopen the app or re-save an alarm</string>
+    <string name="err_backup_invalid_time">Backup contains an invalid time (hour/minute out of range)</string>
+    <string name="err_backup_invalid_day">Backup contains an invalid cycle day</string>
+    <string name="err_backup_invalid_cycle">Backup contains an invalid cycle length</string>
+    <string name="err_backup_duplicate_id">Backup contains duplicate IDs and may be corrupt</string>
+    <string name="err_backup_invalid_id">Backup contains an ID outside the allowed range</string>
+    <string name="err_backup_invalid_plan_ref">A day plan refers to a missing activity type</string>
+    <string name="err_backup_invalid_date">Backup contains an invalid date</string>
+    <string name="err_backup_invalid_holiday">Backup contains an invalid holiday range</string>
+    <string name="err_backup_invalid_snooze">Backup contains an invalid snooze record</string>
+    <string name="err_xlsx_too_many_sheets">Too many worksheets; simplify the file and retry</string>
 </resources>

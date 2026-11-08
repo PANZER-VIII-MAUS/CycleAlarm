@@ -28,7 +28,9 @@ object BackupManager {
         val holidays: Int,
         val snoozes: Int,
         /** 恢复前自动保存的当前数据备份路径；保存失败时为 null。 */
-        val autoBackupPath: String? = null
+        val autoBackupPath: String? = null,
+        /** 恢复后重排是否失败（失败时数据已恢复，但闹钟可能没排上，需要提示用户重试）。 */
+        val rescheduleFailed: Boolean = false
     )
 
     /** 恢复前快照保留份数。 */
@@ -62,10 +64,17 @@ object BackupManager {
             throw LocalizedFailure(R.string.err_backup_no_data)
         }
 
+        // 业务约束校验：必须在动库之前（非法备份不允许写入，0.6.10 审查 Important）
+        BackupValidator.firstIssue(backup)?.let { issue ->
+            throw LocalizedFailure(issue.messageRes)
+        }
+
         // 恢复前先把「当前数据」落一份自动备份，误导入时还能救回来
         val autoBackupPath = runCatching { writeAutoBackup(context, export(context)) }.getOrNull()
 
         val db = AppDatabase.get(context)
+        // 恢复前先记下当前库里的 snooze：事务提交后要取消它们已武装的 PendingIntent
+        val previousSnoozes = runCatching { db.snoozeDao().getAll() }.getOrDefault(emptyList())
         db.withTransaction {
             db.alarmDao().deleteAll()
             db.dateAlarmDao().deleteAll()
@@ -86,8 +95,15 @@ object BackupManager {
             backup.snoozes.forEach { runCatching { db.snoozeDao().insert(it) } }
         }
 
-        runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
+        // 事务已提交：先取消恢复前武装的旧 snooze，再按备份内容重排（否则旧稍后会在之后响）
+        previousSnoozes.forEach { snooze ->
+            runCatching { com.cyclealarm.app.core.AlarmScheduler.cancelStoredSnooze(context, snooze) }
+                .onFailure { Log.e(TAG, "cancel old snooze failed", it) }
+        }
+
+        val resyncOk = runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
             .onFailure { Log.e(TAG, "resync after restore failed", it) }
+            .isSuccess
 
         // 事务成功后才清瞬时状态：放在事务前会因为事务失败白白清掉用户的跳过/静音
         com.cyclealarm.app.core.TemporaryMuteStore.clearAll(context)
@@ -104,7 +120,9 @@ object BackupManager {
             dayPlans = backup.dayPlans.size,
             holidays = backup.holidays.size,
             snoozes = backup.snoozes.size,
-            autoBackupPath = autoBackupPath
+            autoBackupPath = autoBackupPath,
+            // 排期失败不能静默当成「恢复成功」：UI 要提示用户重排（0.6.10 审查 Important）
+            rescheduleFailed = !resyncOk
         )
     }
 

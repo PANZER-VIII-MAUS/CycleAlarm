@@ -68,7 +68,7 @@ class BootReceiver : BroadcastReceiver() {
                         Log.e(TAG, "scheduled resync failed for $action", it)
                     }
                 // 用户关掉「常驻保活」后重启不该再拉起常驻服务（四轮复审 N5）
-                if (GuardServicePolicy.isEnabled(context)) {
+                if (GuardServicePolicy.isAvailable && GuardServicePolicy.isEnabled(context)) {
                     runCatching {
                         ContextCompat.startForegroundService(
                             context,

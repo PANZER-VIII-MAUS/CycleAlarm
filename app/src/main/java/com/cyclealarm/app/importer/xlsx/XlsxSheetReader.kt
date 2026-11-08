@@ -19,6 +19,10 @@ class XlsxSheetReader : SheetReader {
 
     private companion object {
         const val MAX_ENTRY_BYTES = 16 * 1024 * 1024
+        /** 所有相关 entry 解压后的总字节上限：防高压缩比 ZIP 叠加击穿内存。 */
+        const val MAX_TOTAL_UNCOMPRESSED_BYTES = 32L * 1024 * 1024
+        /** 工作表数量上限。 */
+        const val MAX_WORKSHEETS = 30
         const val MAX_ROWS = 5000
         const val MAX_COLS = 100
         const val MAX_MERGE_AREA = 20_000L
@@ -83,17 +87,31 @@ class XlsxSheetReader : SheetReader {
 
     private fun readZipEntries(input: InputStream): Map<String, ByteArray> {
         val result = mutableMapOf<String, ByteArray>()
+        var totalBytes = 0L
+        var worksheetCount = 0
         ZipInputStream(input.buffered()).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
                 val name = entry.name
+                val isWorksheet = name.startsWith("xl/worksheets/") && name.endsWith(".xml")
+                if (isWorksheet) {
+                    worksheetCount++
+                    if (worksheetCount > MAX_WORKSHEETS) {
+                        throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_many_sheets)
+                    }
+                }
                 val wanted = name == "xl/workbook.xml" ||
                     name == "xl/_rels/workbook.xml.rels" ||
                     name == "xl/sharedStrings.xml" ||
                     name == "xl/styles.xml" ||
                     (name.startsWith("xl/worksheets/") && name.endsWith(".xml"))
                 if (wanted && !entry.isDirectory) {
-                    result[name] = zip.readLimited(MAX_ENTRY_BYTES)
+                    val bytes = zip.readLimited(MAX_ENTRY_BYTES)
+                    totalBytes += bytes.size
+                    if (totalBytes > MAX_TOTAL_UNCOMPRESSED_BYTES) {
+                        throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_large)
+                    }
+                    result[name] = bytes
                 }
                 zip.closeEntry()
                 entry = zip.nextEntry
@@ -132,6 +150,9 @@ class XlsxSheetReader : SheetReader {
         parseXml(bytes, object : DefaultHandler() {
             override fun startElement(uri: String?, localName: String?, qName: String?, attributes: Attributes) {
                 if (qName == "sheet" || localName == "sheet") {
+                    if (result.size >= MAX_WORKSHEETS) {
+                        throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_many_sheets)
+                    }
                     val name = attributes.getValue("name") ?: return
                     val relId = attributes.getValue("r:id")
                         ?: attributes.getValue("id")

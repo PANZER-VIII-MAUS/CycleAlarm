@@ -23,7 +23,11 @@ object GuardServicePolicy {
         else -> Action.KEEP
     }
 
-    /** 未设置过时的默认值：直装包默认开，Play 上架包默认关（见 build.gradle.kts -PplayBuild）。 */
+    /** 当前 flavor 是否真的有 AlarmGuardService（play 包在 Manifest 里删掉了，开关必须隐藏）。 */
+    val isAvailable: Boolean
+        get() = com.cyclealarm.app.BuildConfig.GUARD_SERVICE_AVAILABLE
+
+    /** 未设置过时的默认值：直装包默认开，Play 上架包默认关。 */
     private val defaultEnabled: Boolean
         get() = com.cyclealarm.app.BuildConfig.GUARD_SERVICE_DEFAULT_ON
 

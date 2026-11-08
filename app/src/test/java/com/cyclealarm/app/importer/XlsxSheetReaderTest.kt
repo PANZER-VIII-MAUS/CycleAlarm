@@ -124,4 +124,55 @@ class XlsxSheetReaderTest {
         }
         return out.toByteArray()
     }
+    @Test
+    fun `too many worksheets is rejected`() {
+        val bytes = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { zip ->
+                fun entry(name: String, content: String) {
+                    zip.putNextEntry(ZipEntry(name))
+                    zip.write(content.toByteArray())
+                    zip.closeEntry()
+                }
+                entry("xl/workbook.xml", sampleWorkbookXml(sheets = 40))
+                repeat(40) { i ->
+                    entry("xl/worksheets/sheet${i + 1}.xml", EMPTY_SHEET)
+                }
+            }
+        }.toByteArray()
+        val error = runCatching { XlsxSheetReader().read(ByteArrayInputStream(bytes), null) }
+            .exceptionOrNull()
+        assertTrue("应因工作表过多被拒绝", error is SheetReadException)
+    }
+
+    @Test
+    fun `total uncompressed bytes limit is enforced`() {
+        val bigSheet = "<worksheet><sheetData/></worksheet>" + " ".repeat(11 * 1024 * 1024)
+        val bytes = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { zip ->
+                fun entry(name: String, content: String) {
+                    zip.putNextEntry(ZipEntry(name))
+                    zip.write(content.toByteArray())
+                    zip.closeEntry()
+                }
+                entry("xl/workbook.xml", sampleWorkbookXml(sheets = 3))
+                repeat(3) { i -> entry("xl/worksheets/sheet${i + 1}.xml", bigSheet) }
+            }
+        }.toByteArray()
+        val error = runCatching { XlsxSheetReader().read(ByteArrayInputStream(bytes), null) }
+            .exceptionOrNull()
+        assertTrue("应因总解压量超限被拒绝", error is SheetReadException)
+    }
+
+    private fun sampleWorkbookXml(sheets: Int): String = buildString {
+        append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+        append("<workbook xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>")
+        repeat(sheets) { i ->
+            append("<sheet name=\"S${i + 1}\" sheetId=\"${i + 1}\" r:id=\"rId${i + 1}\"/>")
+        }
+        append("</sheets></workbook>")
+    }
+
+    private companion object {
+        const val EMPTY_SHEET = "<?xml version=\"1.0\"?><worksheet><sheetData/></worksheet>"
+    }
 }

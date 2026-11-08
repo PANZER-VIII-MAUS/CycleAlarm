@@ -541,6 +541,18 @@ object AlarmScheduler {
         }.getOrDefault(false)
     }
 
+    /**
+     * 同步取消一条**已持久化** snooze 的系统排期。
+     * 恢复备份时库里的 snooze 会被整体替换，但恢复前已武装的 PendingIntent 不会自动消失，
+     * 必须在事务提交后显式取消，否则旧「稍后」仍会在系统里到点响铃（0.6.10 审查 Critical）。
+     */
+    fun cancelStoredSnooze(context: Context, snooze: SnoozeEntity) {
+        val alarmId = snooze.alarmId.toInt()
+        if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return
+        val am = context.getSystemService(AlarmManager::class.java) ?: return
+        cancelByRequestCode(context, am, snoozeRequestCode(snooze.kind, alarmId))
+    }
+
     /** 清掉某条原闹钟残留的 snooze 记录，并取消已武装的 PendingIntent（与 cancelAlarm 对称）。 */
     fun clearSnoozeForAlarm(context: Context, kind: String, alarmId: Int) {
         if (!RingLaunchValidator.hasValidAlarmId(alarmId)) return

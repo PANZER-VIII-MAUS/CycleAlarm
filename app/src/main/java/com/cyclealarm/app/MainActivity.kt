@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
         // ColorOS 等 ROM 可能拦截前台服务或后台任务，启动阶段任何异常都不能让应用闪退
         try {
             NotificationChannels.createAll(this)
-            if (GuardServicePolicy.isEnabled(this)) {
+            if (GuardServicePolicy.isAvailable && GuardServicePolicy.isEnabled(this)) {
                 ContextCompat.startForegroundService(
                     this,
                     Intent(this, AlarmGuardService::class.java)

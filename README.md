@@ -37,13 +37,16 @@
 
 ## 下载安装
 
-当前最新版本：**0.6.10**（versionCode 38，targetSdk 36）。
+当前最新版本：**0.6.11**（versionCode 39，targetSdk 36）。
 
 正式 APK 请从项目的 **GitHub Releases** 页面下载并侧载安装。覆盖安装新版本时，必须使用与原安装包相同的签名；签名不一致时，Android 会拒绝覆盖安装，只能卸载旧版，卸载会清除应用数据。
 
 ## 隐私
 
 本应用不申请 `INTERNET` 权限、不联网、不收集任何数据，也不包含任何第三方统计 SDK。闹钟、循环安排、假期和导入结果均保存在设备本地。
+
+> `android:allowBackup="false"`（并配置 `dataExtractionRules` 全排除）：不参与系统云备份与换机迁移，
+> 数据只留在本机；换机请用设置页的「导出/导入备份」或开启「备份到系统下载目录」。
 
 > 可选功能：设置页开启「备份到系统下载目录」后，应用会每天把明文备份写入
 > `Download/CycleAlarm/`（保留最近 7 份），用于换机/卸载后恢复；默认关闭，可随时关掉。
@@ -67,6 +70,22 @@
 ---
 
 ## 更新日志
+
+### 0.6.11（2026-11-08）
+
+0.6.10 代码审查的问题修复：
+
+- **Critical：恢复备份会取消旧「稍后提醒」的排期**。恢复前先记录库里的 snooze，事务提交后逐个取消已武装的
+  `PendingIntent`，再按备份内容重排——避免「恢复后旧 snooze 到点又响」
+- **Play 包隐藏无效的「常驻保活」开关**：新增 `GUARD_SERVICE_AVAILABLE` flavor 能力位，
+  play 包不显示该开关；直装包启动失败会回滚开关并提示，不再出现「界面已开启、服务没跑」
+- **XLSX 导入增加聚合限制**：全部相关 entry 解压合计 ≤ 32 MB、工作表 ≤ 30 张（除原有单 entry/行/列限制）
+- **备份业务约束校验**：新增 `BackupValidator`，事务前校验时间范围、周期天数、主键唯一、类型引用、
+  假期起止、snooze 合法性；非法备份在动库前就被拒绝并给出本地化原因
+- **恢复后排期失败不再静默成功**：`BackupSummary.rescheduleFailed` 会提示用户重排
+- **`android:allowBackup` 改为 `false`**：不参与系统云备份/换机迁移，与「数据只在本机」的说明一致
+- **超大备份文件提示修正**：`openInputStream` 失败与「超过 2 MB」分开判断，不再永远显示「读取文件失败」
+- 测试 **317 → 331**：新增备份校验 10 例、XLSX 限制 2 例、旧 snooze 取消 2 例
 
 ### 0.6.10（2026-11-08）
 
@@ -467,7 +486,7 @@
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
 > 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
-> 单元测试 315 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 14 warning。
+> 单元测试 331 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 10 warning。
 
 ## 工程结构
 
@@ -547,7 +566,7 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDirectDebugKotlin
-.\gradlew.bat testDirectDebugUnitTest   # 315 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat testDirectDebugUnitTest   # 331 个 JVM/Robolectric 单测（直装包变体）
 .\gradlew.bat lintDirectDebug          # 应为 0 error
 .\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 
@@ -752,10 +771,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\change-signing-password.ps1
 
 ## 已知限制与后续建议
 
-- 铃声目前使用系统默认闹钟铃声；后续可在编辑页增加"自定义铃声"（使用 `RingtoneManager` 选择器）
+- 铃声：每条闹钟可选系统铃声（编辑页「铃声」行）；失效的铃声 URI 会在选择时提示，响铃时回退系统默认
 - 「图片识别」暂不支持：为避免引入联网与 API Key，课表 / 排班表请用 Excel(.xlsx) 或 CSV 导入
-- `allowBackup=true`：闹钟与设置会随系统 / Google 备份上云；由于周期锚点是绝对日期，
-  换机恢复后「今天是第几天」可能错位，必要时在设置里重新「今天对齐」
+- `allowBackup=false`：不参与系统 / Google 云备份与换机迁移（0.6.11 起）。换机请用设置页的
+  「导出/导入备份」，或开启「备份到系统下载目录」拿回明文副本；恢复后周期锚点按原绝对日期保留，
+  「今天是第几天」可能变化，必要时在设置里重新「今天对齐」
 - 数据库当前为 v11（`alarms` / `date_alarms` / `activity_types` / `day_plans` / `holidays` / `settings`
   / `snoozes` / `import_snapshots` / `ring_events`）；已提供 4→5→6→7→8→9→10→11 迁移链，从 v4 起升级不会清空数据；
 - **迁移链策略**：不提供 v1~v3 的自动迁移（那是早期内部构建）。若你从极老版本升级，

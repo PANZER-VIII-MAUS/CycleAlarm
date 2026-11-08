@@ -543,4 +543,16 @@
     <string name="restore_kind_snapshot">恢复前快照</string>
     <string name="backup_downloads_cleared">已清理公共下载目录里的备份副本</string>
     <string name="ringtone_unavailable">这个铃声无法访问（可能已被删除），请重新选择</string>
+    <string name="toast_guard_failed">系统拒绝了常驻服务，已自动关闭该开关</string>
+    <string name="err_restore_reschedule_failed">已恢复数据，但闹钟排期失败；请退出重进应用或重新保存一次闹钟</string>
+    <string name="err_backup_invalid_time">备份里有非法时间（时/分超出范围）</string>
+    <string name="err_backup_invalid_day">备份里有非法周期天数</string>
+    <string name="err_backup_invalid_cycle">备份里的周期长度不合法</string>
+    <string name="err_backup_duplicate_id">备份里有重复主键，可能已损坏</string>
+    <string name="err_backup_invalid_id">备份里的 ID 超出允许范围</string>
+    <string name="err_backup_invalid_plan_ref">备份里某天安排引用了不存在的类型</string>
+    <string name="err_backup_invalid_date">备份里有非法日期</string>
+    <string name="err_backup_invalid_holiday">备份里的假期起止日期不合法</string>
+    <string name="err_backup_invalid_snooze">备份里有非法的稍后提醒记录</string>
+    <string name="err_xlsx_too_many_sheets">工作表数量过多，请精简后再导入</string>
 </resources>
