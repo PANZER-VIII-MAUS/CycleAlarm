@@ -262,10 +262,24 @@ object AlarmScheduler {
         return existing != null
     }
 
-    /** 取消某条周期闹钟（含未触发的“稍后提醒”与提前提醒）。 */
-    fun cancelAlarm(context: Context, alarm: AlarmEntity) {
+    /**
+     * 同步取消一条已持久化周期闹钟的主排期与提前提醒（不含 snooze）。
+     * 恢复备份时要在事务提交后立刻取消旧排期，不能被 clearSnoozeForAlarm 的异步清理拖后。
+     */
+    fun cancelStoredAlarm(context: Context, alarm: AlarmEntity) {
         cancelBySchedulerId(context, alarm.id)
         cancelPreAlert(context, alarm.id, KIND_CYCLE, alarm.preAlertMinutes)
+    }
+
+    /** 同步取消一条已持久化按日期闹钟的排期与提前提醒（不含 snooze）。 */
+    fun cancelStoredDateAlarm(context: Context, alarm: DateAlarmEntity) {
+        cancelBySchedulerId(context, schedulerId(KIND_DATE, alarm.id))
+        cancelPreAlert(context, alarm.id, KIND_DATE, 0)
+    }
+
+    /** 取消某条周期闹钟（含未触发的“稍后提醒”与提前提醒）。 */
+    fun cancelAlarm(context: Context, alarm: AlarmEntity) {
+        cancelStoredAlarm(context, alarm)
         clearSnoozeForAlarm(context, KIND_CYCLE, alarm.id)
     }
 
@@ -405,13 +419,21 @@ object AlarmScheduler {
 
     /** 取消某条按日期闹钟（含未触发的“稍后提醒”）。 */
     fun cancelDateAlarm(context: Context, alarm: DateAlarmEntity) {
-        cancelBySchedulerId(context, schedulerId(KIND_DATE, alarm.id))
+        cancelStoredDateAlarm(context, alarm)
         clearSnoozeForAlarm(context, KIND_DATE, alarm.id)
     }
 
     // ---------------------------------------------------------------------
     // 全量重建
     // ---------------------------------------------------------------------
+
+    /** 排期重建结果：失败项不再是「只写日志」，恢复备份等流程要据此提示用户。 */
+    data class RescheduleResult(
+        val attempted: Int,
+        val failed: List<String>
+    ) {
+        val allSucceeded: Boolean get() = failed.isEmpty()
+    }
 
     /** 全量重建排期：周期闹钟 + 按日期闹钟。 */
     fun rescheduleAll(
@@ -420,18 +442,26 @@ object AlarmScheduler {
         dateAlarms: List<DateAlarmEntity>,
         settings: AppSettingsEntity?,
         holidays: List<HolidayEntity>
-    ) {
+    ): RescheduleResult {
+        val failed = mutableListOf<String>()
         alarms.forEach { alarm ->
             runCatching { scheduleAlarm(context, alarm, settings, holidays) }
-                .onFailure { Log.e(TAG, "resync alarm failed id=${alarm.id}", it) }
+                .onFailure {
+                    Log.e(TAG, "resync alarm failed id=${alarm.id}", it)
+                    failed += "cycle:${alarm.id}"
+                }
         }
         dateAlarms.forEach { alarm ->
             runCatching { scheduleDateAlarm(context, alarm, settings, holidays) }
-                .onFailure { Log.e(TAG, "resync date alarm failed id=${alarm.id}", it) }
+                .onFailure {
+                    Log.e(TAG, "resync date alarm failed id=${alarm.id}", it)
+                    failed += "date:${alarm.id}"
+                }
         }
         // 标记「这次是 App 自己改的排期」，避免后续广播触发无意义的对账。
         // 必须放在两个循环之外：没有按日期闹钟的用户原来这个守卫永远不会生效（四轮复审 N2）
         ResyncCheckpoint.markSelfWrite(context, System.currentTimeMillis())
+        return RescheduleResult(attempted = alarms.size + dateAlarms.size, failed = failed)
     }
 
     /** 兼容旧调用：只重建周期闹钟。 */

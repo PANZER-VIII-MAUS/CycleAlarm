@@ -23,7 +23,9 @@ object BackupValidator {
         PLAN_TYPE_REF(R.string.err_backup_invalid_plan_ref),
         DATE_RANGE(R.string.err_backup_invalid_date),
         HOLIDAY_RANGE(R.string.err_backup_invalid_holiday),
-        SNOOZE(R.string.err_backup_invalid_snooze)
+        SNOOZE(R.string.err_backup_invalid_snooze),
+        SETTINGS_ID(R.string.err_backup_invalid_settings),
+        PRE_ALERT(R.string.err_backup_invalid_pre_alert)
     }
 
     /** 允许的 epochDay 范围（1970-01-01 ~ 2100-01-01）。 */
@@ -36,23 +38,36 @@ object BackupValidator {
         val cycleLength = settings?.cycleLength ?: 7
         if (cycleLength !in 1..31) return Issue.CYCLE_LENGTH
         if (settings != null) {
+            // SettingsDao.get() 固定查 ID=1：写入别的 ID 会让恢复后「设置丢失」
+            if (settings.id != 1) return Issue.SETTINGS_ID
             if (settings.cycleStartEpochDay !in MIN_EPOCH_DAY..MAX_EPOCH_DAY) return Issue.DATE_RANGE
             if (settings.cycleType !in setOf(CycleTypes.DAILY, CycleTypes.WEEKLY, CycleTypes.CUSTOM)) {
                 return Issue.CYCLE_LENGTH
             }
+            // 循环类型与天数必须自洽，否则「今天是第几天」会算乱
+            val typeMatchesLength = when (settings.cycleType) {
+                CycleTypes.DAILY -> cycleLength == 1
+                CycleTypes.WEEKLY -> cycleLength == 7
+                else -> true
+            }
+            if (!typeMatchesLength) return Issue.CYCLE_LENGTH
         }
 
         if (backup.alarms.any { it.hour !in 0..23 || it.minute !in 0..59 }) return Issue.TIME
         if (backup.alarms.any { it.dayIndex !in 0 until cycleLength }) return Issue.DAY_INDEX
-        if (backup.alarms.any { it.id < 0 || it.id > AlarmScheduler.MAX_ALARM_ID }) return Issue.ID_RANGE
+        if (backup.alarms.any { it.id <= 0 || it.id > AlarmScheduler.MAX_ALARM_ID }) return Issue.ID_RANGE
+        if (backup.alarms.any { it.preAlertMinutes !in com.cyclealarm.app.core.PreAlertPolicy.OPTIONS }) {
+            return Issue.PRE_ALERT
+        }
         if (backup.alarms.map { it.id }.toSet().size != backup.alarms.size) return Issue.DUPLICATE_ID
 
         if (backup.dateAlarms.any { it.hour !in 0..23 || it.minute !in 0..59 }) return Issue.TIME
         if (backup.dateAlarms.any { it.epochDay !in MIN_EPOCH_DAY..MAX_EPOCH_DAY }) return Issue.DATE_RANGE
-        if (backup.dateAlarms.any { it.id < 0 || it.id > AlarmScheduler.MAX_ALARM_ID }) return Issue.ID_RANGE
+        if (backup.dateAlarms.any { it.id <= 0 || it.id > AlarmScheduler.MAX_ALARM_ID }) return Issue.ID_RANGE
         if (backup.dateAlarms.map { it.id }.toSet().size != backup.dateAlarms.size) return Issue.DUPLICATE_ID
 
         if (backup.activityTypes.any { it.hour !in 0..23 || it.minute !in 0..59 }) return Issue.TIME
+        if (backup.activityTypes.any { it.id <= 0 }) return Issue.ID_RANGE
         if (backup.activityTypes.map { it.id }.toSet().size != backup.activityTypes.size) return Issue.DUPLICATE_ID
 
         if (backup.dayPlans.any { it.hour !in 0..23 || it.minute !in 0..59 }) return Issue.TIME
@@ -67,6 +82,7 @@ object BackupValidator {
                     it.endEpochDay !in MIN_EPOCH_DAY..MAX_EPOCH_DAY
             }
         ) return Issue.DATE_RANGE
+        if (backup.holidays.any { it.id <= 0 }) return Issue.ID_RANGE
         if (backup.holidays.map { it.id }.toSet().size != backup.holidays.size) return Issue.DUPLICATE_ID
 
         if (backup.snoozes.any {
@@ -76,6 +92,9 @@ object BackupValidator {
                     it.alarmId > AlarmScheduler.MAX_ALARM_ID
             }
         ) return Issue.SNOOZE
+        // snooze 里也带「原始时间」，非法值会随记录持久化并影响响铃事件时间
+        if (backup.snoozes.any { it.hour !in 0..23 || it.minute !in 0..59 }) return Issue.TIME
+        if (backup.snoozes.any { it.dayIndex !in 0 until cycleLength }) return Issue.DAY_INDEX
         if (backup.snoozes.map { it.kind to it.alarmId }.toSet().size != backup.snoozes.size) {
             return Issue.DUPLICATE_ID
         }

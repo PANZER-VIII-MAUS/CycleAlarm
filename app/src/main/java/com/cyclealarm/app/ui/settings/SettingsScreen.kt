@@ -521,45 +521,53 @@ fun SettingsScreen(
                         }
                     )
                     // play 包没有 AlarmGuardService：开关必须隐藏，否则会显示一个「已开启但无效」的承诺
-                    if (GuardServicePolicy.isAvailable) SettingRow(
-                        title = stringResource(R.string.row_guard_service),
-                        value = if (GuardServicePolicy.isEnabled(context)) {
-                            stringResource(R.string.guard_on)
-                        } else {
-                            stringResource(R.string.guard_off)
-                        },
-                        onClick = {
-                            val enabled = !GuardServicePolicy.isEnabled(context)
-                            GuardServicePolicy.setEnabled(context, enabled)
-                            val intent = Intent(context, com.cyclealarm.app.service.AlarmGuardService::class.java)
-                            if (enabled) {
-                                // 部分 ROM 会拒绝前台服务：失败要回滚开关状态，不能界面显示「已开启」实际没跑
-                                val started = runCatching {
-                                    androidx.core.content.ContextCompat.startForegroundService(context, intent)
-                                }.isSuccess
-                                if (!started) {
-                                    GuardServicePolicy.setEnabled(context, false)
+                    if (GuardServicePolicy.isAvailable) {
+                        val guardEnabled = GuardServicePolicy.isEnabled(context)
+                        // 展示「真实状态」：已开启但最近一次前台化失败时，明确提示失败而不是显示正常
+                        val guardFailed = guardEnabled && GuardServicePolicy.lastFailureAt(context) != null
+                        SettingRow(
+                            title = stringResource(R.string.row_guard_service),
+                            value = stringResource(
+                                when {
+                                    !guardEnabled -> R.string.guard_off
+                                    guardFailed -> R.string.guard_on_failed
+                                    else -> R.string.guard_on
+                                }
+                            ),
+                            onClick = {
+                                val enable = !guardEnabled
+                                GuardServicePolicy.setEnabled(context, enable)
+                                if (enable) {
+                                    // 同步失败 = 根本没发出去，直接回滚，不再显示成功 Toast
+                                    if (!com.cyclealarm.app.service.GuardServiceStarter.start(context)) {
+                                        GuardServicePolicy.setEnabled(context, false)
+                                        GuardServicePolicy.recordFailure(context)
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.toast_guard_failed),
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        GuardServicePolicy.clearFailure(context)
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.toast_guard_on),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    com.cyclealarm.app.service.GuardServiceStarter.stop(context)
+                                    GuardServicePolicy.clearFailure(context)
                                     Toast.makeText(
                                         context,
-                                        context.getString(R.string.toast_guard_failed),
-                                        Toast.LENGTH_LONG
+                                        context.getString(R.string.toast_guard_off),
+                                        Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                            } else {
-                                context.stopService(intent)
+                                (context as? android.app.Activity)?.recreate()
                             }
-                            Toast.makeText(
-                                context,
-                                if (enabled) {
-                                    context.getString(R.string.toast_guard_on)
-                                } else {
-                                    context.getString(R.string.toast_guard_off)
-                                },
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            (context as? android.app.Activity)?.recreate()
-                        }
-                    )
+                        )
+                    }
                     SettingRow(
                         title = stringResource(R.string.row_ring_history),
                         value = stringResource(R.string.ring_history_value),

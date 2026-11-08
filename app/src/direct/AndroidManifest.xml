@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  direct（直装包）专用声明：常驻保活服务。
+  play 包没有这个服务（所以主 manifest 不声明，避免 play lint 报 foregroundServiceType 缺失）。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- 常驻前台服务：降低被 ColorOS 杀死的概率 -->
+        <service
+            android:name=".service.AlarmGuardService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="persistent alarm scheduler service for user repeating alarms" />
+        </service>
+    </application>
+</manifest>

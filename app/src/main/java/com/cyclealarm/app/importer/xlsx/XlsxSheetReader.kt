@@ -23,6 +23,8 @@ class XlsxSheetReader : SheetReader {
         const val MAX_TOTAL_UNCOMPRESSED_BYTES = 32L * 1024 * 1024
         /** 工作表数量上限。 */
         const val MAX_WORKSHEETS = 30
+        /** 所有工作表加总后的单元格预算（解析后的 Cell 对象比 XML 更占内存）。 */
+        const val MAX_TOTAL_CELLS = 500_000
         const val MAX_ROWS = 5000
         const val MAX_COLS = 100
         const val MAX_MERGE_AREA = 20_000L
@@ -67,9 +69,17 @@ class XlsxSheetReader : SheetReader {
                     )
                 }
             }
-            return selected.take(20).map { (name, path) ->
-                parseSheet(name, entries.getValue(path), sharedStrings, timeStyles)
+            val sheets = mutableListOf<Sheet>()
+            var totalCells = 0
+            for ((name, path) in selected.take(MAX_WORKSHEETS)) {
+                val sheet = parseSheet(name, entries.getValue(path), sharedStrings, timeStyles)
+                totalCells += sheet.rows.sumOf { row -> row.size }
+                if (totalCells > MAX_TOTAL_CELLS) {
+                    throw SheetReadException(messageRes = com.cyclealarm.app.R.string.err_xlsx_too_large)
+                }
+                sheets += sheet
             }
+            return sheets
         } catch (e: SheetReadException) {
             throw e
         } catch (e: Exception) {

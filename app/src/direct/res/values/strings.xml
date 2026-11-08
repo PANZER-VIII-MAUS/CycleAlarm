@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- direct（直装包）专用文案：常驻保活服务。play 包没有该服务，不必带这些字符串。 -->
+<resources>
+    <string name="guard_title">闹钟守护中</string>
+    <string name="guard_text">保持后台存活，保证闹钟准时触发（可在此通知里关闭）</string>
+</resources>

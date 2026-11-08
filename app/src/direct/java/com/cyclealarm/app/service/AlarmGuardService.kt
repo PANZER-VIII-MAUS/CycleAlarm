@@ -25,8 +25,11 @@ class AlarmGuardService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             startAsForeground()
+            // 真正前台化成功后才清掉失败标记（设置页据此显示真实状态）
+            com.cyclealarm.app.core.GuardServicePolicy.clearFailure(this)
         } catch (e: Exception) {
-            // 部分 ROM 会拒绝 specialUse 前台服务：不能崩，直接结束本服务
+            // 部分 ROM 会拒绝 specialUse 前台服务：记录失败，设置页不再显示「已开启」
+            com.cyclealarm.app.core.GuardServicePolicy.recordFailure(this)
             stopSelf()
         }
         return START_STICKY

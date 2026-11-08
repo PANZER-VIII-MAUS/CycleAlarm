@@ -13,6 +13,7 @@ object GuardServicePolicy {
 
     private const val PREFS = "app_prefs"
     private const val KEY = "guard_service_enabled"
+    private const val KEY_LAST_FAILURE = "guard_service_last_failure"
 
     /** 需要执行的动作。 */
     enum class Action { START, STOP, KEEP }
@@ -42,4 +43,32 @@ object GuardServicePolicy {
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit { putBoolean(KEY, enabled) }
     }
+
+    /**
+     * 服务真正前台化失败的记录：设置页据此显示「已开启但启动失败」，
+     * 不再只展示用户意图（0.6.11 复查 §3.4）。
+     */
+    fun recordFailure(context: Context) {
+        runCatching {
+            context.applicationContext
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit { putLong(KEY_LAST_FAILURE, System.currentTimeMillis()) }
+        }
+    }
+
+    fun clearFailure(context: Context) {
+        runCatching {
+            context.applicationContext
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit { remove(KEY_LAST_FAILURE) }
+        }
+    }
+
+    /** 最近一次前台化失败时间；null = 最近一次启动成功或从未启动。 */
+    fun lastFailureAt(context: Context): Long? = runCatching {
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getLong(KEY_LAST_FAILURE, 0L)
+            .takeIf { it > 0L }
+    }.getOrNull()
 }

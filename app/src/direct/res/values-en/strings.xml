@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guard_title">Alarm guard active</string>
+    <string name="guard_text">Keeps the app alive so alarms fire on time</string>
+</resources>

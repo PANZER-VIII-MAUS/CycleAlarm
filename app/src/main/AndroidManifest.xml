@@ -111,17 +111,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- 常驻前台服务：降低被 ColorOS 杀死的概率 -->
-        <service
-            android:name=".service.AlarmGuardService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-            android:stopWithTask="false">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="persistent alarm scheduler service for user repeating alarms" />
-        </service>
-
         <!-- 响铃前台服务：由闹钟广播直接拉起（不走 WorkManager，避免后台启动限制） -->
         <service
             android:name=".service.RingService"

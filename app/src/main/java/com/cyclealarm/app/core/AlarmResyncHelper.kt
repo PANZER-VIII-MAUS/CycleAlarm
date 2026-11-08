@@ -21,7 +21,7 @@ import java.time.LocalDate
 object AlarmResyncHelper {
     private const val TAG = "AlarmResyncHelper"
 
-    suspend fun resyncAll(context: Context, auditMissed: Boolean = true) {
+    suspend fun resyncAll(context: Context, auditMissed: Boolean = true): AlarmScheduler.RescheduleResult {
         val db = AppDatabase.get(context)
         val now = System.currentTimeMillis()
 
@@ -46,7 +46,8 @@ object AlarmResyncHelper {
             db.snoozeDao().getAll()
         }
 
-        AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
+        val reschedule = AlarmScheduler.rescheduleAll(context, cycleAlarms, dateAlarms, settings, holidays)
+        val snoozeFailures = mutableListOf<String>()
 
         snoozes.forEach { snooze ->
             // 恢复前校验父闹钟仍然存在且启用，否则删掉记录（避免「删了闹钟还响」）
@@ -57,7 +58,9 @@ object AlarmResyncHelper {
                     cycleAlarms.any { it.id.toLong() == snooze.alarmId && it.enabled }
             }
             if (parentEnabled && SnoozeTimePolicy.shouldRestore(snooze.triggerAt, now)) {
-                AlarmScheduler.rescheduleStoredSnooze(context, snooze)
+                if (!AlarmScheduler.rescheduleStoredSnooze(context, snooze)) {
+                    snoozeFailures += "snooze:${snooze.kind}:${snooze.alarmId}"
+                }
             } else {
                 db.snoozeDao().deleteById(snooze.id)
             }
@@ -71,6 +74,11 @@ object AlarmResyncHelper {
         }
         // 排期变化后同步刷新桌面小组件（没有小组件时内部直接返回）
         runCatching { com.cyclealarm.app.widget.WidgetUpdater.updateAll(context) }
+
+        return AlarmScheduler.RescheduleResult(
+            attempted = reschedule.attempted + snoozes.size,
+            failed = reschedule.failed + snoozeFailures
+        )
     }
 
     /**

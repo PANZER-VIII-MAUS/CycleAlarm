@@ -73,8 +73,11 @@ object BackupManager {
         val autoBackupPath = runCatching { writeAutoBackup(context, export(context)) }.getOrNull()
 
         val db = AppDatabase.get(context)
-        // 恢复前先记下当前库里的 snooze：事务提交后要取消它们已武装的 PendingIntent
+        // 恢复前先记下当前库里的闹钟与 snooze：事务提交后要取消它们已武装的 PendingIntent
+        // （旧 snooze、旧主闹钟、旧提前提醒——0.6.11 复查 §3.1）
         val previousSnoozes = runCatching { db.snoozeDao().getAll() }.getOrDefault(emptyList())
+        val previousAlarms = runCatching { db.alarmDao().getAll() }.getOrDefault(emptyList())
+        val previousDateAlarms = runCatching { db.dateAlarmDao().getAll() }.getOrDefault(emptyList())
         db.withTransaction {
             db.alarmDao().deleteAll()
             db.dateAlarmDao().deleteAll()
@@ -95,15 +98,25 @@ object BackupManager {
             backup.snoozes.forEach { runCatching { db.snoozeDao().insert(it) } }
         }
 
-        // 事务已提交：先取消恢复前武装的旧 snooze，再按备份内容重排（否则旧稍后会在之后响）
+        // 事务已提交：先取消恢复前的旧排期（snooze / 主闹钟 / 提前提醒），再按备份内容重排
         previousSnoozes.forEach { snooze ->
             runCatching { com.cyclealarm.app.core.AlarmScheduler.cancelStoredSnooze(context, snooze) }
                 .onFailure { Log.e(TAG, "cancel old snooze failed", it) }
         }
+        previousAlarms.forEach { alarm ->
+            runCatching { com.cyclealarm.app.core.AlarmScheduler.cancelStoredAlarm(context, alarm) }
+                .onFailure { Log.e(TAG, "cancel old alarm failed id=${alarm.id}", it) }
+        }
+        previousDateAlarms.forEach { alarm ->
+            runCatching { com.cyclealarm.app.core.AlarmScheduler.cancelStoredDateAlarm(context, alarm) }
+                .onFailure { Log.e(TAG, "cancel old date alarm failed id=${alarm.id}", it) }
+        }
 
-        val resyncOk = runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
+        // 用结构化结果判断是否真的有排期失败（以前只判断有没有异常抛出，逐条失败发现不了）
+        val resyncOutcome = runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
             .onFailure { Log.e(TAG, "resync after restore failed", it) }
-            .isSuccess
+        val resyncFailed = resyncOutcome.isFailure ||
+            (resyncOutcome.getOrNull()?.allSucceeded == false)
 
         // 事务成功后才清瞬时状态：放在事务前会因为事务失败白白清掉用户的跳过/静音
         com.cyclealarm.app.core.TemporaryMuteStore.clearAll(context)
@@ -122,7 +135,7 @@ object BackupManager {
             snoozes = backup.snoozes.size,
             autoBackupPath = autoBackupPath,
             // 排期失败不能静默当成「恢复成功」：UI 要提示用户重排（0.6.10 审查 Important）
-            rescheduleFailed = !resyncOk
+            rescheduleFailed = resyncFailed
         )
     }
 

@@ -14,7 +14,6 @@ import com.cyclealarm.app.core.AlarmResyncHelper
 import com.cyclealarm.app.core.DatabaseSelfCheck
 import com.cyclealarm.app.core.GuardServicePolicy
 import com.cyclealarm.app.core.NotificationChannels
-import com.cyclealarm.app.service.AlarmGuardService
 import com.cyclealarm.app.ui.MainScreen
 import com.cyclealarm.app.ui.theme.ThemeManager
 import com.cyclealarm.app.ui.theme.CycleAlarmTheme
@@ -65,10 +64,7 @@ class MainActivity : ComponentActivity() {
         try {
             NotificationChannels.createAll(this)
             if (GuardServicePolicy.isAvailable && GuardServicePolicy.isEnabled(this)) {
-                ContextCompat.startForegroundService(
-                    this,
-                    Intent(this, AlarmGuardService::class.java)
-                )
+                com.cyclealarm.app.service.GuardServiceStarter.start(this)
             }
             DailyResyncWorker.enqueue(this)
         } catch (e: Exception) {

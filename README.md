@@ -37,7 +37,7 @@
 
 ## 下载安装
 
-当前最新版本：**0.6.11**（versionCode 39，targetSdk 36）。
+当前最新版本：**0.6.12**（versionCode 40，targetSdk 36）。
 
 正式 APK 请从项目的 **GitHub Releases** 页面下载并侧载安装。覆盖安装新版本时，必须使用与原安装包相同的签名；签名不一致时，Android 会拒绝覆盖安装，只能卸载旧版，卸载会清除应用数据。
 
@@ -70,6 +70,25 @@
 ---
 
 ## 更新日志
+
+### 0.6.12（2026-11-08）
+
+0.6.11 复查报告的 5 个 Important + 1 个 Minor 修复：
+
+- **恢复备份现在会取消旧主闹钟与旧提前提醒**（不只旧 snooze）：恢复前记录旧周期/日期闹钟，
+  事务提交后逐个取消主排期与 pre-alert，再按备份内容重排
+- **提前提醒会校验父闹钟**：`ACTION_PRE_ALERT` 收到广播后先查父闹钟是否存在且启用，已删除/停用则跳过通知
+- **排期重建返回真实失败摘要**：`AlarmScheduler.rescheduleAll` 改为返回 `RescheduleResult`，
+  逐条失败、snooze 重建失败都会汇总；恢复流程的 `rescheduleFailed` 不再只看「有没有抛异常」
+- **守护服务状态真实化**：服务真正前台化成功/失败会回写偏好；设置页显示「已开启（但服务启动失败）」，
+  同步失败时不再继续弹成功 Toast
+- **Play lint 转绿并进 CI**：`AlarmGuardService` 移入 `src/direct`（服务声明也移到 direct manifest），
+  主代码改用 flavor 无关的 `GuardServiceStarter`；`lintPlayDebug` 从 5 error → **0 error**，CI 同时跑 direct/play lint
+- **备份校验补齐**：`settings.id == 1`、snooze 的时分与周期日、autoGenerate 主键必须为正、
+  `DAILY/WEEKLY` 与周期长度自洽、`preAlertMinutes` 必须在允许选项内
+- **XLSX 上限统一**：去掉硬编码的 20 张表上限（统一用 `MAX_WORKSHEETS=30`），并增加
+  全局单元格预算 `MAX_TOTAL_CELLS=500000`
+- 测试 **331 → 337**（备份校验 6 例新增；pre-alert 测试改为先落父闹钟并等待异步校验）
 
 ### 0.6.11（2026-11-08）
 
@@ -486,7 +505,7 @@
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
 > 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
-> 单元测试 331 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 10 warning。
+> 单元测试 337 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error（direct + play 双 flavor）。
 
 ## 工程结构
 
@@ -566,7 +585,7 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDirectDebugKotlin
-.\gradlew.bat testDirectDebugUnitTest   # 331 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat testDirectDebugUnitTest   # 337 个 JVM/Robolectric 单测（直装包变体）
 .\gradlew.bat lintDirectDebug          # 应为 0 error
 .\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 
@@ -786,6 +805,8 @@ powershell -ExecutionPolicy Bypass -File .\tools\change-signing-password.ps1
   闹钟备注是用户数据，切换语言不会改写已保存的备注
 - 签名密钥只保存在本机（`keystore.properties` + `.jks`，均已 gitignore）；换密码可用 `tools/change-signing-password.ps1`，
   但**密钥本身务必单独备份**——密钥丢失将无法覆盖更新老版本
+- `play` 包不含常驻保活服务（`AlarmGuardService` 已移入 `src/direct`，play 设置页也不显示该开关）；
+  响铃前台服务 `RingService` 两个 flavor 都有
 - 若上架 Google Play：`specialUse` 前台服务与 `SCHEDULE_EXACT_ALARM` 需要按政策填写用途声明
 
 ## 免责声明

@@ -10,7 +10,6 @@ import com.cyclealarm.app.core.BootResyncPolicy
 import com.cyclealarm.app.core.ResyncAuditPolicy
 import com.cyclealarm.app.core.ResyncCheckpoint
 import com.cyclealarm.app.core.GuardServicePolicy
-import com.cyclealarm.app.service.AlarmGuardService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,13 +68,8 @@ class BootReceiver : BroadcastReceiver() {
                     }
                 // 用户关掉「常驻保活」后重启不该再拉起常驻服务（四轮复审 N5）
                 if (GuardServicePolicy.isAvailable && GuardServicePolicy.isEnabled(context)) {
-                    runCatching {
-                        ContextCompat.startForegroundService(
-                            context,
-                            Intent(context, AlarmGuardService::class.java)
-                        )
-                    }.onFailure {
-                        Log.e(TAG, "guard service start failed for ${intent.action}", it)
+                    if (!com.cyclealarm.app.service.GuardServiceStarter.start(context)) {
+                        Log.e(TAG, "guard service start failed for ${intent.action}")
                     }
                 } else {
                     Log.d(TAG, "guard service disabled by user, skip start")

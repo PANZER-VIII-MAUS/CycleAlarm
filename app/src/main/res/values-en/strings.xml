@@ -22,8 +22,6 @@
     <string name="missed_label_fallback">Alarm</string>
     <string name="missed_single">Missed one alarm: %1$s</string>
     <string name="list_separator">, </string>
-    <string name="guard_title">CycleAlarm is running</string>
-    <string name="guard_text">Guard service is running; allow background activity in system settings</string>
     <string name="alert_start_failed_title">Could not start the ringing service</string>
     <string name="alert_reschedule_failed_title">Failed to schedule the next alarm</string>
     <string name="alert_reschedule_failed_text">%1$s · %2$s — open the app to check</string>
@@ -574,4 +572,7 @@
     <string name="err_backup_invalid_holiday">Backup contains an invalid holiday range</string>
     <string name="err_backup_invalid_snooze">Backup contains an invalid snooze record</string>
     <string name="err_xlsx_too_many_sheets">Too many worksheets; simplify the file and retry</string>
+    <string name="guard_on_failed">On (but the service failed to start; the system may be blocking it)</string>
+    <string name="err_backup_invalid_settings">Backup settings row is invalid (exactly one row with ID=1 expected)</string>
+    <string name="err_backup_invalid_pre_alert">Backup contains an unsupported pre-alert interval</string>
 </resources>

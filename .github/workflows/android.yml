@@ -48,7 +48,7 @@ jobs:
 
       - name: Test, lint and build (both flavors + AAB)
         run: |
-          ./gradlew "$DIRECT_TEST" "$DIRECT_LINT" testPlayDebugUnitTest \
+          ./gradlew "$DIRECT_TEST" "$DIRECT_LINT" lintPlayDebug testPlayDebugUnitTest \
             assembleDirectDebug assembleDirectRelease assemblePlayRelease bundlePlayRelease
 
       # 上架包必须在 manifest 层面真的没有常驻守护服务（不只是 BuildConfig 默认值）

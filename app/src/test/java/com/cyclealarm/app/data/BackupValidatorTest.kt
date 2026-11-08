@@ -98,4 +98,58 @@ class BackupValidatorTest {
         )
         assertEquals(BackupValidator.Issue.SNOOZE, BackupValidator.firstIssue(backup))
     }
+    @Test
+    fun `settings with wrong id is rejected`() {
+        val backup = baseBackup(settings = AppSettingsEntity(cycleLength = 6, cycleStartEpochDay = 20_000).copy(id = 2))
+        assertEquals(BackupValidator.Issue.SETTINGS_ID, BackupValidator.firstIssue(backup))
+    }
+
+    @Test
+    fun `daily cycle type must have length one`() {
+        val backup = baseBackup(
+            settings = AppSettingsEntity(
+                cycleLength = 6,
+                cycleStartEpochDay = 20_000,
+                cycleType = CycleTypes.DAILY
+            )
+        )
+        assertEquals(BackupValidator.Issue.CYCLE_LENGTH, BackupValidator.firstIssue(backup))
+    }
+
+    @Test
+    fun `unsupported pre alert minutes is rejected`() {
+        val backup = baseBackup(
+            alarms = listOf(AlarmEntity(id = 1, dayIndex = 0, hour = 7, minute = 0, preAlertMinutes = 7))
+        )
+        assertEquals(BackupValidator.Issue.PRE_ALERT, BackupValidator.firstIssue(backup))
+    }
+
+    @Test
+    fun `zero alarm id is rejected`() {
+        val backup = baseBackup(alarms = listOf(AlarmEntity(id = 0, dayIndex = 0, hour = 7, minute = 0)))
+        assertEquals(BackupValidator.Issue.ID_RANGE, BackupValidator.firstIssue(backup))
+    }
+
+    @Test
+    fun `snooze with invalid time is rejected`() {
+        val backup = baseBackup(
+            snoozes = listOf(
+                SnoozeEntity(kind = AlarmScheduler.KIND_CYCLE, alarmId = 1, dayIndex = 0, hour = 25, minute = 0,
+                    label = "", triggerAt = System.currentTimeMillis() + 60_000, requestCode = 1)
+            )
+        )
+        assertEquals(BackupValidator.Issue.TIME, BackupValidator.firstIssue(backup))
+    }
+
+    @Test
+    fun `weekly cycle type must have length seven`() {
+        val backup = baseBackup(
+            settings = AppSettingsEntity(
+                cycleLength = 6,
+                cycleStartEpochDay = 20_000,
+                cycleType = CycleTypes.WEEKLY
+            )
+        )
+        assertEquals(BackupValidator.Issue.CYCLE_LENGTH, BackupValidator.firstIssue(backup))
+    }
 }

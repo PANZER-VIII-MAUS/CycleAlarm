@@ -104,7 +104,28 @@ class AlarmReceiver : BroadcastReceiver() {
                 val preAlertAlarmId = intent.getIntExtra(AlarmScheduler.EXTRA_ALARM_ID, 0)
                 val preAlertKind = intent.getStringExtra(AlarmScheduler.EXTRA_ALARM_KIND)
                     ?: AlarmScheduler.KIND_CYCLE
-                notifyPreAlert(context, preAlertKind, preAlertAlarmId, hour, minute, label, minutes)
+                // 恢复备份/删闹钟后，旧提前提醒仍可能留在系统里：父闹钟不存在或已停用就跳过
+                val pendingResult = goAsync()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val db = AppDatabase.get(context)
+                        val parentEnabled = when (preAlertKind) {
+                            AlarmScheduler.KIND_DATE ->
+                                db.dateAlarmDao().getById(preAlertAlarmId)?.enabled == true
+                            else ->
+                                db.alarmDao().getById(preAlertAlarmId)?.enabled == true
+                        }
+                        if (!parentEnabled) {
+                            Log.w(TAG, "pre alert skipped: parent $preAlertKind/$preAlertAlarmId gone or disabled")
+                        } else {
+                            notifyPreAlert(context, preAlertKind, preAlertAlarmId, hour, minute, label, minutes)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "pre alert check failed", e)
+                    } finally {
+                        pendingResult.finish()
+                    }
+                }
             }
 
             AlarmScheduler.ACTION_RESYNC -> {

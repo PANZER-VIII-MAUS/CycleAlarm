@@ -22,8 +22,6 @@
     <string name="missed_label_fallback">闹钟</string>
     <string name="missed_single">错过一次闹钟：%1$s</string>
     <string name="list_separator">、</string>
-    <string name="guard_title">循环闹钟正在运行</string>
-    <string name="guard_text">闹钟守护服务运行中，请在系统设置中允许后台运行</string>
     <string name="alert_start_failed_title">闹钟响铃服务启动失败</string>
     <string name="alert_reschedule_failed_title">下一次闹钟排期失败</string>
     <string name="alert_reschedule_failed_text">%1$s · %2$s，请打开 App 检查</string>
@@ -555,4 +553,7 @@
     <string name="err_backup_invalid_holiday">备份里的假期起止日期不合法</string>
     <string name="err_backup_invalid_snooze">备份里有非法的稍后提醒记录</string>
     <string name="err_xlsx_too_many_sheets">工作表数量过多，请精简后再导入</string>
+    <string name="guard_on_failed">已开启（但服务启动失败，可能被系统限制）</string>
+    <string name="err_backup_invalid_settings">备份里的设置行不合法（应只有一行且 ID=1）</string>
+    <string name="err_backup_invalid_pre_alert">备份里有不受支持的提前提醒分钟数</string>
 </resources>
