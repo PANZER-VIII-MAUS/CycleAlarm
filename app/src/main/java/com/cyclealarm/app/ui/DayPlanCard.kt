@@ -137,12 +137,11 @@ internal fun DayPlanCard(
         onClick = onOpenPlan,
         onClickLabel = stringResource(R.string.cd_open_plan)
     ) {
-        BoxWithConstraints {
-            // 判定依据是「屏幕宽度」而不是「卡片内部宽度」：
-            // 用卡内宽（≈屏宽-40dp）会让普通 360dp 手机永远走紧凑布局（四轮复审 §3.3）
+        run {
+            // 七轮复审 §2.3：去掉 maxWidth 兜底——360dp 手机卡内只有 280dp，
+            // 用卡内宽判定会让普通手机永远走紧凑布局。只按屏宽 + 字号判定。
             val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
-            // 主判定用屏宽（普通 360dp 手机不该永远紧凑）；maxWidth 只是极窄卡片的兜底
-            val compact = largeFont || screenWidthDp < 360 || maxWidth < 300.dp
+            val compact = largeFont || screenWidthDp < 340
             Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
                 modifier = Modifier

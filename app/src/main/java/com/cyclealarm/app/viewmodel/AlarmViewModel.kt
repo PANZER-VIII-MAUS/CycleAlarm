@@ -284,8 +284,11 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** 删除单条闹钟：取消排期并删除，不影响周期天数。 */
-    fun deleteAlarm(id: Int) = viewModelScope.launch {
-        val alarm = db.alarmDao().getById(id) ?: return@launch
+    fun deleteAlarm(id: Int) = viewModelScope.launch { performDeleteAlarm(id) }
+
+    /** 串行执行删除（供 WithUndo 复用：删除完成后再登记 pending，避免「先 fire 再登记」竞态）。 */
+    private suspend fun performDeleteAlarm(id: Int) {
+        val alarm = db.alarmDao().getById(id) ?: return
         AlarmScheduler.cancelAlarm(getApplication(), alarm)
         db.alarmDao().deleteById(id)
         syncPlans()
@@ -294,7 +297,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     /** 删除周期闹钟并登记待撤销（六轮复审 §5：三类删除原先不在撤销体系里）。 */
     suspend fun deleteAlarmWithUndo(id: Int) {
         val snapshot = db.alarmDao().getById(id) ?: return
-        deleteAlarm(id)
+        performDeleteAlarm(id)
         _pendingUndo.value = PendingUndo.Alarm(
             snapshot,
             com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())
@@ -460,10 +463,6 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         _pendingUndo.value = null
     }
 
-    fun clearPendingUndo() {
-        _pendingUndo.value = null
-    }
-
     /**
      * 只清掉 [expected] 这一条待撤销项。
      * 六轮复审 §5：连删两条时，第一条的 Snackbar 关闭回调会把第二条的 pending 清掉，
@@ -579,7 +578,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** 删除一段假期。 */
-    fun deleteHoliday(id: Int) = viewModelScope.launch {
+    fun deleteHoliday(id: Int) = viewModelScope.launch { performDeleteHoliday(id) }
+
+    private suspend fun performDeleteHoliday(id: Int) {
         db.holidayDao().deleteById(id)
         reschedule()
     }
@@ -587,7 +588,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     /** 删除假期并登记待撤销。 */
     suspend fun deleteHolidayWithUndo(id: Int) {
         val snapshot = db.holidayDao().getById(id) ?: return
-        deleteHoliday(id)
+        performDeleteHoliday(id)
         _pendingUndo.value = PendingUndo.Holiday(
             snapshot,
             com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())
@@ -620,7 +621,9 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
         reschedule()
     }
 
-    fun deleteDateAlarm(id: Int) = viewModelScope.launch {
+    fun deleteDateAlarm(id: Int) = viewModelScope.launch { performDeleteDateAlarm(id) }
+
+    private suspend fun performDeleteDateAlarm(id: Int) {
         db.dateAlarmDao().getById(id)?.let { AlarmScheduler.cancelDateAlarm(getApplication(), it) }
         db.dateAlarmDao().deleteById(id)
         reschedule()
@@ -629,7 +632,7 @@ class AlarmViewModel(app: Application) : AndroidViewModel(app) {
     /** 删除按日期闹钟并登记待撤销。 */
     suspend fun deleteDateAlarmWithUndo(id: Int) {
         val snapshot = db.dateAlarmDao().getById(id) ?: return
-        deleteDateAlarm(id)
+        performDeleteDateAlarm(id)
         _pendingUndo.value = PendingUndo.DateAlarm(
             snapshot,
             com.cyclealarm.app.core.AppLanguage.localizedContext(getApplication())

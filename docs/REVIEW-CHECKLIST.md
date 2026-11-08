@@ -5,7 +5,7 @@
 > 适用阶段：**侧载分发期**（单人开发 / 无服务端 / 无三方崩溃 SDK）。
 > 上架 Play 前需额外补：Play 声明表单、隐私政策、Data safety、API 35/36 真机回归。
 >
-> 版本：与 `0.6.6`（flavor 拆分后）同步。每版发版记录见 `docs/release-audit-<版本>.md`。
+> 版本：与 `0.6.10` 同步（含 AAB 与双重 CI 断言）。每版发版记录见 `docs/release-audit-<版本>.md`。
 
 ---
 
@@ -233,7 +233,7 @@ adb shell pm clear com.cyclealarm.app
 | 7 | 跨夏令时 `-24h` 算错 | ✅ 已修（改为按本地日期回退，含美东春季跳变测试） |
 | 8 | 提前提醒改「关闭」后旧预告仍会弹一次 | ✅ 已修（排期前先取消既有提前提醒） |
 | 9 | Play flavor 只改 BuildConfig、manifest 未删声明 | ✅ 已修（manifest 真删 + CI 断言） |
-| 10 | instrumentation 从未跑成功 | ✅ 已修（CI API 34/36 各 3 用例通过） |
+| 10 | instrumentation 从未跑成功 | ✅ CI 每次 push 在 API 34/36 模拟器各跑 3 用例（证据看 Actions run 的 instrumentation job） |
 | 11 | 迁移护栏 `current = 11` 硬编码 + 缺 `@Before` 重置 | ✅ 已修（schema 推导 + 重置 + 源码断言） |
 | 12 | ColorOS 上 `USE_FULL_SCREEN_INTENT` 被 appop 拒绝，FSI 不可依赖 | 已知；靠悬浮窗兜底（0.6.6） |
 | 16 | lint warning 偏高（78） | ✅ 已收敛到 **13**（0 error）：含 UseKtx 34 条、Plurals 20 条、未使用 import 18 个 |

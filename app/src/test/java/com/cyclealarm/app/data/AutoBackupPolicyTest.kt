@@ -95,4 +95,24 @@ class AutoBackupPolicyTest {
             AutoBackupPolicy.expiredByPrefix(names, AutoBackupPolicy.RESTORE_PREFIX, 5).isEmpty()
         )
     }
+    @Test
+    fun `legacy restore prefix shares retention with new restore prefix`() {
+        val names = listOf(
+            "restore-300.txt", "restore-200.txt", "restore-100.txt",
+            "backup-before-restore-400.txt", "backup-before-restore-50.txt"
+        )
+        val expired = AutoBackupPolicy.expiredByPrefixes(
+            names,
+            listOf(AutoBackupPolicy.RESTORE_PREFIX, AutoBackupPolicy.LEGACY_RESTORE_PREFIX),
+            keep = 3
+        )
+        assertEquals(2, expired.size)
+    }
+
+    @Test
+    fun `isRestoreName recognizes both prefixes only`() {
+        assertTrue(AutoBackupPolicy.isRestoreName("restore-1.txt"))
+        assertTrue(AutoBackupPolicy.isRestoreName("backup-before-restore-1.txt"))
+        assertTrue(!AutoBackupPolicy.isRestoreName("daily-2026-11-05.txt"))
+    }
 }

@@ -44,7 +44,9 @@ internal fun NextAlarmCard(
     CycleCard(modifier = modifier) {
         if (nextAlarm == null || settings == null) {
             Text(
-                text = stringResource(R.string.main_no_alarm),
+                text = stringResource(
+                    if (expiresHint) R.string.main_no_alarm_expired else R.string.main_no_alarm
+                ),
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -64,8 +66,10 @@ internal fun NextAlarmCard(
                             text = DisplayPrefs.formatClock(
                                 context, nextAlarm.hour, nextAlarm.minute
                             ),
+                            // 与日卡同一策略：大字号用 displaySmall(36sp)，保证随 fontScale 单调放大
+                            // （六轮复审 §3.1 修好了日卡，七轮复审 §3.2 指出这里漏了）
                             style = if (LocalDensity.current.fontScale > 1.25f) {
-                                MaterialTheme.typography.titleLarge
+                                MaterialTheme.typography.displaySmall
                             } else {
                                 MaterialTheme.typography.headlineMedium
                             },

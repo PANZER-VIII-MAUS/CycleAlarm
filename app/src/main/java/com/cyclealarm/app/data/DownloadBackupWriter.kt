@@ -29,15 +29,18 @@ object DownloadBackupWriter {
         if (!isSupported()) return false
         val resolver = context.contentResolver
         val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + SUB_DIR
+        // Android 实测 RELATIVE_PATH 以尾斜杠形式存储（Download/update/…），
+        // 查询时必须带 "/"，否则查重永远不命中、保留策略也失效（七轮复审 §3.3）
+        val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + SUB_DIR + "/"
+        val relativePathNoSlash = relativePath.trimEnd('/')
         val exists = runCatching {
             resolver.query(
                 collection,
                 arrayOf(MediaStore.Downloads._ID),
                 "${MediaStore.Downloads.DISPLAY_NAME} = ? AND " +
-                    "${MediaStore.Downloads.RELATIVE_PATH} = ? AND " +
+                    "${MediaStore.Downloads.RELATIVE_PATH} IN (?, ?) AND " +
                     "${MediaStore.Downloads.IS_PENDING} = 0",
-                arrayOf(displayName, relativePath),
+                arrayOf(displayName, relativePath, relativePathNoSlash),
                 null
             )?.use { it.count > 0 } ?: false
         }.getOrDefault(false)
@@ -75,8 +78,8 @@ object DownloadBackupWriter {
             resolver.query(
                 collection,
                 arrayOf(MediaStore.Downloads._ID),
-                "${MediaStore.Downloads.RELATIVE_PATH} = ?",
-                arrayOf(relativePath),
+                "${MediaStore.Downloads.RELATIVE_PATH} IN (?, ?)",
+                arrayOf(relativePath, relativePath.trimEnd('/')),
                 "${MediaStore.Downloads.DATE_ADDED} DESC"
             )?.use { cursor ->
                 while (cursor.moveToNext()) ids += cursor.getLong(0)
@@ -93,7 +96,18 @@ object DownloadBackupWriter {
         }
     }
 
-    /** 供测试/文档用的路径提示。 */
-    fun publicPathHint(context: Context): String =
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), SUB_DIR).absolutePath
+    /** 清空公共目录里的所有备份副本（关闭开关时调用，避免明文残留）。 */
+    fun deleteAll(context: Context): Int {
+        if (!isSupported()) return 0
+        val resolver = context.contentResolver
+        val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + SUB_DIR + "/"
+        return runCatching {
+            resolver.delete(
+                collection,
+                "${MediaStore.Downloads.RELATIVE_PATH} IN (?, ?)",
+                arrayOf(relativePath, relativePath.trimEnd('/'))
+            )
+        }.getOrDefault(0)
+    }
 }

@@ -1,5 +1,6 @@
 package com.cyclealarm.app.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -68,7 +69,30 @@ internal fun EditAlarmDialog(
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val picked: Uri? = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-            ringtone = picked?.toString()
+            if (picked != null) {
+                // 选完立刻验证能打开：失效 URI 存进库只会在响铃时静音回退，用户无从发现
+                val readable = runCatching {
+                    context.contentResolver.openAssetFileDescriptor(picked, "r")?.use { true } ?: false
+                }.getOrDefault(false)
+                if (readable) {
+                    // 尽量持久化读权限（系统铃声选择器不一定授予，失败忽略）
+                    runCatching {
+                        context.contentResolver.takePersistableUriPermission(
+                            picked,
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        )
+                    }
+                    ringtone = picked.toString()
+                } else {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.ringtone_unavailable),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            } else {
+                ringtone = null
+            }
         }
     }
 

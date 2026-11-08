@@ -389,10 +389,8 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onToggle = { alarm, enabled -> viewModel.setDateAlarmEnabled(alarm, enabled) },
                         onSave = { viewModel.saveDateAlarm(it) },
                         onDelete = { alarm ->
+                            // 统一走 ViewModel 撤销（pendingUndo → 全局 Snackbar），不再本地再弹一条
                             uiScope.launch { viewModel.deleteDateAlarmWithUndo(alarm.id) }
-                            showUndoSnackbar(context.getString(R.string.snack_deleted_date_alarm)) {
-                                viewModel.restoreDateAlarm(alarm)
-                            }
                         }
                     )
                 }
@@ -423,9 +421,6 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onToggleManual = { alarm, enabled -> viewModel.setEnabled(alarm, enabled) },
                         onDeleteManual = { alarm ->
                             uiScope.launch { viewModel.deleteAlarmWithUndo(alarm.id) }
-                            showUndoSnackbar(context.getString(R.string.snack_deleted_alarm)) {
-                                viewModel.restoreAlarm(alarm)
-                            }
                         }
                     )
                 }
@@ -451,9 +446,6 @@ fun MainScreen(viewModel: AlarmViewModel = viewModel()) {
                         onSetAllMuted = { viewModel.setAllAlarmsMutedDuringHoliday(it) },
                         onDeleteHoliday = { holiday ->
                             uiScope.launch { viewModel.deleteHolidayWithUndo(holiday.id) }
-                            showUndoSnackbar(context.getString(R.string.snack_deleted_holiday)) {
-                                viewModel.restoreHoliday(holiday)
-                            }
                         }
                     )
                 }

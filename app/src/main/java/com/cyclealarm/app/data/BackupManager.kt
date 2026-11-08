@@ -65,8 +65,6 @@ object BackupManager {
         // 恢复前先把「当前数据」落一份自动备份，误导入时还能救回来
         val autoBackupPath = runCatching { writeAutoBackup(context, export(context)) }.getOrNull()
 
-        // 恢复 = 回到备份时刻：瞬时状态（跳过下一次 / 今天静音）必须一起作废
-        com.cyclealarm.app.core.TemporaryMuteStore.clearAll(context)
         val db = AppDatabase.get(context)
         db.withTransaction {
             db.alarmDao().deleteAll()
@@ -91,6 +89,14 @@ object BackupManager {
         runCatching { AlarmResyncHelper.resyncAll(context, auditMissed = false) }
             .onFailure { Log.e(TAG, "resync after restore failed", it) }
 
+        // 事务成功后才清瞬时状态：放在事务前会因为事务失败白白清掉用户的跳过/静音
+        com.cyclealarm.app.core.TemporaryMuteStore.clearAll(context)
+        // 恢复 = 回到备份时刻：把漏响审计检查点推到「现在」，避免下次审计把恢复窗口
+        // 内的旧事件报成「错过闹钟」
+        runCatching {
+            com.cyclealarm.app.core.ResyncCheckpoint.markChecked(context, System.currentTimeMillis())
+        }
+
         return BackupSummary(
             alarms = backup.alarms.size,
             dateAlarms = backup.dateAlarms.size,
@@ -103,11 +109,14 @@ object BackupManager {
     }
 
     /** 自动备份条目（恢复入口用）。 */
+    enum class AutoBackupKind { DAILY, RESTORE }
+
     data class AutoBackupInfo(
         val file: File,
         val name: String,
         val sizeBytes: Long,
-        val savedAt: Long
+        val savedAt: Long,
+        val kind: AutoBackupKind = AutoBackupKind.DAILY
     )
 
     /**
@@ -162,10 +171,17 @@ object BackupManager {
     /** 列出可恢复的自动备份（每日备份 + 恢复前快照），最近的在前。 */
     fun listAutoBackups(context: Context): List<AutoBackupInfo> {
         migrateLegacyAutoBackups(context)
-        val dirs = listOf(dailyDir(context), restoreDir(context))
-        return dirs.flatMap { dir -> (dir.listFiles() ?: emptyArray()).filter { it.isFile }.toList() }
-            .sortedByDescending { it.lastModified() }
-            .map { AutoBackupInfo(it, it.name, it.length(), it.lastModified()) }
+        val daily = (dailyDir(context).listFiles() ?: emptyArray()).filter { it.isFile }
+        val restore = (restoreDir(context).listFiles() ?: emptyArray()).filter { it.isFile }
+        val legacyRoot = (autoBackupRoot(context).listFiles() ?: emptyArray())
+            .filter { it.isFile && AutoBackupPolicy.isRestoreName(it.name) }
+        return (daily.map { it to AutoBackupKind.DAILY } +
+            restore.map { it to AutoBackupKind.RESTORE } +
+            legacyRoot.map { it to AutoBackupKind.RESTORE })
+            .sortedByDescending { it.first.lastModified() }
+            .map { (file, kind) ->
+                AutoBackupInfo(file, file.name, file.length(), file.lastModified(), kind)
+            }
     }
 
     /** 每日备份目录。 */
@@ -209,9 +225,13 @@ object BackupManager {
         val dir = restoreDir(context).apply { mkdirs() }
         val file = File(dir, AutoBackupPolicy.restoreFileName(System.currentTimeMillis()))
         file.writeText(payload, Charsets.UTF_8)
-        AutoBackupPolicy.expiredByPrefix(
+        // 旧前缀 backup-before-restore-* 也参与同一保留额度（否则迁移来的旧文件永不淘汰）
+        AutoBackupPolicy.expiredByPrefixes(
             dir.listFiles()?.map { it.name } ?: emptyList(),
-            AutoBackupPolicy.RESTORE_PREFIX,
+            listOf(
+                AutoBackupPolicy.RESTORE_PREFIX,
+                AutoBackupPolicy.LEGACY_RESTORE_PREFIX
+            ),
             AUTO_BACKUP_KEEP
         ).forEach { stale -> File(dir, stale).delete() }
         return file.absolutePath

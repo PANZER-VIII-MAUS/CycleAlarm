@@ -144,8 +144,9 @@ class RingOverlayController(private val context: Context) {
 
     fun hide() {
         val current = view ?: return
-        view = null
-        runCatching { windowManager?.removeView(current) }
+        // 先 removeView 成功再清字段：否则抛异常被吞后控制器认为已隐藏，窗口却留在屏上
+        val removed = runCatching { windowManager?.removeView(current) }.isSuccess
+        if (removed) view = null
     }
 
     /** 供策略查询的静态判断：是否具备悬浮窗权限。 */

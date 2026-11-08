@@ -52,6 +52,23 @@ jobs:
             assembleDirectDebug assembleDirectRelease assemblePlayRelease bundlePlayRelease
 
       # 上架包必须在 manifest 层面真的没有常驻守护服务（不只是 BuildConfig 默认值）
+      # 交付物是 AAB，必须验证 AAB 内部的 manifest（而不是 intermediates 里的副本）
+      - name: Assert play AAB drops the guard service
+        run: |
+          AAB=app/build/outputs/bundle/playRelease/app-play-release.aab
+          test -f "$AAB"
+          unzip -p "$AAB" base/manifest/AndroidManifest.xml > /tmp/aab-manifest.pb
+          test -s /tmp/aab-manifest.pb
+          if grep -aq 'AlarmGuardService' /tmp/aab-manifest.pb; then
+            echo '::error::AAB 内仍含 AlarmGuardService'
+            exit 1
+          fi
+          if ! grep -aq 'RingService' /tmp/aab-manifest.pb; then
+            echo '::error::AAB 内缺少 RingService'
+            exit 1
+          fi
+          echo 'AAB manifest OK (no AlarmGuardService, RingService present)'
+
       - name: Assert play flavor drops the guard service
         run: |
           MANIFEST=$(find app/build/intermediates -path '*play*' -name AndroidManifest.xml | head -1)

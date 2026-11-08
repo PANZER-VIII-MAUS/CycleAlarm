@@ -130,9 +130,6 @@
     <string name="cd_cycle_settings">周期设置</string>
     <string name="cd_permissions">权限设置</string>
     <string name="main_add_alarm">添加闹钟</string>
-    <string name="snack_deleted_date_alarm">已删除按日期闹钟</string>
-    <string name="snack_deleted_alarm">已删除闹钟</string>
-    <string name="snack_deleted_holiday">已删除假期</string>
     <string name="main_tip">提示：循环天数固定后，只能在对应的第 X 天里添加闹钟；同一天可加多个闹钟；右上角设置可修改循环方式。</string>
     <string name="db_error_title">无法打开数据库</string>
     <string name="db_error_ok">知道了</string>
@@ -436,8 +433,6 @@
     <string name="err_snapshot_unknown_record">未知的导入快照记录</string>
     <string name="err_snapshot_bool">导入快照布尔值格式错误</string>
     <string name="err_backup_no_data">备份文件里没有可恢复的数据</string>
-    <string name="pp_current_type">当前类型</string>
-    <string name="plan_conflict_same_minute">同分钟冲突</string>
     <string name="date_month_day">%1$d月%2$d日</string>
     <string name="hol_new_year">元旦</string>
     <string name="hol_spring_festival">春节</string>
@@ -469,7 +464,6 @@
     <string name="restore_auto_empty">还没有自动备份：应用每天首次打开时会自动备份一份</string>
     <string name="restore_auto_confirm_title">恢复这份自动备份？</string>
     <string name="restore_auto_confirm_text">将用所选备份替换当前全部闹钟与设置。恢复前会自动保存一份当前数据。</string>
-    <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">已从自动备份恢复</string>
     <string name="backup_confirm_text_legacy">这是旧版（V1）备份，没有校验和，文件若被截断也能“恢复”出一半数据。确定要用它替换当前数据吗？</string>
     <plurals name="missed_multi">
@@ -529,9 +523,6 @@
     <plurals name="import_done_skipped">
         <item quantity="other">有 %1$d 条周课表条目被跳过（没有切到每周）</item>
     </plurals>
-    <plurals name="perm_health_missing">
-        <item quantity="other">缺少 %1$d 项设置：%2$s</item>
-    </plurals>
     <string name="err_backup_newer_version">这个备份来自更新版本的 App，请先升级应用再恢复</string>
     <string name="row_backup_to_downloads">备份到系统下载目录</string>
     <string name="backup_to_downloads_on">已开启（每天一份，保留 7 份）</string>
@@ -547,4 +538,9 @@
     <string name="vm_undo_holiday">已删除假期「%1$s」</string>
     <string name="main_no_alarm_expired">暂无开启的闹钟</string>
     <string name="main_no_alarm_expired_hint">有按日期闹钟已过期，需要重新添加；也可以直接打开下面任意一天</string>
+    <string name="restore_auto_item_kind">%1$s · %2$s · %3$s</string>
+    <string name="restore_kind_daily">每日备份</string>
+    <string name="restore_kind_snapshot">恢复前快照</string>
+    <string name="backup_downloads_cleared">已清理公共下载目录里的备份副本</string>
+    <string name="ringtone_unavailable">这个铃声无法访问（可能已被删除），请重新选择</string>
 </resources>

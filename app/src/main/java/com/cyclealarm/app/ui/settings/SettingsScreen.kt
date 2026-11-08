@@ -175,14 +175,17 @@ fun SettingsScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
+            backupScope.launch {
             runCatching {
-                val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.readBytes()
-                } ?: error(context.getString(R.string.error_read_file))
-                if (bytes.size > MAX_BACKUP_BYTES) {
-                    throw com.cyclealarm.app.core.LocalizedFailure(R.string.err_backup_too_large)
+                withContext(Dispatchers.IO) {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { stream ->
+                        readBounded(stream, MAX_BACKUP_BYTES)
+                    } ?: error(context.getString(R.string.error_read_file))
+                    if (bytes == null) {
+                        throw com.cyclealarm.app.core.LocalizedFailure(R.string.err_backup_too_large)
+                    }
+                    bytes.toString(Charsets.UTF_8)
                 }
-                bytes.toString(Charsets.UTF_8)
             }.onSuccess { text ->
                 pendingImportPayload = text
             }.onFailure {
@@ -191,6 +194,7 @@ fun SettingsScreen(
                     context.getString(R.string.toast_import_failed, it.uiMessage(context)),
                     Toast.LENGTH_LONG
                 ).show()
+            }
             }
         }
     }
@@ -260,7 +264,14 @@ fun SettingsScreen(
                             ) {
                                 Text(
                                     context.getString(
-                                        R.string.restore_auto_item,
+                                        R.string.restore_auto_item_kind,
+                                        context.getString(
+                                            if (info.kind == com.cyclealarm.app.data.BackupManager.AutoBackupKind.RESTORE) {
+                                                R.string.restore_kind_snapshot
+                                            } else {
+                                                R.string.restore_kind_daily
+                                            }
+                                        ),
                                         stamp,
                                         com.cyclealarm.app.data.AutoBackupPolicy.formatSize(info.sizeBytes)
                                     )
@@ -556,7 +567,8 @@ fun SettingsScreen(
                     var downloadCopyOn by remember {
                         mutableStateOf(com.cyclealarm.app.core.BackupPrefs.downloadCopyEnabled(context))
                     }
-                    SettingRow(
+                    // Android 8/9 没有免权限的公共目录写入：不显示开关，避免「已开启但静默 no-op」
+                    if (com.cyclealarm.app.data.DownloadBackupWriter.isSupported()) SettingRow(
                         title = stringResource(R.string.row_backup_to_downloads),
                         value = stringResource(
                             if (downloadCopyOn) R.string.backup_to_downloads_on
@@ -572,6 +584,18 @@ fun SettingsScreen(
                                     context.getString(R.string.backup_to_downloads_toast),
                                     Toast.LENGTH_LONG
                                 ).show()
+                            } else {
+                                // 关闭时清掉已写入公共目录的明文副本
+                                backupScope.launch {
+                                    val removed = withContext(Dispatchers.IO) {
+                                        com.cyclealarm.app.data.DownloadBackupWriter.deleteAll(context)
+                                    }
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.backup_downloads_cleared),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
                             }
                         }
                     )
@@ -1002,6 +1026,21 @@ private fun themeLabel(mode: String): String = when (mode) {
 
 /** 备份文件大小上限（超过视为损坏）。 */
 private const val MAX_BACKUP_BYTES = 2L * 1024 * 1024
+
+/** 流式限读：超过上限立即返回 null，避免先 readBytes 再判（大文件先 OOM）。 */
+private fun readBounded(input: java.io.InputStream, limit: Long): ByteArray? {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(64 * 1024)
+    var total = 0L
+    while (true) {
+        val read = input.read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > limit) return null
+        out.write(buffer, 0, read)
+    }
+    return out.toByteArray()
+}
 
 /**
  * 「上次响铃」诊断文案：记录的是响铃界面实际是怎么显示出来的

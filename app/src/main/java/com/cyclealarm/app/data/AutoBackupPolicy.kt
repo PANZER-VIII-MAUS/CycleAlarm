@@ -52,12 +52,22 @@ object AutoBackupPolicy {
     /** 恢复前快照文件名。 */
     fun restoreFileName(now: Long): String = "$RESTORE_PREFIX$now.txt"
 
+    /** 是否「恢复前快照」（含 0.6.8 及以前的旧前缀）。 */
+    fun isRestoreName(name: String): Boolean =
+        name.startsWith(RESTORE_PREFIX) || name.startsWith(LEGACY_RESTORE_PREFIX)
+
     /**
-     * 按前缀分别淘汰：只在一批同前缀文件里保留最近 [keep] 份。
+     * 按多个前缀一起淘汰（旧前缀与新前缀共享同一保留额度）。
      * （修复六轮复审 §4.1：以前恢复前快照会把同目录的每日备份一起计入并删掉）
      */
     fun expiredByPrefix(names: List<String>, prefix: String, keep: Int): List<String> {
         val matched = names.filter { it.startsWith(prefix) }.sortedDescending()
+        return matched.drop(keep.coerceAtLeast(1))
+    }
+
+    /** 同时按多个前缀淘汰（例如 restore- 与旧的 backup-before-restore- 共享额度）。 */
+    fun expiredByPrefixes(names: List<String>, prefixes: List<String>, keep: Int): List<String> {
+        val matched = names.filter { name -> prefixes.any { name.startsWith(it) } }.sortedDescending()
         return matched.drop(keep.coerceAtLeast(1))
     }
 

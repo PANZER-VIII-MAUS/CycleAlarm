@@ -76,6 +76,9 @@ class RingService : Service() {
             return START_NOT_STICKY
         }
         lastStartId = startId
+        // 每次响铃都是新会话：上一轮「超时自动停止」的标记必须清零，
+        // 否则新一次响铃停止时会被当成超时（不计「已处理」）——七轮复审 §2.3
+        timedOut = false
         // 新的响铃开始前先撤掉上一轮可能残留的浮窗/轮询（六轮复审 §4.4：跨闹钟残留）
         releaseOverlay()
         previewMode = intent.getBooleanExtra(AlarmScheduler.EXTRA_PREVIEW, false)

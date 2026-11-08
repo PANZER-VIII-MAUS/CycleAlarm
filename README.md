@@ -37,7 +37,7 @@
 
 ## 下载安装
 
-当前最新版本：**0.6.9**（versionCode 37，targetSdk 36）。
+当前最新版本：**0.6.10**（versionCode 38，targetSdk 36）。
 
 正式 APK 请从项目的 **GitHub Releases** 页面下载并侧载安装。覆盖安装新版本时，必须使用与原安装包相同的签名；签名不一致时，Android 会拒绝覆盖安装，只能卸载旧版，卸载会清除应用数据。
 
@@ -61,12 +61,30 @@
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | 引导用户在系统设置中将应用加入电池优化白名单，减少后台排期被限制。 |
 | `VIBRATE` | 闹钟响铃时提供振动提醒。 |
 | `WAKE_LOCK` | 响铃期间短时保持 CPU 工作，避免屏幕唤醒后铃声或振动立即中断。 |
-| `SYSTEM_ALERT_WINDOW` | 仅用于检测和引导用户打开悬浮窗相关系统权限；应用核心闹钟功能不依赖悬浮窗覆盖其他应用。 |
+| `SYSTEM_ALERT_WINDOW` | 用于锁屏/后台启动受限时显示「停止 / 稍后」兜底界面（系统拦截 Activity 时仍可操作闹钟）。 |
 | `ACCESS_NETWORK_STATE` | 由 WorkManager 引入（用于判断调度约束）；应用自身不联网、不上传任何数据。 |
 
 ---
 
 ## 更新日志
+
+### 0.6.10（2026-11-08）
+
+七轮复审指出三处「修了一半」与多条反复提的遗留，本版收口：
+
+- **撤销双路径**：删除闹钟/日期闹钟/假期不再同时弹两条 Snackbar，只保留 ViewModel 一条（转屏不丢）
+- **「下次响铃」字号与大字号同步**：130% 字号下不再比默认还小（与日卡同用 `displaySmall`）
+- **下载副本查重修正**：MediaStore 的 `RELATIVE_PATH` 实际带尾斜杠，0.6.9 的 `=` 匹配永远不命中
+  → 改为带斜杠匹配，恢复「每天一份 + 保留 7 份」；关闭开关时清理已写入的公共副本
+- **恢复备份顺序**：先完成事务再清瞬时状态（失败不清），并推进漏响检查点，避免恢复窗口内误报
+- **撤销竞态**：`deleteXWithUndo` 先等删除完成再登记待撤销项
+- **手动导入**：读取移到 IO 且流式限读 2 MB（不再先 `readBytes` 再判上限）
+- **日期闹钟状态**：改用 `EffectiveTriggerPolicy.nextDateTrigger`，被跳过的日期闹钟不再显示「待响铃」
+- **`timedOut` 重置**：新一次响铃不再继承上一轮的「超时」标记（第三次提）
+- **日卡阈值**：去掉 `maxWidth` 兜底，纯按屏宽 + 字号判定
+- **铃声**：选完立即验证可访问并尽量持久化授权，失效铃声当场提示而不是响铃时静默回退
+- **浮窗**：`hide()` 先移除成功再清状态；恢复列表区分「每日备份 / 恢复前快照」；旧前缀快照纳入保留额度
+- **发布物验证**：CI 增加 AAB 内部 manifest 断言（无 `AlarmGuardService`、有 `RingService`）
 
 ### 0.6.9（2026-11-07）
 
@@ -118,6 +136,7 @@
 - **重复触发不再漏记「响了」**：事件登记改为幂等（重复登记返回已有行 id），
   避免唯一索引 + IGNORE 导致 `rungAt` 写不进去被误判漏响
 - **v10→v11 迁移去重会合并 `rungAt`/`ackedAt`**：不再因为保留行恰好是「没响的那行」而丢失响铃事实
+  > 说明：该修复只对「DB 仍为 v10、之后升级到本版」的设备生效；0.6.3~0.6.7 期间已升级的设备，被旧迁移删掉的重复行无法恢复（数据已丢弃）。
 - **V1 老备份恢复前提示**：旧格式无校验和，截断文件也可能部分恢复，确认框会明确警告
 
 ### 0.6.6（2026-11-05）
@@ -181,7 +200,7 @@
 - **宽屏优化**：屏宽 > 700dp 时内容收窄到 640dp 居中
 - `MainScreen` 从 1442 行拆为 7 个文件（下次响铃卡 / 循环卡 / 日卡 / 假期卡 / 假期对话框 / 编辑闹钟 / 主脚手架），并补充 4 个 `@Preview`
 - **R8 keep 规则收缩**：去掉「整个 data 包全保留」的粗放规则，只保留 Room 的 `AppDatabase_Impl` 与枚举 `values()/valueOf()`；数据库 schema 不再打进正式包
-- 正式包体积 1,908,083 → 1,884,159 字节
+- 正式包体积随版本变化（见各 Release 资产；0.6.9 为 1,933,337 字节）
 - release 签名密钥已更换密码（密钥本身未变，签名指纹一致，可直接覆盖升级）
 
 ### 0.6.0（2026-11-01）
@@ -448,7 +467,7 @@
 | minSdk / targetSdk / compileSdk | 26 / 36 / 36 |
 
 > 版本说明：targetSdk 36 对应 Android 16；该组合需要 Android Studio Ladybug 及以上。
-> 单元测试 313 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 13 warning。
+> 单元测试 315 个（JUnit4 + Robolectric 4.14.1 + `room-testing`），`lint` 0 error / 14 warning。
 
 ## 工程结构
 
@@ -528,7 +547,7 @@ CycleAlarm/
 
 ```powershell
 .\gradlew.bat :app:compileDirectDebugKotlin
-.\gradlew.bat testDirectDebugUnitTest   # 313 个 JVM/Robolectric 单测（直装包变体）
+.\gradlew.bat testDirectDebugUnitTest   # 315 个 JVM/Robolectric 单测（直装包变体）
 .\gradlew.bat lintDirectDebug          # 应为 0 error
 .\gradlew.bat connectedDirectDebugAndroidTest  # 真机/模拟器冒烟（需要已连接的设备）
 
@@ -584,7 +603,7 @@ Release 签名与正式 APK 的生成方式见下方「打包发布（正式签�
 - 使用 `setAlarmClock(AlarmClockInfo, operation)`：系统按最高优先级处理，状态栏显示闹钟图标，锁屏也能触发
 - 若用户收回"精确闹钟"权限或系统未授予，排期会降级为 `set(RTC_WAKEUP)`（非精确闹钟），并记录日志，不会崩溃
 - 响铃后立即为同一条闹钟计算并设置下一次触发，形成循环
-- `BootReceiver` 处理 `BOOT_COMPLETED / MY_PACKAGE_REPLACED / TIME_SET / TIMEZONE_CHANGED`，开机后重建
+- `BootReceiver` 处理 `BOOT_COMPLETED / MY_PACKAGE_REPLACED / TIME_SET / TIMEZONE_CHANGED / NEXT_ALARM_CLOCK_CHANGED`，开机后重建
 
 ### 4. 响铃链路（前台服务，不走 WorkManager）
 

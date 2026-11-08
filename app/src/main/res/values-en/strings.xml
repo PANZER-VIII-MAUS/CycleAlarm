@@ -130,9 +130,6 @@
     <string name="cd_cycle_settings">Cycle settings</string>
     <string name="cd_permissions">Permissions</string>
     <string name="main_add_alarm">Add alarm</string>
-    <string name="snack_deleted_date_alarm">Deleted date alarm</string>
-    <string name="snack_deleted_alarm">Deleted alarm</string>
-    <string name="snack_deleted_holiday">Deleted holiday</string>
     <string name="main_tip">Tip: with a fixed cycle you can only add alarms to their matching day; several alarms per day are allowed; change the cycle in Settings.</string>
     <string name="db_error_title">Cannot open the database</string>
     <string name="db_error_ok">Got it</string>
@@ -436,8 +433,6 @@
     <string name="err_snapshot_unknown_record">Unknown import snapshot record</string>
     <string name="err_snapshot_bool">Import snapshot boolean value is malformed</string>
     <string name="err_backup_no_data">The backup file contains no restorable data</string>
-    <string name="pp_current_type">Current type</string>
-    <string name="plan_conflict_same_minute">Conflict in the same minute</string>
     <string name="date_month_day">%1$d/%2$d</string>
     <string name="hol_new_year">New Year</string>
     <string name="hol_spring_festival">Chinese New Year</string>
@@ -469,7 +464,6 @@
     <string name="restore_auto_empty">No auto backup yet: one is created on the first launch each day</string>
     <string name="restore_auto_confirm_title">Restore this auto backup?</string>
     <string name="restore_auto_confirm_text">This replaces all current alarms and settings. A snapshot of the current data is saved first.</string>
-    <string name="restore_auto_item">%1$s · %2$s</string>
     <string name="toast_restore_auto_ok">Restored from auto backup</string>
     <string name="backup_confirm_text_legacy">This is a legacy (V1) backup without a checksum: a truncated file can still “restore” partially. Replace current data with it?</string>
     <plurals name="missed_multi">
@@ -548,10 +542,6 @@
         <item quantity="one">%1$d weekly row was skipped because the cycle was not switched to weekly</item>
         <item quantity="other">%1$d weekly rows were skipped because the cycle was not switched to weekly</item>
     </plurals>
-    <plurals name="perm_health_missing">
-        <item quantity="one">%1$d setting missing: %2$s</item>
-        <item quantity="other">%1$d settings missing: %2$s</item>
-    </plurals>
     <string name="err_backup_newer_version">This backup comes from a newer app version. Update the app before restoring.</string>
     <string name="row_backup_to_downloads">Back up to Downloads</string>
     <string name="backup_to_downloads_on">On (one per day, keep 7)</string>
@@ -567,4 +557,9 @@
     <string name="vm_undo_holiday">Holiday \"%1$s\" deleted</string>
     <string name="main_no_alarm_expired">No active alarms</string>
     <string name="main_no_alarm_expired_hint">Some date alarms have expired — add them again, or turn on any day below</string>
+    <string name="restore_auto_item_kind">%1$s · %2$s · %3$s</string>
+    <string name="restore_kind_daily">Daily</string>
+    <string name="restore_kind_snapshot">Pre-restore</string>
+    <string name="backup_downloads_cleared">Removed backup copies from Downloads</string>
+    <string name="ringtone_unavailable">This ringtone is not accessible (maybe deleted); please pick another</string>
 </resources>

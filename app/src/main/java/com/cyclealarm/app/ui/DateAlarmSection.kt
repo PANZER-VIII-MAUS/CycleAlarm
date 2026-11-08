@@ -73,7 +73,10 @@ fun DateAlarmSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             alarms.forEach { alarm ->
-                val next = AlarmScheduler.nextTriggerForDateAlarm(alarm, settings, holidays)
+                // 用生效触发点：被「跳过下一次」或今天静音的日期闹钟不应显示为待响铃
+                val next = com.cyclealarm.app.core.EffectiveTriggerPolicy.nextDateTrigger(
+                    context = context, alarm = alarm, settings = settings, holidays = holidays
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(
                         modifier = Modifier
